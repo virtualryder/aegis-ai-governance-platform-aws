@@ -1,0 +1,379 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Aegis - Sample Agent (low-blast-radius). A Standard Step Functions state machine
+  implementing Classify -> Retrieve -> Draft -> Check -> HumanGate (waitForTaskToken)
+  -> Finalize, plus its IAM role and a couple of inline-Python placeholder Lambdas.
+  Imports the governance-core stack outputs (audit table, guardrail) via Fn::ImportValue.
+  All resources are serverless / pay-per-use and tear down cleanly.
+
+Parameters:
+  CoreStackName:
+    Type: String
+    Description: Name of the deployed governance-core stack to import outputs from.
+    Default: aegis-governance-core
+
+  AgentName:
+    Type: String
+    Description: Short name of this agent (used in resource names and tags).
+    Default: service-desk
+
+  Pack:
+    Type: String
+    Default: enterprise
+
+  Department:
+    Type: String
+    Default: shared-services
+
+  DataClass:
+    Type: String
+    AllowedValues:
+      - public
+      - pii
+      - phi
+      - cji
+      - fti
+      - edu
+    Default: pii
+
+  Environment:
+    Type: String
+    AllowedValues:
+      - dev
+      - test
+      - staging
+      - prod
+    Default: dev
+
+  AppName:
+    Type: String
+    Default: aegis
+
+  LogRetentionDays:
+    Type: Number
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90]
+    Default: 7
+
+Resources:
+
+  StepLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AppName}-${AgentName}-steps-${Environment}"
+      RetentionInDays: !Ref LogRetentionDays
+
+  SfnLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/vendedlogs/states/${AppName}-${AgentName}-${Environment}"
+      RetentionInDays: !Ref LogRetentionDays
+
+  StepLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-${AgentName}-step-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: aegis-agent-step-least-privilege
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AuditAppendOnly
+                Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource:
+                  - Fn::ImportValue: !Sub "${CoreStackName}-AuditTableArn"
+              - Sid: AuditDenyMutations
+                Effect: Deny
+                Action:
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource:
+                  - Fn::ImportValue: !Sub "${CoreStackName}-AuditTableArn"
+              - Sid: SendTaskToken
+                Effect: Allow
+                Action:
+                  - states:SendTaskSuccess
+                  - states:SendTaskFailure
+                Resource: "*"
+              - Sid: LogsToOwnGroup
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !GetAtt StepLogGroup.Arn
+                  - !Sub "${StepLogGroup.Arn}:*"
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+  WorkerFn:
+    Type: AWS::Lambda::Function
+    DependsOn: StepLogGroup
+    Properties:
+      FunctionName: !Sub "${AppName}-${AgentName}-worker-${Environment}"
+      Description: Placeholder worker for Classify / Retrieve / Draft / Check / Finalize steps.
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      MemorySize: 128
+      Role: !GetAtt StepLambdaRole.Arn
+      Environment:
+        Variables:
+          AUDIT_TABLE:
+            Fn::ImportValue: !Sub "${CoreStackName}-AuditTableName"
+          GUARDRAIL_ID:
+            Fn::ImportValue: !Sub "${CoreStackName}-GuardrailId"
+          DATA_CLASS: !Ref DataClass
+      Code:
+        ZipFile: |
+          import os
+          import time
+          import uuid
+
+          import boto3
+
+          ddb = boto3.client("dynamodb")
+          AUDIT_TABLE = os.environ["AUDIT_TABLE"]
+          DATA_CLASS = os.environ.get("DATA_CLASS", "unknown")
+
+
+          def handler(event, context):
+              """Generic placeholder step. The state machine passes the step name in
+              event['step']; each invocation appends one audit record (append-only)."""
+              step = (event or {}).get("step", "unknown")
+              request_id = (event or {}).get("request_id") or str(uuid.uuid4())
+              seq = int((event or {}).get("seq", 0))
+
+              ddb.put_item(
+                  TableName=AUDIT_TABLE,
+                  Item={
+                      "request_id": {"S": request_id},
+                      "seq": {"N": str(seq)},
+                      "ts": {"N": str(int(time.time()))},
+                      "data_class": {"S": DATA_CLASS},
+                      "step": {"S": step},
+                      "decision": {"S": "allow"},
+                  },
+                  ConditionExpression="attribute_not_exists(request_id) AND attribute_not_exists(seq)",
+              )
+
+              result = {
+                  "request_id": request_id,
+                  "seq": seq + 1,
+                  "step": step,
+                  "status": "ok",
+              }
+              return result
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+  HumanGateFn:
+    Type: AWS::Lambda::Function
+    DependsOn: StepLogGroup
+    Properties:
+      FunctionName: !Sub "${AppName}-${AgentName}-humangate-${Environment}"
+      Description: Placeholder human-gate worker invoked with the Step Functions task token (waitForTaskToken).
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      MemorySize: 128
+      Role: !GetAtt StepLambdaRole.Arn
+      Code:
+        ZipFile: |
+          def handler(event, context):
+              """Placeholder. Receives {'taskToken': ..., 'payload': ...}. A real
+              reviewer action calls states:SendTaskSuccess / SendTaskFailure with the
+              token out of band. This stub simply records that a gate was opened."""
+              token = (event or {}).get("taskToken", "")
+              return {
+                  "gate": "pending",
+                  "has_token": bool(token),
+                  "note": "Awaiting human approver (approver != requester).",
+              }
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+  StateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-${AgentName}-sfn-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: aegis-agent-sfn-least-privilege
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: InvokeStepLambdas
+                Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt WorkerFn.Arn
+                  - !GetAtt HumanGateFn.Arn
+              - Sid: DeliverLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogDelivery
+                  - logs:GetLogDelivery
+                  - logs:UpdateLogDelivery
+                  - logs:DeleteLogDelivery
+                  - logs:ListLogDeliveries
+                  - logs:PutResourcePolicy
+                  - logs:DescribeResourcePolicies
+                  - logs:DescribeLogGroups
+                Resource: "*"
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+  AgentStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub "${AppName}-${AgentName}-${Environment}"
+      StateMachineType: STANDARD
+      RoleArn: !GetAtt StateMachineRole.Arn
+      LoggingConfiguration:
+        Level: ALL
+        IncludeExecutionData: false
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt SfnLogGroup.Arn
+      DefinitionSubstitutions:
+        WorkerArn: !GetAtt WorkerFn.Arn
+        HumanGateArn: !GetAtt HumanGateFn.Arn
+      DefinitionString: |
+        {
+          "Comment": "Aegis sample agent: Classify -> Retrieve -> Draft -> Check -> HumanGate -> Finalize",
+          "StartAt": "Classify",
+          "States": {
+            "Classify": {
+              "Type": "Task",
+              "Resource": "${WorkerArn}",
+              "Parameters": { "step": "classify", "request_id.$": "$.request_id", "seq": 0 },
+              "ResultPath": "$.classify",
+              "Next": "Retrieve"
+            },
+            "Retrieve": {
+              "Type": "Task",
+              "Resource": "${WorkerArn}",
+              "Parameters": { "step": "retrieve", "request_id.$": "$.classify.request_id", "seq.$": "$.classify.seq" },
+              "ResultPath": "$.retrieve",
+              "Next": "Draft"
+            },
+            "Draft": {
+              "Type": "Task",
+              "Resource": "${WorkerArn}",
+              "Parameters": { "step": "draft", "request_id.$": "$.retrieve.request_id", "seq.$": "$.retrieve.seq" },
+              "ResultPath": "$.draft",
+              "Next": "Check"
+            },
+            "Check": {
+              "Type": "Task",
+              "Resource": "${WorkerArn}",
+              "Parameters": { "step": "check", "request_id.$": "$.draft.request_id", "seq.$": "$.draft.seq" },
+              "ResultPath": "$.check",
+              "Next": "HumanGate"
+            },
+            "HumanGate": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+              "Parameters": {
+                "FunctionName": "${HumanGateArn}",
+                "Payload": {
+                  "taskToken.$": "$$.Task.Token",
+                  "request_id.$": "$.check.request_id",
+                  "purpose": "consequential-action-approval"
+                }
+              },
+              "ResultPath": "$.gate",
+              "TimeoutSeconds": 3600,
+              "Next": "Finalize"
+            },
+            "Finalize": {
+              "Type": "Task",
+              "Resource": "${WorkerArn}",
+              "Parameters": { "step": "finalize", "request_id.$": "$.check.request_id", "seq.$": "$.check.seq" },
+              "ResultPath": "$.finalize",
+              "End": true
+            }
+          }
+        }
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+Outputs:
+  StateMachineArn:
+    Description: Sample agent Step Functions state machine ARN.
+    Value: !Ref AgentStateMachine
+    Export:
+      Name: !Sub "${AWS::StackName}-StateMachineArn"
+
+  WorkerFnArn:
+    Description: Placeholder worker Lambda ARN.
+    Value: !GetAtt WorkerFn.Arn
+
+  HumanGateFnArn:
+    Description: Placeholder human-gate Lambda ARN.
+    Value: !GetAtt HumanGateFn.Arn

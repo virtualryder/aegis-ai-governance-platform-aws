@@ -1,0 +1,11 @@
+[
+  { "ParameterKey": "DataClass", "ParameterValue": "pii" },
+  { "ParameterKey": "Pack", "ParameterValue": "enterprise" },
+  { "ParameterKey": "Department", "ParameterValue": "it-service-desk" },
+  { "ParameterKey": "Environment", "ParameterValue": "dev" },
+  { "ParameterKey": "AppName", "ParameterValue": "aegis" },
+  { "ParameterKey": "LogRetentionDays", "ParameterValue": "7" },
+  { "ParameterKey": "BedrockModelId", "ParameterValue": "anthropic.claude-3-haiku-20240307-v1:0" },
+  { "ParameterKey": "GuardrailGroundingThreshold", "ParameterValue": "0.80" },
+  { "ParameterKey": "GuardrailRelevanceThreshold", "ParameterValue": "0.75" }
+]

@@ -1,0 +1,11 @@
+[
+  { "ParameterKey": "DataClass", "ParameterValue": "public" },
+  { "ParameterKey": "Pack", "ParameterValue": "slg-core" },
+  { "ParameterKey": "Department", "ParameterValue": "city-311" },
+  { "ParameterKey": "Environment", "ParameterValue": "dev" },
+  { "ParameterKey": "AppName", "ParameterValue": "aegis" },
+  { "ParameterKey": "LogRetentionDays", "ParameterValue": "7" },
+  { "ParameterKey": "BedrockModelId", "ParameterValue": "anthropic.claude-3-haiku-20240307-v1:0" },
+  { "ParameterKey": "GuardrailGroundingThreshold", "ParameterValue": "0.75" },
+  { "ParameterKey": "GuardrailRelevanceThreshold", "ParameterValue": "0.70" }
+]

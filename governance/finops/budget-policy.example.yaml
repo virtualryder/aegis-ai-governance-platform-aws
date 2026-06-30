@@ -1,0 +1,123 @@
+# Aegis — Example token-budget + chargeback policy
+#
+# Implements the FinOps model in docs/05-FINOPS-TOKEN-BUDGETS-CHARGEBACK.md.
+# Two mechanisms:
+#   1. Token budgets with hard caps enforced in the gateway BEFORE spend (stops "token maxing").
+#   2. Per-department chargeback via Bedrock application inference profiles (AIPs) tagged with
+#      cost-allocation tags that flow to Cost Explorer / CUR.
+#
+# This is an EXAMPLE. Copy it per environment and adjust caps, owners, and tags.
+
+apiVersion: aegis/v1
+kind: BudgetPolicy
+
+metadata:
+  name: example-org-budget-policy
+  description: Per-department token budgets and chargeback for the Aegis platform.
+  period: monthly                 # budgets reset monthly (aligns with CUR billing period)
+  currency_note: >-
+    Caps are expressed in tokens (input+output). The gateway token meter is the real-time
+    control; the Cost and Usage Report (CUR) is the financial source of truth. Tags can lag
+    up to 24h in Cost Explorer/CUR, so reconcile the meter against the CUR as a day-2 practice.
+
+# ---------------------------------------------------------------------------
+# Global defaults applied to every department unless overridden below.
+# ---------------------------------------------------------------------------
+defaults:
+  cap_behavior: hard              # hard = deny over-budget calls; soft = warn and continue
+  alert_thresholds: [0.6, 0.85, 1.0]   # fractions of the cap at which alerts fire to the owner
+  alert_channel: sns:arn:aws:sns:us-east-1:111122223333:aegis-finops-alerts
+  # Cost-allocation tags attached to every AIP (must be activated in the Billing console).
+  cost_allocation_tags:
+    - dept
+    - team
+    - app
+    - data_class
+    - pack
+
+# ---------------------------------------------------------------------------
+# Per-department budgets. Each department maps to one or more agents/AIPs.
+# ---------------------------------------------------------------------------
+departments:
+
+  - dept: dept-planning
+    owner: planning-finance@example.gov
+    monthly_token_cap: 120_000_000
+    cap_behavior: hard            # planning is sensitive to overspend -> deny at cap
+    pack: slg
+    agents:
+      - id: permitting-precheck
+        inference_profile: aip-planning-precheck
+        monthly_token_cap: 50_000_000      # sub-cap; must not exceed the dept cap
+        data_class: pii
+        tags: { dept: dept-planning, team: permits, app: precheck, data_class: pii, pack: slg }
+
+  - dept: dept-it
+    owner: it-finance@example.com
+    monthly_token_cap: 200_000_000
+    cap_behavior: soft            # internal service desk -> warn, don't block, but still alert
+    pack: enterprise
+    agents:
+      - id: service-desk-triage
+        inference_profile: aip-it-servicedesk
+        monthly_token_cap: 80_000_000
+        data_class: pii
+        tags: { dept: dept-it, team: servicedesk, app: triage, data_class: pii, pack: enterprise }
+
+  - dept: dept-clinical-ops
+    owner: clinops-finance@example.org
+    monthly_token_cap: 90_000_000
+    cap_behavior: hard            # PHI workloads carry tighter budgets + stricter review
+    pack: healthcare-lifesciences
+    alert_thresholds: [0.5, 0.75, 0.9, 1.0]   # override: alert earlier on sensitive workloads
+    agents:
+      - id: prior-auth-summarizer
+        inference_profile: aip-clinops-priorauth
+        monthly_token_cap: 40_000_000
+        data_class: phi
+        tags: { dept: dept-clinical-ops, team: utilization, app: priorauth, data_class: phi, pack: healthcare-lifesciences }
+
+# ---------------------------------------------------------------------------
+# Caps per data class (strictest-wins with department/agent caps).
+# High-sensitivity classes carry tighter ceilings and stricter review.
+# ---------------------------------------------------------------------------
+data_class_caps:
+  public: { monthly_token_cap: 500_000_000, cap_behavior: soft }
+  pii:    { monthly_token_cap: 150_000_000, cap_behavior: hard }
+  phi:    { monthly_token_cap:  60_000_000, cap_behavior: hard, requires_review: true }
+  fti:    { monthly_token_cap:  40_000_000, cap_behavior: hard, requires_review: true }
+  cji:    { monthly_token_cap:  40_000_000, cap_behavior: hard, requires_review: true }
+
+# ---------------------------------------------------------------------------
+# Second, account-level guardrail on actual dollar spend (independent of the
+# token meter). AWS Budgets actions can notify or restrict at these thresholds.
+# ---------------------------------------------------------------------------
+aws_budgets_guardrail:
+  enabled: true
+  monthly_cost_usd: 25000
+  thresholds_pct: [80, 100]
+  action: notify        # notify | apply_scp (restrict) -- restrict is customer-approved only
+
+# ---------------------------------------------------------------------------
+# Temporary-lift approval block: a department can request a temporary cap lift
+# through the SAME human-gate machinery as any other gateway decision. The
+# approval is audited, bound, time-boxed, and separation-of-duties enforced.
+# ---------------------------------------------------------------------------
+temporary_lifts:
+  - id: lift-2026-q3-planning-surge
+    dept: dept-planning
+    agent: permitting-precheck
+    reason: "Q3 permit-season volume surge; precheck demand exceeds baseline cap."
+    requested_by: planning-ops@example.gov
+    approved_by: planning-finance@example.gov   # must differ from requested_by (SoD)
+    additional_token_cap: 20_000_000
+    effective_from: 2026-07-01T00:00:00Z
+    expires_at:     2026-09-30T23:59:59Z         # auto-reverts to baseline after expiry
+    cap_behavior_during_lift: hard
+    audit:
+      gate_mode: step_functions_wait_for_task_token
+      separation_of_duties: true
+      bound_to:
+        dept: dept-planning
+        agent: permitting-precheck
+      single_use: true

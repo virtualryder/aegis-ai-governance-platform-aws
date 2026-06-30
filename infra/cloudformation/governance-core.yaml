@@ -1,0 +1,551 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Aegis - Governed Agent Platform - Governance Core (minimal deployable subset of
+  infra/cloudformation/STACKS.md: security + data + gateway tiers). Customer-managed
+  KMS CMK per data class, append-only DynamoDB audit table, single-use approval ledger,
+  WORM S3 evidence bucket (Object Lock enabled, no default retention so teardown stays
+  clean), a Bedrock Guardrail (PII + contextual grounding + denied topic), Cognito user
+  pool for federated JWT, a least-privilege gateway Lambda role with an explicit
+  append-only deny, and a stub control-plane gateway Lambda. All resources are
+  serverless / pay-per-use and tear down cleanly. Optimized for low cost.
+
+Parameters:
+  DataClass:
+    Type: String
+    Description: Data classification this stack governs (drives the CMK + guardrail).
+    AllowedValues:
+      - public
+      - pii
+      - phi
+      - cji
+      - fti
+      - edu
+    Default: pii
+
+  Pack:
+    Type: String
+    Description: Compliance overlay pack name (e.g. enterprise, slg-core).
+    Default: enterprise
+
+  Department:
+    Type: String
+    Description: Owning department for cost allocation / chargeback.
+    Default: shared-services
+
+  Environment:
+    Type: String
+    Description: Deployment environment.
+    AllowedValues:
+      - dev
+      - test
+      - staging
+      - prod
+    Default: dev
+
+  AppName:
+    Type: String
+    Description: Application / agent platform short name used in tags and naming.
+    Default: aegis
+
+  LogRetentionDays:
+    Type: Number
+    Description: CloudWatch Logs retention in days (keep low for cost).
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90]
+    Default: 7
+
+  BedrockModelId:
+    Type: String
+    Description: >-
+      Bedrock model id the gateway Lambda is permitted to invoke (scoped, no wildcard
+      Resource). Must be enabled for your account/region under Bedrock model access.
+    Default: anthropic.claude-3-haiku-20240307-v1:0
+
+  GuardrailGroundingThreshold:
+    Type: Number
+    Description: Contextual grounding threshold (0.00-0.99). Higher is stricter.
+    Default: 0.80
+    MinValue: 0
+    MaxValue: 0.99
+
+  GuardrailRelevanceThreshold:
+    Type: Number
+    Description: Contextual relevance threshold (0.00-0.99). Higher is stricter.
+    Default: 0.75
+    MinValue: 0
+    MaxValue: 0.99
+
+Resources:
+
+  DataClassKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Description: !Sub "Aegis CMK for data class ${DataClass} (${AppName}/${Environment})"
+      EnableKeyRotation: true
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: aegis-cmk-policy
+        Statement:
+          - Sid: EnableRootAccountAdmin
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: AllowServicesUseOfKey
+            Effect: Allow
+            Principal:
+              Service:
+                - dynamodb.amazonaws.com
+                - s3.amazonaws.com
+                - logs.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+  DataClassKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${AppName}-${DataClass}-${Environment}"
+      TargetKeyId: !Ref DataClassKey
+
+  AuditTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TableName: !Sub "${AppName}-audit-${DataClass}-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: request_id
+          AttributeType: S
+        - AttributeName: seq
+          AttributeType: N
+      KeySchema:
+        - AttributeName: request_id
+          KeyType: HASH
+        - AttributeName: seq
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !Ref DataClassKey
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+  ApprovalLedger:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      TableName: !Sub "${AppName}-approvals-${DataClass}-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: approval_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: approval_id
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !Ref DataClassKey
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+  WormEvidenceBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub "${AppName}-worm-${DataClass}-${Environment}-${AWS::AccountId}"
+      ObjectLockEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt DataClassKey.Arn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+  AegisGuardrail:
+    Type: AWS::Bedrock::Guardrail
+    Properties:
+      Name: !Sub "${AppName}-guardrail-${DataClass}-${Environment}"
+      Description: >-
+        Aegis mandatory guardrail: PII sensitive-information filters, contextual
+        grounding + relevance thresholds, and a denied topic. Applied on input and
+        output by the control-plane gateway.
+      BlockedInputMessaging: "This request was blocked by Aegis governance policy."
+      BlockedOutputsMessaging: "This response was blocked by Aegis governance policy."
+      SensitiveInformationPolicyConfig:
+        PiiEntitiesConfig:
+          - Type: EMAIL
+            Action: ANONYMIZE
+          - Type: PHONE
+            Action: ANONYMIZE
+          - Type: US_SOCIAL_SECURITY_NUMBER
+            Action: BLOCK
+      ContextualGroundingPolicyConfig:
+        FiltersConfig:
+          - Type: GROUNDING
+            Threshold: !Ref GuardrailGroundingThreshold
+          - Type: RELEVANCE
+            Threshold: !Ref GuardrailRelevanceThreshold
+      TopicPolicyConfig:
+        TopicsConfig:
+          - Name: UngroundedConsequentialAction
+            Definition: >-
+              Requests to issue, adjudicate, release, award, or transfer something of
+              value, or to take any consequential action, without a valid bound human
+              approval. Such actions must be routed to the human gate, never executed
+              by the model directly.
+            Examples:
+              - "Go ahead and approve and release the payment now."
+              - "Issue the permit without waiting for sign-off."
+            Type: DENY
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+  AegisUserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      UserPoolName: !Sub "${AppName}-pool-${DataClass}-${Environment}"
+      MfaConfiguration: "OFF"
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 14
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      UserPoolTags:
+        dept: !Ref Department
+        app: !Ref AppName
+        data_class: !Ref DataClass
+        pack: !Ref Pack
+        environment: !Ref Environment
+
+  AegisUserPoolGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: !Sub "${AppName}-operator"
+      Description: Role group whose JWT role claim the gateway evaluates for least-privilege.
+      Precedence: 10
+      UserPoolId: !Ref AegisUserPool
+
+  GatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AppName}-gateway-${DataClass}-${Environment}"
+      RetentionInDays: !Ref LogRetentionDays
+
+  GatewayLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-gateway-role-${DataClass}-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: aegis-gateway-least-privilege
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AuditAppendOnly
+                Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:ConditionCheckItem
+                Resource:
+                  - !GetAtt AuditTable.Arn
+              - Sid: AuditDenyMutations
+                Effect: Deny
+                Action:
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource:
+                  - !GetAtt AuditTable.Arn
+              - Sid: ApprovalLedgerBoundWrites
+                Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:ConditionCheckItem
+                Resource:
+                  - !GetAtt ApprovalLedger.Arn
+              - Sid: BedrockGuardrailApply
+                Effect: Allow
+                Action:
+                  - bedrock:ApplyGuardrail
+                Resource:
+                  - !GetAtt AegisGuardrail.GuardrailArn
+              - Sid: BedrockInvokeScoped
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}"
+              - Sid: KmsDataKeyOnCmk
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                Resource:
+                  - !GetAtt DataClassKey.Arn
+              - Sid: LogsToOwnGroup
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !GetAtt GatewayLogGroup.Arn
+                  - !Sub "${GatewayLogGroup.Arn}:*"
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+  GatewayFn:
+    Type: AWS::Lambda::Function
+    DependsOn: GatewayLogGroup
+    Properties:
+      FunctionName: !Sub "${AppName}-gateway-${DataClass}-${Environment}"
+      Description: Aegis control-plane gateway entrypoint (stub) - writes an audit record and applies the guardrail.
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      MemorySize: 128
+      Role: !GetAtt GatewayLambdaRole.Arn
+      Environment:
+        Variables:
+          AUDIT_TABLE: !Ref AuditTable
+          APPROVAL_LEDGER: !Ref ApprovalLedger
+          GUARDRAIL_ID: !GetAtt AegisGuardrail.GuardrailId
+          GUARDRAIL_VERSION: !GetAtt AegisGuardrail.Version
+          DATA_CLASS: !Ref DataClass
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import time
+          import uuid
+
+          import boto3
+
+          ddb = boto3.client("dynamodb")
+          bedrock = boto3.client("bedrock-runtime")
+
+          AUDIT_TABLE = os.environ["AUDIT_TABLE"]
+          GUARDRAIL_ID = os.environ.get("GUARDRAIL_ID", "")
+          GUARDRAIL_VERSION = os.environ.get("GUARDRAIL_VERSION", "DRAFT")
+          DATA_CLASS = os.environ.get("DATA_CLASS", "unknown")
+
+
+          def _apply_guardrail(text):
+              """Apply the Bedrock guardrail on input text. Best-effort: never block
+              the audit write if guardrail access is not yet enabled."""
+              if not GUARDRAIL_ID:
+                  return {"action": "NONE", "reason": "no-guardrail-configured"}
+              try:
+                  resp = bedrock.apply_guardrail(
+                      guardrailIdentifier=GUARDRAIL_ID,
+                      guardrailVersion=str(GUARDRAIL_VERSION),
+                      source="INPUT",
+                      content=[{"text": {"text": text}}],
+                  )
+                  return {"action": resp.get("action", "NONE")}
+              except Exception as exc:  # noqa: BLE001
+                  return {"action": "ERROR", "reason": str(exc)}
+
+
+          def handler(event, context):
+              request_id = (event or {}).get("request_id") or str(uuid.uuid4())
+              prompt = (event or {}).get("prompt", "hello from aegis gateway")
+
+              guardrail_result = _apply_guardrail(prompt)
+
+              item = {
+                  "request_id": {"S": request_id},
+                  "seq": {"N": "0"},
+                  "ts": {"N": str(int(time.time()))},
+                  "data_class": {"S": DATA_CLASS},
+                  "decision": {"S": "allow"},
+                  "guardrail_action": {"S": str(guardrail_result.get("action"))},
+                  "purpose": {"S": (event or {}).get("purpose", "demo")},
+              }
+              ddb.put_item(
+                  TableName=AUDIT_TABLE,
+                  Item=item,
+                  ConditionExpression="attribute_not_exists(request_id) AND attribute_not_exists(seq)",
+              )
+
+              return {
+                  "statusCode": 200,
+                  "request_id": request_id,
+                  "seq": 0,
+                  "guardrail": guardrail_result,
+                  "body": json.dumps({"status": "audited", "request_id": request_id}),
+              }
+      Tags:
+        - Key: dept
+          Value: !Ref Department
+        - Key: app
+          Value: !Ref AppName
+        - Key: data_class
+          Value: !Ref DataClass
+        - Key: pack
+          Value: !Ref Pack
+        - Key: environment
+          Value: !Ref Environment
+
+Outputs:
+  AuditTableName:
+    Description: Append-only audit DynamoDB table name.
+    Value: !Ref AuditTable
+    Export:
+      Name: !Sub "${AWS::StackName}-AuditTableName"
+
+  AuditTableArn:
+    Description: Append-only audit DynamoDB table ARN.
+    Value: !GetAtt AuditTable.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-AuditTableArn"
+
+  ApprovalLedgerName:
+    Description: Single-use approval ledger DynamoDB table name.
+    Value: !Ref ApprovalLedger
+    Export:
+      Name: !Sub "${AWS::StackName}-ApprovalLedgerName"
+
+  WormEvidenceBucketName:
+    Description: WORM (Object Lock) evidence S3 bucket name.
+    Value: !Ref WormEvidenceBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-WormEvidenceBucketName"
+
+  GuardrailId:
+    Description: Bedrock Guardrail id.
+    Value: !GetAtt AegisGuardrail.GuardrailId
+    Export:
+      Name: !Sub "${AWS::StackName}-GuardrailId"
+
+  GuardrailArn:
+    Description: Bedrock Guardrail ARN.
+    Value: !GetAtt AegisGuardrail.GuardrailArn
+    Export:
+      Name: !Sub "${AWS::StackName}-GuardrailArn"
+
+  GuardrailVersion:
+    Description: Bedrock Guardrail version.
+    Value: !GetAtt AegisGuardrail.Version
+    Export:
+      Name: !Sub "${AWS::StackName}-GuardrailVersion"
+
+  UserPoolId:
+    Description: Cognito user pool id (federated identity / JWT).
+    Value: !Ref AegisUserPool
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolId"
+
+  GatewayFnArn:
+    Description: Control-plane gateway Lambda ARN.
+    Value: !GetAtt GatewayFn.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-GatewayFnArn"
+
+  GatewayFnName:
+    Description: Control-plane gateway Lambda name.
+    Value: !Ref GatewayFn
+    Export:
+      Name: !Sub "${AWS::StackName}-GatewayFnName"
+
+  KmsKeyArn:
+    Description: Customer-managed CMK ARN for this data class.
+    Value: !GetAtt DataClassKey.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-KmsKeyArn"

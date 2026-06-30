@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+demo_out/
+.DS_Store
+*.egg-info/
+*.tmp
+.~lock.*
+_pgcheck/
+.claude/

@@ -1,0 +1,218 @@
+# Aegis — Machine-readable control -> regime mapping
+#
+# Source of truth for the control matrix summarized in docs/02 section 9 and the
+# per-regime narrative in docs/03. Packs (packs/<pack>/pack.yaml) reference these
+# control ids via their `controls_profile`.
+#
+# Field meaning:
+#   id            stable control id, referenced by packs and audit lineage
+#   name          human-readable control name
+#   description   what the platform actually does
+#   tier          implemented  = platform-guaranteed (the platform builds/enforces it)
+#                 configurable = customer-owned under the AWS Shared Responsibility Model
+#   nist_800_53   relevant NIST SP 800-53 Rev.5 control ids
+#   nist_ai_rmf   relevant NIST AI RMF / AI 600-1 (GenAI Profile) function(s) or risk(s)
+#   regimes       map of regime -> how this control addresses it.
+#                 A regime key is present only where the control is relevant to it.
+#
+# Regime keys used across this file:
+#   govramp_fedramp, cjis_v6, irs_1075, hipaa_hitech, cfr_part2,
+#   gxp_part11, ferpa, coppa, pci_dss
+#
+# See SOURCES.md for the citation backing every regime claim.
+
+apiVersion: aegis/v1
+kind: ControlMappings
+
+controls:
+  - id: edge-waf-shield
+    name: Edge protection (CloudFront + WAF + Shield)
+    description: >-
+      TLS termination at the CDN edge, AWS WAF managed rule sets (OWASP Top 10,
+      known-bad inputs) plus rate limiting, and L3/L4 DDoS absorption with Shield.
+      CloudFront-scoped WAF is deployed in us-east-1.
+    tier: implemented
+    nist_800_53: [SC-5, SC-7, SC-8]
+    nist_ai_rmf: [Information Security]
+    regimes:
+      govramp_fedramp: Boundary protection for the authorization package.
+      cjis_v6: Perimeter protection for systems near CJI.
+      irs_1075: Perimeter protection for the FTI boundary.
+      hipaa_hitech: Transmission security and network protection for ePHI.
+      pci_dss: Network security controls in front of the cardholder data path.
+
+  - id: crypto-identity-mfa
+    name: Cryptographic identity + MFA (Cognito + federated IdP + API Gateway authorizer)
+    description: >-
+      Cognito federates the org IdP and issues a short-lived JWT carrying verified
+      role claims; the API Gateway JWT authorizer validates issuer/audience/expiry
+      with an alg-confusion guard. Client-supplied roles are never trusted.
+    tier: implemented
+    nist_800_53: [IA-2, IA-5, AC-2]
+    nist_ai_rmf: [Human-AI Configuration]
+    regimes:
+      govramp_fedramp: Identity and authentication for the boundary.
+      cjis_v6: MFA mandatory for all CJI access (v6.0, audited since 2025-10-01).
+      irs_1075: Identity proofing and access authorization for FTI.
+      hipaa_hitech: Access control and unique user identification.
+      cfr_part2: Authenticated access to SUD records.
+      ferpa: Authenticated, role-based access to education records.
+      coppa: Authenticated access supporting verifiable parental consent flows.
+
+  - id: deny-by-default-gateway
+    name: Deny-by-default authorization gateway (least-privilege intersection)
+    description: >-
+      Every model/tool/retrieval call is brokered by the MCP authorization gateway,
+      which re-validates identity and computes permitted = agent grant INTERSECT
+      user entitlement, mints a scoped per-call token, and denies anything undeclared.
+    tier: implemented
+    nist_800_53: [AC-3, AC-6, AC-4]
+    nist_ai_rmf: [Manage]
+    regimes:
+      govramp_fedramp: Least-privilege access enforcement across the boundary.
+      cjis_v6: Deny-by-default access to CJI; scoped, time-limited tokens.
+      irs_1075: Need-to-know enforcement and least privilege for FTI.
+      hipaa_hitech: Minimum-necessary access enforcement.
+      cfr_part2: Strict access limitation on SUD records.
+      gxp_part11: Authority checks limiting system access to authorized individuals.
+      ferpa: Need-to-know / school-official-exception access limitation.
+      coppa: Scoped access to children's personal information.
+      pci_dss: Restrict access to cardholder data by business need-to-know.
+
+  - id: human-gate
+    name: Human gate for consequential actions (bound, single-use, separation-of-duties)
+    description: >-
+      Consequential actions (issue/adjudicate/release/award/transfer) are withheld
+      from the agent and routed to a human gate (Step Functions waitForTaskToken /
+      interrupt_before). The approval token is bound to the exact tool+arguments,
+      single-use, expiring, and requires approver != requestor.
+    tier: implemented
+    nist_800_53: [AC-3, AC-5, AC-6]
+    nist_ai_rmf: [Human-AI Configuration, Manage]
+    regimes:
+      govramp_fedramp: Separation of duties on consequential operations.
+      cjis_v6: Human authorization and separation of duties for CJI actions.
+      irs_1075: Authorized human decision on FTI-affecting actions.
+      hipaa_hitech: Human authorization on PHI-affecting decisions.
+      cfr_part2: Human authorization on SUD disclosure / redisclosure.
+      gxp_part11: Electronic-signature-grade, attributable, non-repudiable approvals.
+      ferpa: Human authorization on disclosure of education records.
+
+  - id: in-account-inference-guardrails
+    name: In-account inference + Bedrock Guardrails over PrivateLink
+    description: >-
+      Inference uses Amazon Bedrock over AWS PrivateLink with mandatory Guardrails on
+      input and output: sensitive-information (PII) filters and denied topics. The
+      model never receives unmasked sensitive data.
+    tier: implemented
+    nist_800_53: [SC-7, SC-8, AC-4]
+    nist_ai_rmf: [Data Privacy, Information Security]
+    regimes:
+      govramp_fedramp: Keeps inference within the authorized boundary.
+      cjis_v6: No CJI egress; guardrails on every call.
+      irs_1075: No FTI egress to a public model surface.
+      hipaa_hitech: Minimum necessary; no ePHI egress.
+      cfr_part2: No SUD-record egress to a public model surface.
+      gxp_part11: Controlled, in-account processing for regulated activities.
+      ferpa: No education-record egress to a general-purpose model.
+      coppa: No children's data egress to a public model surface.
+
+  - id: contextual-grounding-automated-reasoning
+    name: Contextual grounding + automated reasoning checks
+    description: >-
+      Bedrock contextual-grounding check scores grounding and relevance (0-0.99) to
+      filter hallucinations in RAG, and automated reasoning checks apply formal logic
+      to validate responses against defined policy.
+    tier: implemented
+    nist_800_53: [SI-10]
+    nist_ai_rmf: [Confabulation, Information Integrity]
+    regimes:
+      hipaa_hitech: Guards against fabricated clinical/eligibility facts.
+      gxp_part11: Supports information integrity for regulated outputs.
+
+  - id: append-only-audit-worm
+    name: Append-only audit + WORM retention
+    description: >-
+      DynamoDB append-only audit (PutItem-only IAM with explicit Update/Delete deny and
+      conditional writes) records every tool attempt (allow/deny/pending/error) with
+      full lineage and masked fields; S3 Object Lock provides immutable (WORM) evidence
+      keyed to data classification and retention schedule.
+    tier: implemented
+    nist_800_53: [AU-2, AU-9, AU-10, AU-11]
+    nist_ai_rmf: [Measure]
+    regimes:
+      govramp_fedramp: Audit and accountability evidence for the package.
+      cjis_v6: Tamper-evident audit logging of CJI access.
+      irs_1075: Access logging and immutable retention for FTI.
+      hipaa_hitech: Audit controls for ePHI access and disclosure.
+      cfr_part2: Segregated, immutable audit of SUD access/redisclosure.
+      gxp_part11: Electronic-records integrity (append-only + WORM) for regulated activities.
+      ferpa: Record of disclosures of education records.
+      pci_dss: Track and monitor all access to cardholder data.
+
+  - id: masking-fail-closed
+    name: Boundary masking (PII/PHI/FTI/CJI/EDU/card/biometric), fail-closed
+    description: >-
+      Amazon Comprehend / Comprehend Medical detect PII/PHI; Amazon Macie discovers and
+      classifies sensitive data in S3; S3 Object Lambda redacts on read. The active
+      pack selects the entity sets to detect. If masking cannot run, the boundary denies
+      rather than leaks.
+    tier: implemented
+    nist_800_53: [MP-6, SC-28, SI-12]
+    nist_ai_rmf: [Data Privacy]
+    regimes:
+      govramp_fedramp: Sensitive-information handling at every boundary.
+      cjis_v6: CJI masking before any prompt, log, or audit field.
+      irs_1075: FTI masking before any prompt, log, or audit field.
+      hipaa_hitech: PHI detection and de-identification (Comprehend Medical).
+      cfr_part2: SUD-record masking with stricter handling.
+      ferpa: Masking of student identifiers.
+      coppa: Biometric-identifier masking (voiceprints, facial patterns) in scope from 2025.
+      pci_dss: Luhn-aware card (PAN) masking; no PAN in prompts or audit.
+
+  - id: kms-cmk-dataclass-isolation
+    name: KMS CMK per data class + data-class isolation
+    description: >-
+      Separate KMS customer-managed keys per data class (CJI/FTI/PHI/EDU/public) with
+      account/VPC/key separation; CJI and FTI run in isolated accounts.
+    tier: implemented
+    nist_800_53: [SC-12, SC-13, SC-28, AC-4]
+    nist_ai_rmf: [Information Security]
+    regimes:
+      govramp_fedramp: Cryptographic protection and boundary isolation.
+      cjis_v6: CJI key/account/VPC isolation.
+      irs_1075: FTI isolation account with a dedicated CMK.
+      hipaa_hitech: Encryption of ePHI at rest with managed keys.
+      cfr_part2: Segregated keys/storage for SUD records.
+      gxp_part11: Cryptographic protection of regulated electronic records.
+      ferpa: Encryption and isolation of education-record data class.
+      pci_dss: Strong cryptography for stored cardholder data.
+
+  - id: token-budgets-chargeback
+    name: Token budgets + per-department chargeback
+    description: >-
+      Inference is routed through Bedrock application inference profiles tagged with
+      cost-allocation tags (dept/team/app/data_class/pack) flowing to Cost Explorer /
+      CUR for chargeback; the gateway enforces hard token caps in real time before spend.
+    tier: implemented
+    nist_800_53: [SA-2, PM-3]
+    nist_ai_rmf: [Value Chain and Component Integration, Manage]
+    regimes:
+      govramp_fedramp: Resource accountability and cost attribution (organizational).
+
+  - id: continuous-monitoring
+    name: Continuous monitoring (CloudTrail, GuardDuty, Security Hub, Config, X-Ray)
+    description: >-
+      CloudTrail records the control plane; GuardDuty detects threats; Security Hub
+      aggregates findings against standards; AWS Config records/enforces resource
+      compliance; X-Ray traces agent execution end to end.
+    tier: implemented
+    nist_800_53: [CA-7, SI-4, AU-6]
+    nist_ai_rmf: [Manage, Measure]
+    regimes:
+      govramp_fedramp: Continuous monitoring program evidence.
+      cjis_v6: Continuous monitoring (new requirement in v6.0).
+      irs_1075: Ongoing monitoring of the FTI environment.
+      hipaa_hitech: Information system activity review.
+      gxp_part11: Ongoing monitoring of the validated state.
+      pci_dss: Regularly monitor and test networks.

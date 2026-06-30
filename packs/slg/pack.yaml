@@ -1,0 +1,97 @@
+# Aegis Compliance Overlay Pack — State, Local & Public Sector (SLG)
+#
+# Regimes: GovRAMP (formerly StateRAMP) / FedRAMP, CJIS Security Policy v6.0,
+# IRS Pub 1075 (FTI), NIST AI RMF, ADA Title II / WCAG 2.1 AA.
+# See docs/03-COMPLIANCE-OVERLAY-PACKS.md and governance/controls/control_mappings.yaml.
+
+apiVersion: aegis/v1
+kind: CompliancePack
+
+metadata:
+  name: slg
+  title: State, Local & Public Sector
+  description: >-
+    Public-sector overlay turning on CJI/FTI isolation, mandatory MFA, deny-by-default
+    authorization, masked append-only audit, and continuous monitoring for GovRAMP/FedRAMP-,
+    CJIS v6.0-, and IRS Pub 1075-aligned deployments.
+
+regimes:
+  - govramp_fedramp
+  - cjis_v6
+  - irs_1075
+  - nist_ai_rmf
+  - ada_title_ii_wcag
+
+# Region guidance. CJI/FTI and High-impact workloads target GovCloud.
+regions:
+  commercial: us-east-1, us-west-2      # US Moderate workloads
+  govcloud: us-gov-west-1, us-gov-east-1 # High-impact / CJI / FTI
+  notes: >-
+    Deploy CJI and FTI workloads in AWS GovCloud (US) with account/VPC isolation.
+    CloudFront-scoped WAF must be deployed in us-east-1 regardless of workload region.
+
+# Data classes this pack governs.
+data_classes:
+  - public
+  - pii
+  - cji          # Criminal Justice Information
+  - fti          # Federal Tax Information (IRS Pub 1075)
+
+# Comprehend/Macie/biometric/card entity sets to enable at the masking boundary.
+# SLG enables CJI and FTI handling; no card/biometric sets in the base pack.
+masking_entities:
+  comprehend_pii:
+    - NAME
+    - ADDRESS
+    - SSN              # FTI / PII identifier
+    - DRIVER_ID
+    - LICENSE_PLATE    # frequently present in CJI contexts
+    - PHONE
+    - EMAIL
+    - DATE_TIME
+    - BANK_ACCOUNT_NUMBER
+  comprehend_medical: false
+  macie_managed_identifiers:
+    - USA_SOCIAL_SECURITY_NUMBER
+    - USA_INDIVIDUAL_TAX_IDENTIFICATION_NUMBER   # FTI
+    - USA_DRIVERS_LICENSE
+  card_entities: false        # no PAN handling in the SLG base pack
+  biometric_entities: false
+  fail_closed: true           # if masking cannot run, deny at the boundary
+
+guardrail_profile:
+  grounding_threshold: 0.85          # contextual-grounding minimum (0-0.99)
+  relevance_threshold: 0.80
+  automated_reasoning: false         # optional for SLG; enable per high-stakes workflow
+  denied_topics_hints:
+    - "disclosure of sealed or expunged records"
+    - "release of CJI to unauthorized parties"
+    - "ungrounded legal or eligibility determinations"
+
+retention:
+  worm: true                         # S3 Object Lock
+  audit_retention_years: 7           # align to records schedule; FTI/CJI per agency schedule
+  object_lock_mode: COMPLIANCE
+  notes: >-
+    Retention schedule sign-off is customer-owned. FTI access logs and CJI audit are kept
+    immutable for the agency's mandated period.
+
+# Reference to control ids defined in governance/controls/control_mappings.yaml.
+controls_profile:
+  inherits_core: true
+  controls:
+    - edge-waf-shield
+    - crypto-identity-mfa            # MFA mandatory for CJI (CJIS v6.0)
+    - deny-by-default-gateway
+    - human-gate
+    - in-account-inference-guardrails
+    - append-only-audit-worm
+    - masking-fail-closed
+    - kms-cmk-dataclass-isolation    # CJI/FTI isolated accounts + dedicated CMKs
+    - continuous-monitoring          # new in CJIS v6.0
+
+# Controls this pack cannot grant; remain customer-owned.
+customer_owned:
+  - "Authorization to Operate (ATO) / GovRAMP / FedRAMP authorization"
+  - "IdP / MFA integration"
+  - "FTI retention-schedule sign-off"

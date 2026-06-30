@@ -1,0 +1,78 @@
+# Aegis — Example agent manifest
+#
+# A complete, conformant example for a low-blast-radius, decision-support enterprise agent.
+# Validates against governance/onboarding/agent-manifest.schema.json (draft 2020-12) and
+# clears the 9-point minimum bar (governance/onboarding/MINIMUM-BAR.md).
+#
+# "service-desk-triage": reads tickets and the IT knowledge base, summarizes, and SUGGESTS a
+# category/priority and a draft response. It never resolves, closes, or escalates a ticket on
+# its own -- those are consequential and human-gated.
+
+apiVersion: aegis/v1
+kind: Agent
+
+metadata:
+  id: service-desk-triage
+  name: Service Desk Triage Assistant
+  description: >-
+    Decision-support agent that triages inbound IT service-desk tickets: classifies, prioritizes,
+    surfaces relevant knowledge-base articles, and drafts a suggested response for a human agent
+    to review. Does not take consequential action on tickets.
+  owner: dept-it
+  team: servicedesk
+  packs:
+    - enterprise
+  classification:
+    - public
+    - pii            # tickets may contain requester name/email/phone
+  blast_radius: low
+
+grants:
+  tools:
+    - id: servicenow.read_ticket
+      scope: read
+      data_classes: [public, pii]
+    - id: kb.search_it_articles
+      scope: read
+      data_classes: [public]
+    - id: servicenow.draft_response
+      scope: write          # writes a DRAFT only; never sends/closes
+      data_classes: [public, pii]
+  consequential:
+    # Withheld from the agent; reachable only via the human gate.
+    - servicenow.close_ticket
+    - servicenow.escalate_ticket
+    - servicenow.send_response
+
+grounding:
+  knowledge_base: kb-it-servicedesk
+  grounding_threshold: 0.85
+  relevance_threshold: 0.80
+
+budget:
+  monthly_token_cap: 80000000
+  inference_profile: aip-it-servicedesk
+  cap_behavior: soft         # internal tooling: warn and continue, but alert
+  alert_thresholds: [0.6, 0.85, 1.0]
+
+evals:
+  suite: evals/service-desk-triage/
+  min_pass_rate: 0.95
+  categories:
+    - accuracy
+    - refusal
+    - fairness
+    - prompt_injection
+    - accessibility
+    - grounding
+
+human_gate:
+  mode: step_functions_wait_for_task_token
+  separation_of_duties: true
+  approval_ttl_seconds: 3600
+  esignature_grade: false
+
+signing:
+  publisher: it-platform-team
+  signature: "cosign:MEUCIQ-EXAMPLE-SIGNATURE-NOT-A-REAL-KEY-aZ09..."
+  algorithm: cosign

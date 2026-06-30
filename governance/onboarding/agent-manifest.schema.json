@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis.dev/schemas/agent-manifest/v1.json",
+  "title": "Aegis Agent Manifest",
+  "description": "The signed contract every Aegis agent (first-party or third-party add-on) must satisfy to run on the platform. It is the artifact CI validates and the contract the MCP authorization gateway enforces. See docs/04-AGENT-ONBOARDING-STANDARD.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "grants",
+    "grounding",
+    "budget",
+    "evals",
+    "human_gate",
+    "signing"
+  ],
+  "properties": {
+    "apiVersion": {
+      "description": "Aegis manifest API version.",
+      "type": "string",
+      "const": "aegis/v1"
+    },
+    "kind": {
+      "description": "Resource kind. Always 'Agent' for an agent manifest.",
+      "type": "string",
+      "const": "Agent"
+    },
+    "metadata": {
+      "description": "Identity, ownership, compliance packs, and data classification for the agent.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "owner", "packs", "classification"],
+      "properties": {
+        "id": {
+          "description": "Unique agent id (kebab-case). Used in audit lineage and as a registry key.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{2,62}[a-z0-9]$"
+        },
+        "name": {
+          "description": "Human-readable agent name.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "description": {
+          "description": "Short description of what the agent does and its decision posture.",
+          "type": "string",
+          "maxLength": 1024
+        },
+        "owner": {
+          "description": "Owning department / cost-allocation + chargeback owner. Maps to the 'dept' cost-allocation tag.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,62}[a-z0-9]$"
+        },
+        "team": {
+          "description": "Optional owning team within the department (maps to the 'team' cost-allocation tag).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,62}[a-z0-9]$"
+        },
+        "packs": {
+          "description": "Compliance overlay packs that must be active in the target environment for this agent to deploy. Deploy fails if a required pack is not active.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["slg", "education", "healthcare-lifesciences", "enterprise"]
+          }
+        },
+        "classification": {
+          "description": "Data classes this agent is permitted to touch. Masking is enforced for every declared class and fails closed.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["public", "pii", "phi", "fti", "cji", "edu", "sud", "card", "npi"]
+          }
+        },
+        "blast_radius": {
+          "description": "Declared impact level of the agent's actions. Drives review depth and human-gate strictness.",
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "default": "low"
+        }
+      }
+    },
+    "grants": {
+      "description": "Least-privilege grants. At runtime the gateway intersects these with the acting human's entitlement (permitted = grant ∩ entitlement). Anything not declared is denied.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tools"],
+      "properties": {
+        "tools": {
+          "description": "Tools / MCP servers the agent may reach. Each must be registered in the gateway tool registry.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "scope"],
+            "properties": {
+              "id": {
+                "description": "Registered MCP tool id (e.g. 'kb.search_policy', 'accela.read_permit').",
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_.-]{1,126}[a-z0-9]$"
+              },
+              "scope": {
+                "description": "Access scope granted for this tool.",
+                "type": "string",
+                "enum": ["read", "write", "execute", "admin"]
+              },
+              "data_classes": {
+                "description": "Optional per-tool restriction of which declared data classes may flow through this tool. Must be a subset of metadata.classification.",
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "enum": ["public", "pii", "phi", "fti", "cji", "edu", "sud", "card", "npi"]
+                }
+              }
+            }
+          }
+        },
+        "consequential": {
+          "description": "Consequential actions (issue/adjudicate/release/award/transfer) that are WITHHELD from the agent and only reachable via the human gate. CI proves these are absent from the agent's executable grants.",
+          "type": "array",
+          "uniqueItems": true,
+          "default": [],
+          "items": {
+            "description": "Registered tool id of a consequential action.",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.-]{1,126}[a-z0-9]$"
+          }
+        }
+      }
+    },
+    "grounding": {
+      "description": "RAG grounding configuration. A grounding source is required; no ungrounded free-generation against systems of record.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["knowledge_base", "grounding_threshold"],
+      "properties": {
+        "knowledge_base": {
+          "description": "Required Bedrock Knowledge Base id (or list) the agent grounds against.",
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 }
+            }
+          ]
+        },
+        "grounding_threshold": {
+          "description": "Minimum Bedrock contextual-grounding score required to return a response. Bedrock supports 0–0.99; higher is stricter.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.99
+        },
+        "relevance_threshold": {
+          "description": "Optional minimum contextual-relevance score (0–0.99) for retrieved passages.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.99
+        }
+      }
+    },
+    "budget": {
+      "description": "Token budget and chargeback configuration. No unbounded spend; all spend is attributable. See docs/05-FINOPS-TOKEN-BUDGETS-CHARGEBACK.md.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["monthly_token_cap", "inference_profile", "alert_thresholds"],
+      "properties": {
+        "monthly_token_cap": {
+          "description": "Hard cap on monthly input+output tokens. The gateway rejects or throttles calls that would breach the cap (fail-closed on budget).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "inference_profile": {
+          "description": "Bedrock application inference profile name/alias used for cost attribution (the profile ARN is used in place of the model id at call time).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,126}[a-z0-9]$"
+        },
+        "cap_behavior": {
+          "description": "Behavior when the cap is reached. 'hard' denies; 'soft' warns and continues.",
+          "type": "string",
+          "enum": ["hard", "soft"],
+          "default": "hard"
+        },
+        "alert_thresholds": {
+          "description": "Fractions of the monthly cap at which alerts fire to the owner (e.g. 0.6, 0.85, 1.0). Ascending, unique.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1.0
+          }
+        }
+      }
+    },
+    "evals": {
+      "description": "Required eval suite and minimum pass rate. Must pass before promotion and is re-run on model/prompt change.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suite", "min_pass_rate"],
+      "properties": {
+        "suite": {
+          "description": "Path to the eval suite (accuracy, refusal, fairness/four-fifths, prompt-injection resistance, accessibility for user-facing output).",
+          "type": "string",
+          "minLength": 1
+        },
+        "min_pass_rate": {
+          "description": "Minimum fraction of eval cases that must pass to promote.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.0
+        },
+        "categories": {
+          "description": "Optional list of eval categories this suite covers.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["accuracy", "refusal", "fairness", "prompt_injection", "accessibility", "grounding"]
+          }
+        }
+      }
+    },
+    "human_gate": {
+      "description": "Human-in-the-loop gate for consequential actions. Approval tokens are bound to the exact tool+arguments, single-use, separation-of-duties, and expiring.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "separation_of_duties"],
+      "properties": {
+        "mode": {
+          "description": "Mechanism used to suspend execution and wait for human approval.",
+          "type": "string",
+          "enum": [
+            "step_functions_wait_for_task_token",
+            "interrupt_before",
+            "none"
+          ]
+        },
+        "separation_of_duties": {
+          "description": "If true, the approver must differ from the requestor (enforced at approval time).",
+          "type": "boolean"
+        },
+        "approval_ttl_seconds": {
+          "description": "Time-to-live for an approval token before it expires.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 3600
+        },
+        "esignature_grade": {
+          "description": "If true, approvals are attributable/non-repudiable to 21 CFR Part 11 electronic-signature grade (required by the healthcare-lifesciences GxP pack).",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "signing": {
+      "description": "Publisher signature. The gateway verifies the signature at load; unsigned or untrusted manifests are rejected.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["publisher", "signature"],
+      "properties": {
+        "publisher": {
+          "description": "Known publisher identity (department or ISV) trusted to sign manifests.",
+          "type": "string",
+          "minLength": 1
+        },
+        "signature": {
+          "description": "Detached signature over the manifest (cosign / JWS).",
+          "type": "string",
+          "minLength": 1
+        },
+        "algorithm": {
+          "description": "Signature algorithm.",
+          "type": "string",
+          "enum": ["cosign", "jws-rs256", "jws-es256"],
+          "default": "cosign"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,114 @@
+# Aegis Compliance Overlay Pack — Providers, Payers, Pharma & MedTech (Healthcare & Life Sciences)
+#
+# Regimes: HIPAA/HITECH, 42 CFR Part 2 (SUD records), GxP / 21 CFR Part 11 & EU Annex 11,
+# HITRUST, MARS-E (state Medicaid).
+# See docs/03-COMPLIANCE-OVERLAY-PACKS.md and governance/controls/control_mappings.yaml.
+
+apiVersion: aegis/v1
+kind: CompliancePack
+
+metadata:
+  name: healthcare-lifesciences
+  title: Providers, Payers, Pharma & MedTech
+  description: >-
+    Healthcare & life-sciences overlay enabling Comprehend Medical PHI detection/masking,
+    minimum-necessary retrieval, contextual-grounding + automated-reasoning checks on every
+    generated statement, e-signature-grade human gate (21 CFR Part 11), and a separate
+    stricter SUD-record class for 42 CFR Part 2.
+
+regimes:
+  - hipaa_hitech
+  - cfr_part2        # 42 CFR Part 2 -- substance-use-disorder records
+  - gxp_part11       # 21 CFR Part 11 & EU Annex 11
+  - hitrust
+  - mars_e           # state Medicaid
+
+regions:
+  commercial: us-east-1, us-west-2     # HIPAA-eligible services in commercial regions under a BAA
+  govcloud: us-gov-west-1              # for state Medicaid (MARS-E) / public-payer deployments
+  notes: >-
+    Bedrock and AgentCore are HIPAA-eligible (HIPAA Eligible Services Reference); a signed AWS
+    BAA plus customer-implemented controls are required. "HIPAA-eligible" != "HIPAA-compliant."
+
+data_classes:
+  - public
+  - pii
+  - phi          # Protected Health Information (HIPAA)
+  - sud          # Substance-Use-Disorder records (42 CFR Part 2) -- stricter than PHI
+
+# Comprehend Medical is ON; PHI detection/masking is the core of this pack.
+masking_entities:
+  comprehend_pii:
+    - NAME
+    - ADDRESS
+    - SSN
+    - PHONE
+    - EMAIL
+    - DATE_TIME
+  comprehend_medical: true        # PHI entity detection/masking
+  comprehend_medical_entities:
+    - NAME
+    - AGE
+    - MEDICAL_RECORD_NUMBER
+    - ID                           # incl. health-plan beneficiary numbers
+    - DATE
+    - PROFESSION
+    - PHONE_OR_FAX
+    - EMAIL
+    - URL
+    - ADDRESS
+  macie_managed_identifiers:
+    - USA_SOCIAL_SECURITY_NUMBER
+    - USA_HEALTH_INSURANCE_CLAIM_NUMBER
+    - USA_MEDICARE_BENEFICIARY_IDENTIFIER
+    - USA_NATIONAL_DRUG_CODE
+  card_entities: false
+  biometric_entities: false
+  fail_closed: true
+
+guardrail_profile:
+  grounding_threshold: 0.95          # high bar: board-level fear is a fabricated clinical fact
+  relevance_threshold: 0.90
+  automated_reasoning: true          # formal-logic validation of generated statements
+  deterministic_decisioning_outside_llm: true   # eligibility/clinical-rule engines kept out of the LLM
+  denied_topics_hints:
+    - "definitive diagnosis or treatment directive"
+    - "ungrounded clinical or eligibility determination"
+    - "redisclosure of SUD records without consent"
+
+retention:
+  worm: true
+  audit_retention_years: 6           # HIPAA retains certain documentation 6 years; align to policy
+  object_lock_mode: COMPLIANCE
+  sud_segregated_audit: true         # 42 CFR Part 2 segregated audit
+  notes: >-
+    Electronic-records integrity (append-only + WORM) supports 21 CFR Part 11. SUD-record audit
+    is segregated with stricter consent/redisclosure tracking.
+
+controls_profile:
+  inherits_core: true
+  controls:
+    - edge-waf-shield
+    - crypto-identity-mfa
+    - deny-by-default-gateway                 # minimum-necessary access enforcement
+    - human-gate                              # e-signature-grade (esignature_grade: true) for Part 11
+    - in-account-inference-guardrails         # no ePHI egress
+    - contextual-grounding-automated-reasoning # required for this pack
+    - append-only-audit-worm                  # electronic-records integrity (Part 11)
+    - masking-fail-closed                     # Comprehend Medical PHI masking
+    - kms-cmk-dataclass-isolation             # PHI + segregated SUD keys
+    - continuous-monitoring
+
+# 42 CFR Part 2 / Part 11 consent + signature posture.
+consent:
+  sud_consent: required
+  redisclosure_controls: true
+  consent_ledger: true
+human_gate_overrides:
+  esignature_grade: true            # 21 CFR Part 11 attributable, non-repudiable approvals
+
+customer_owned:
+  - "Signed AWS Business Associate Addendum (BAA)"
+  - "Computer Software Assurance / risk-based validation for the intended use (GxP)"
+  - "HITRUST assessment leveraging AWS service inheritance"
+  - "Clinical model-risk validation sign-off"

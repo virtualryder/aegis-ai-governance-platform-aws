@@ -1,0 +1,100 @@
+# Aegis Compliance Overlay Pack — K-12, Higher Ed & EdTech (Education)
+#
+# Regimes: FERPA, amended COPPA (2025), state student-data-privacy laws (e.g. SOPIPA),
+# ADA / Section 508.
+# See docs/03-COMPLIANCE-OVERLAY-PACKS.md and governance/controls/control_mappings.yaml.
+
+apiVersion: aegis/v1
+kind: CompliancePack
+
+metadata:
+  name: education
+  title: K-12, Higher Ed & EdTech
+  description: >-
+    Education overlay treating student records as a protected EDU data class with
+    security-trimmed retrieval, biometric-identifier masking (per the amended COPPA Rule),
+    opt-in consent capture, and FERPA school-official-exception controls.
+
+regimes:
+  - ferpa
+  - coppa            # amended COPPA Rule, eff. 2025-06-23, compliance deadline 2026-04-22
+  - state_student_privacy   # SOPIPA and similar
+  - ada_section_508
+
+regions:
+  commercial: us-east-1, us-west-2
+  govcloud: us-gov-west-1     # for public-university / state-operated deployments that require it
+  notes: >-
+    Most education workloads run in commercial regions; public institutions with state mandates
+    may require GovCloud. CloudFront-scoped WAF deploys in us-east-1.
+
+data_classes:
+  - public
+  - pii
+  - edu          # student education records (FERPA)
+
+# COPPA's 2025 amendment expands "personal information" to BIOMETRIC IDENTIFIERS
+# (voiceprints, facial patterns), so the biometric entity set is ON for this pack.
+masking_entities:
+  comprehend_pii:
+    - NAME
+    - ADDRESS
+    - EMAIL
+    - PHONE
+    - DATE_TIME
+    - AGE                 # children's data
+    - USERNAME
+    - SSN                 # student/guardian identifier when present
+  comprehend_medical: false
+  macie_managed_identifiers:
+    - USA_SOCIAL_SECURITY_NUMBER
+    - NAME
+  card_entities: false
+  biometric_entities: true    # voiceprints, facial patterns -- required by amended COPPA (2025)
+  biometric_set:
+    - VOICEPRINT
+    - FACIAL_GEOMETRY
+  fail_closed: true
+
+guardrail_profile:
+  grounding_threshold: 0.85
+  relevance_threshold: 0.80
+  automated_reasoning: false
+  denied_topics_hints:
+    - "targeted advertising to students"        # prohibited by SOPIPA-style laws
+    - "profiling or behavioral targeting of minors"
+    - "disclosure of education records without the school-official exception"
+    - "ungrounded statements about a student's record"
+
+retention:
+  worm: true
+  audit_retention_years: 5
+  object_lock_mode: COMPLIANCE
+  data_minimization: true     # state laws impose retention limits on EDU data
+  notes: >-
+    EDU data carries retention limits under state student-privacy laws; minimize and purge
+    on schedule. Disclosure records are kept immutable.
+
+controls_profile:
+  inherits_core: true
+  controls:
+    - edge-waf-shield
+    - crypto-identity-mfa            # supports verifiable parental consent flows (COPPA)
+    - deny-by-default-gateway        # school-official-exception / need-to-know access limitation
+    - human-gate
+    - in-account-inference-guardrails # no student data to a general-purpose model
+    - append-only-audit-worm         # record of disclosures (FERPA)
+    - masking-fail-closed            # incl. biometric set (COPPA 2025)
+    - kms-cmk-dataclass-isolation
+    - continuous-monitoring
+
+# Consent posture specific to education.
+consent:
+  parental_consent: opt_in          # COPPA 2025 shifts to opt-in
+  consent_ledger: true              # capture/track consent in the consent ledger
+  written_security_program: true    # required by amended COPPA; this pack's evidence map is its technical core
+
+customer_owned:
+  - "FERPA data-sharing / school-official agreements with vendors"
+  - "Verifiable parental consent collection process"
+  - "State-law-specific retention sign-off"

@@ -1,0 +1,99 @@
+# Aegis Compliance Overlay Pack — Cross-Industry / Whole-of-Enterprise (Enterprise)
+#
+# Regimes: SOC 2, PCI DSS, ISO 27001/27701, GLBA, plus a sector-agnostic data-governance baseline.
+# See docs/03-COMPLIANCE-OVERLAY-PACKS.md and governance/controls/control_mappings.yaml.
+
+apiVersion: aegis/v1
+kind: CompliancePack
+
+metadata:
+  name: enterprise
+  title: Cross-Industry / Whole-of-Enterprise
+  description: >-
+    Sector-agnostic overlay providing the SOC 2 / ISO 27001 control baseline plus PCI DSS card
+    handling (Luhn-aware PAN masking, no PAN in prompts or audit) and GLBA NPI handling. The same
+    governance that satisfies a government review board serves the regulated enterprise.
+
+regimes:
+  - soc2
+  - pci_dss
+  - iso_27001_27701
+  - glba
+  - baseline_data_governance
+
+regions:
+  commercial: us-east-1, us-west-2, eu-west-1   # follow data-residency requirements
+  govcloud: us-gov-west-1                        # only when an enterprise tenant requires it
+  notes: >-
+    Enterprise deployments typically run in commercial regions; choose region for data residency.
+    CloudFront-scoped WAF deploys in us-east-1.
+
+data_classes:
+  - public
+  - pii
+  - card         # cardholder data (PCI DSS)
+  - npi          # Nonpublic Personal Information (GLBA)
+
+# Enterprise enables CARD (PAN) masking; Luhn-aware so it does not flag non-card numbers.
+masking_entities:
+  comprehend_pii:
+    - NAME
+    - ADDRESS
+    - EMAIL
+    - PHONE
+    - SSN
+    - CREDIT_DEBIT_NUMBER
+    - CREDIT_DEBIT_CVV
+    - CREDIT_DEBIT_EXPIRY
+    - BANK_ACCOUNT_NUMBER
+    - BANK_ROUTING
+    - PIN
+  comprehend_medical: false
+  macie_managed_identifiers:
+    - CREDIT_CARD_NUMBER
+    - CREDIT_CARD_MAGNETIC_STRIPE_DATA
+    - USA_SOCIAL_SECURITY_NUMBER
+    - USA_BANK_ACCOUNT_NUMBER
+  card_entities: true          # PCI DSS -- PAN masking ON
+  card_options:
+    luhn_aware: true           # only mask values that pass the Luhn check (true PANs)
+    no_pan_in_prompts: true
+    no_pan_in_audit: true
+  biometric_entities: false
+  fail_closed: true
+
+guardrail_profile:
+  grounding_threshold: 0.80          # baseline; raise per high-stakes workflow
+  relevance_threshold: 0.75
+  automated_reasoning: false
+  denied_topics_hints:
+    - "exposure of cardholder data (PAN/CVV)"
+    - "disclosure of nonpublic personal information"
+    - "ungrounded financial or contractual claims"
+
+retention:
+  worm: true
+  audit_retention_years: 3           # SOC 2 audit-period evidence; align to corporate policy
+  object_lock_mode: GOVERNANCE       # enterprise often uses GOVERNANCE mode for flexibility
+  notes: >-
+    PCI DSS prohibits storing CVV and mandates rendering PAN unreadable; audit never contains PAN.
+
+controls_profile:
+  inherits_core: true
+  controls:
+    - edge-waf-shield
+    - crypto-identity-mfa
+    - deny-by-default-gateway        # business need-to-know access (PCI)
+    - human-gate
+    - in-account-inference-guardrails
+    - append-only-audit-worm         # track all access to cardholder data
+    - masking-fail-closed            # Luhn-aware card masking
+    - kms-cmk-dataclass-isolation    # strong cryptography for stored cardholder data
+    - token-budgets-chargeback       # whole-of-enterprise chargeback across business units
+    - continuous-monitoring
+
+customer_owned:
+  - "SOC 2 / ISO 27001 audit engagement and report"
+  - "PCI DSS QSA assessment / SAQ"
+  - "Tokenized payment connector integration"
+  - "GLBA safeguards-rule program ownership"
