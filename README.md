@@ -94,26 +94,34 @@ industries without re-doing governance each time. See
 ## Repository map
 
 ```
-README.md                      This file — platform definition & positioning
-SOURCES.md                     Grounded citation base (every claim → a source, tiered)
+README.md                        This file — platform definition & positioning
+SOURCES.md                       Grounded citation base (every claim → a source, tiered)
+DEMO.md                          Step-by-step demo walkthrough
 docs/
-  01-PLATFORM-OVERVIEW.md       What it is, the five layers, the value narrative
-  02-REFERENCE-ARCHITECTURE.md  Edge-to-data AWS architecture + per-component talking points
-  03-COMPLIANCE-OVERLAY-PACKS.md Regime-by-regime control mapping (Implemented vs Configurable)
+  01-PLATFORM-OVERVIEW.md         What it is, the five layers, the value narrative
+  02-REFERENCE-ARCHITECTURE.md    Edge-to-data AWS architecture + per-component talking points
+  03-COMPLIANCE-OVERLAY-PACKS.md  Regime-by-regime control mapping (Implemented vs Configurable)
   04-AGENT-ONBOARDING-STANDARD.md The minimum bar + manifest + CI gates
-  05-FINOPS-TOKEN-BUDGETS-CHARGEBACK.md Token maxing + per-department chargeback/showback
-  06-HALLUCINATION-AND-EVALUATION.md Grounding, guardrails, evals, the trust pipeline
-  07-MCP-GATEWAY-AND-VALIDATION.md MCP access, tool registration, validation/invalidation
-  08-GTM-AND-POSITIONING.md     Master narrative, personas, first-customer talk track, AWS pitch
+  05-FINOPS-TOKEN-BUDGETS-CHARGEBACK.md  Token budgets + per-department chargeback/showback
+  06-HALLUCINATION-AND-EVALUATION.md     Grounding, guardrails, evals, the trust pipeline
+  07-MCP-GATEWAY-AND-VALIDATION.md       MCP access, tool registration, validation/invalidation
+  08-GTM-AND-POSITIONING.md       Master narrative, personas, first-customer talk track, AWS pitch
   09-REPO-REVIEW-slg-ai-agents.md Gap analysis of the predecessor + improvement plan
   10-PRODUCTION-READINESS-RACI.md Honest gap assessment + shared-responsibility matrix
+platform_core/                   Python governance modules (gateway, policy engine, audit, masking, chargeback, token budgets)
 governance/
-  controls/control_mappings.yaml   Machine-readable control→regime map
-  onboarding/agent-manifest.schema.json  Agent contract (JSON Schema)
-  onboarding/MINIMUM-BAR.md        The bar every agent must clear
-  finops/budget-policy.example.yaml Token budget + chargeback policy example
+  controls/control_mappings.yaml        Machine-readable control→regime map
+  onboarding/agent-manifest.schema.json Agent contract (JSON Schema)
+  onboarding/MINIMUM-BAR.md             The bar every agent must clear
+  finops/budget-policy.example.yaml     Token budget + chargeback policy example
 packs/{slg,education,healthcare-lifesciences,enterprise}/pack.yaml  Overlay pack definitions
-infra/                           IaC skeleton (Terraform + CloudFormation), commercial + GovCloud
+sample_agents/
+  billing-inquiry/               Enterprise billing inquiry agent (manifest, prompts, evals, runbook)
+  resident-services-311/         SLG 311 resident services agent
+  service-desk-triage/           Enterprise service desk triage agent
+infra/                           CloudFormation IaC, deploy/teardown scripts, smoke tests
+demo/                            Acceptance tests and demo harness
+tools/                           CLI utilities (e.g., add_agent.py for scaffolding new agents)
 ```
 
 ## Status & honesty
