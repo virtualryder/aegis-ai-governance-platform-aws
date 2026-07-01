@@ -38,7 +38,8 @@ Legend: **D** Designed · **IO** Implemented offline (Python demo) · **DA** Dep
 | Bedrock Guardrail (grounding+PII+topic) | ✓ | ✓ | ✓ | ✓ |  | READY live; contextual grounding + PII filters confirmed |
 | Human gate (waitForTaskToken) | ✓ | ✓ | ✓ | ✓ |  | Proven live: paused → approved → completed; audit 4→5 records |
 | Fail-closed gateway | ✓ | ✓ | ✓ (template) |  |  | Fixed this session (guardrail error/intervention → deny); redeploy to prove |
-| Deny-by-default policy (full predicate) | ✓ | ✓ |  |  |  | Offline engine only; **AgentCore Policy/Cedar not yet deployed** |
+| Deny-by-default policy (full predicate) | ✓ | ✓ | ✓ | ✓ |  | **Cedar on Amazon Verified Permissions — deployed & live-tested** (1 ALLOW + 2 DENY, 2026-06-30); AgentCore Policy is the next target |
+| Real Bedrock invocation (Model Gateway) | ✓ | ✓ | ✓ | ✓ |  | Claude Haiku 4.5 via inference profile, live (2026-06-30) |
 | Cryptographic identity + MFA | ✓ | partial |  |  |  | Cognito pool deployed with **MFA OFF**, no IdP federation/authorizer yet |
 | PII/PHI/FTI/CJI masking | ✓ | ✓ |  |  |  | Regex offline; Comprehend/Macie not wired at runtime |
 | Token budgets + chargeback | ✓ | ✓ |  |  |  | Offline meter + AIP design; not deployed/reconciled |

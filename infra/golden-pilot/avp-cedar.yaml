@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Aegis Golden Pilot - real Cedar authorization on Amazon Verified Permissions (AVP).
+  A STRICT-validated policy store with a schema (Agent principal, Tool resource,
+  InvokeTool action) and a default-deny permit policy implementing least-privilege as an
+  INTERSECTION (agent grant AND user entitlement) plus purpose limitation and a data-class
+  boundary. This is the production analog of platform_core/policy_engine.py, deployed on a
+  live AWS service and testable via verifiedpermissions is-authorized. Tears down cleanly.
+
+Resources:
+  AegisPolicyStore:
+    Type: AWS::VerifiedPermissions::PolicyStore
+    Properties:
+      Description: Aegis governed-agent authorization (Cedar)
+      ValidationSettings:
+        Mode: STRICT
+      Schema:
+        CedarJson: |
+          {"Aegis":{"entityTypes":{"Agent":{"shape":{"type":"Record","attributes":{"grants":{"type":"Set","element":{"type":"String"}}}}},"Tool":{"shape":{"type":"Record","attributes":{"id":{"type":"String"},"dataClass":{"type":"String"},"allowedPurposes":{"type":"Set","element":{"type":"String"}}}}}},"actions":{"InvokeTool":{"appliesTo":{"principalTypes":["Agent"],"resourceTypes":["Tool"],"context":{"type":"Record","attributes":{"userEntitlements":{"type":"Set","element":{"type":"String"}},"userDataClasses":{"type":"Set","element":{"type":"String"}},"purpose":{"type":"String"}}}}}}}}
+
+  InvokeToolPolicy:
+    Type: AWS::VerifiedPermissions::Policy
+    Properties:
+      PolicyStoreId: !Ref AegisPolicyStore
+      Definition:
+        Static:
+          Description: "Least-privilege intersection + purpose + data-class boundary (default-deny otherwise)"
+          Statement: |
+            permit (
+              principal is Aegis::Agent,
+              action == Aegis::Action::"InvokeTool",
+              resource is Aegis::Tool
+            )
+            when {
+              principal.grants.contains(resource.id) &&
+              context.userEntitlements.contains(resource.id) &&
+              resource.allowedPurposes.contains(context.purpose) &&
+              context.userDataClasses.contains(resource.dataClass)
+            };
+
+Outputs:
+  PolicyStoreId:
+    Description: Amazon Verified Permissions policy store id.
+    Value: !Ref AegisPolicyStore
+    Export:
+      Name: !Sub "${AWS::StackName}-PolicyStoreId"

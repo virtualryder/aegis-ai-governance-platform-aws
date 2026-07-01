@@ -1,0 +1,4 @@
+{"entityList": [
+  {"identifier": {"entityType": "Aegis::Tool", "entityId": "ticket.issue"}, "attributes": {"id": {"string": "ticket.issue"}, "dataClass": {"string": "public"}, "allowedPurposes": {"set": [{"string": "service-desk"}]}}},
+  {"identifier": {"entityType": "Aegis::Agent", "entityId": "service-desk-agent"}, "attributes": {"grants": {"set": [{"string": "kb.search"}, {"string": "ticket.draft"}]}}}
+]}

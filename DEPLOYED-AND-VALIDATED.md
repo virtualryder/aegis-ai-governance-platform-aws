@@ -77,3 +77,28 @@ Draft → Check → **HumanGate (waitForTaskToken)** → Finalize) and drove one
 none; CMK in the mandatory 7-day `PendingDeletion` window. Zero `aegis-*` runtime resources remain.
 
 > Full gap list from the four-perspective review: [`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md).
+
+---
+
+## Run 3 (2026-06-30) — Golden-pilot slice: real Cedar authz + real Bedrock
+
+**Real Cedar authorization on Amazon Verified Permissions.** Deployed `infra/golden-pilot/avp-cedar.yaml`
+(STRICT-validated policy store + schema + a default-deny permit implementing least-privilege
+intersection + purpose + data-class boundary). Three live `is-authorized` decisions:
+- Legit read (agent-granted, user-entitled, right purpose, `public`) -> **ALLOW**.
+- Unpermitted consequential tool (`ticket.issue` not in agent grants, though user entitled) -> **DENY**.
+- Wrong data class (`kb.search` tagged `phi`, user cleared only for `public`) -> **DENY**.
+This is the production analog of `platform_core/policy_engine.py`, enforced by a live AWS service.
+
+**Real Bedrock invocation.** `bedrock-runtime converse` on **Claude Haiku 4.5** via the
+`us.anthropic.claude-haiku-4-5-20251001-v1:0` inference profile returned a real completion
+(16 input / 31 output tokens) — exercising the inference-profile path that underpins chargeback.
+(Claude 3 Haiku is now a Legacy model and returns access-denied; use an active model + inference profile.)
+
+**Debugging note (real finding):** the CLI proxy drops `--cli-input-json` for `is-authorized`,
+producing a false DENY with no determining policy and no errors. Passing the request as explicit
+`--principal/--action/--resource/--context/--entities` `file://` flags resolved it. Captured in the
+runbook so a customer SA doesn't lose an hour to it.
+
+**Teardown:** AVP policy-store stack deleted. See `infra/golden-pilot/GOLDEN-PILOT.md` for what this
+slice does and does not yet cover.
