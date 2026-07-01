@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Aegis Golden Pilot - immutable evidence (task #23). An S3 bucket with Object Lock and a
+  DEFAULT retention rule so every evidence object is written WORM. Pilot profile uses
+  GOVERNANCE mode (deletable only by an authorized break-glass principal holding
+  s3:BypassGovernanceRetention); production uses COMPLIANCE mode (no one can delete before
+  expiry, even root). This proves "Object Lock ENABLED + retention APPLIED", closing the gap
+  where retention was enabled but never set.
+
+Parameters:
+  AppName: { Type: String, Default: aegis }
+  Environment: { Type: String, Default: dev }
+  RetentionMode:
+    Type: String
+    Default: GOVERNANCE
+    AllowedValues: [GOVERNANCE, COMPLIANCE]
+    Description: GOVERNANCE for pilots (bypassable by break-glass); COMPLIANCE for production.
+  RetentionDays:
+    Type: Number
+    Default: 1
+    Description: Retention period in days applied by default to every object.
+
+Resources:
+  EvidenceBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub "${AppName}-evidence-worm-${Environment}-${AWS::AccountId}"
+      ObjectLockEnabled: true
+      ObjectLockConfiguration:
+        ObjectLockEnabled: Enabled
+        Rule:
+          DefaultRetention:
+            Mode: !Ref RetentionMode
+            Days: !Ref RetentionDays
+      VersioningConfiguration: { Status: Enabled }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+Outputs:
+  EvidenceBucketName:
+    Value: !Ref EvidenceBucket
+    Export: { Name: !Sub "${AWS::StackName}-EvidenceBucketName" }

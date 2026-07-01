@@ -38,3 +38,12 @@ The API Gateway HTTP API + Cognito JWT authorizer front door (tested here via di
 with the verified claims the authorizer would inject), a reviewer web UI, approve/reject reasons +
 escalation + SLA/timeout notifications, and recovery when the approval service or Step Functions is
 unavailable.
+
+## Front door — now closed (`reviewer-api.yaml`, 2026-07-01)
+
+The API Gateway HTTP API + Cognito JWT authorizer front door is now built and live-tested
+(`infra/golden-pilot/reviewer-api.yaml`): unauthenticated `POST /approvals` returns **401**; an
+authenticated `supervisor2` ID token (full MFA login) returns **200 APPROVE** and the gated execution
+reaches **SUCCEEDED**. Reviewer identity is taken only from the authorizer's verified `cognito:username`
+/ `cognito:groups` claims — never the request body. See `DEPLOYED-AND-VALIDATED.md` Run 7. Still open:
+a reviewer web UI, approve/reject reasons + escalation + SLA notifications, and failure-recovery.

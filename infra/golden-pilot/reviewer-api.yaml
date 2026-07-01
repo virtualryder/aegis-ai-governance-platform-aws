@@ -1,0 +1,308 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Aegis Golden Pilot - reviewer service behind a real front door (task #22 completion).
+  API Gateway HTTP API + Cognito JWT authorizer -> reviewer Lambda. The authorizer verifies
+  the RS256 token (issuer/audience) BEFORE the Lambda runs; the Lambda then enforces
+  verified-supervisor role + separation of duties + bound single-use approval + audit and
+  releases the Step Functions waitForTaskToken gate. Hardened Cognito (MFA required, advanced
+  security). Tears down cleanly.
+
+Parameters:
+  AppName: { Type: String, Default: aegis }
+  Environment: { Type: String, Default: dev }
+  SupervisorGroup: { Type: String, Default: service-desk-supervisor }
+
+Resources:
+
+  # ---------- identity ----------
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Delete
+    Properties:
+      UserPoolName: !Sub "${AppName}-reviewer-idp-${Environment}"
+      MfaConfiguration: "ON"
+      EnabledMfas: [SOFTWARE_TOKEN_MFA]
+      UserPoolAddOns: { AdvancedSecurityMode: ENFORCED }
+      AdminCreateUserConfig: { AllowAdminCreateUserOnly: true }
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 14
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      Schema: [{ Name: email, AttributeDataType: String, Mutable: true, Required: true }]
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${AppName}-reviewer-client-${Environment}"
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows: [ALLOW_ADMIN_USER_PASSWORD_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+      PreventUserExistenceErrors: ENABLED
+      IdTokenValidity: 60
+      AccessTokenValidity: 60
+      TokenValidityUnits: { IdToken: minutes, AccessToken: minutes }
+
+  SupervisorGroupRes:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: { GroupName: !Ref SupervisorGroup, Precedence: 5, UserPoolId: !Ref UserPool }
+  OperatorGroupRes:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties: { GroupName: service-desk-operator, Precedence: 10, UserPoolId: !Ref UserPool }
+
+  # ---------- data ----------
+  PendingTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    Properties:
+      TableName: !Sub "${AppName}-api-pending-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: request_id, AttributeType: S }]
+      KeySchema: [{ AttributeName: request_id, KeyType: HASH }]
+  LedgerTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    Properties:
+      TableName: !Sub "${AppName}-api-ledger-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: approval_id, AttributeType: S }]
+      KeySchema: [{ AttributeName: approval_id, KeyType: HASH }]
+      TimeToLiveSpecification: { AttributeName: expires_at, Enabled: true }
+  AuditTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    Properties:
+      TableName: !Sub "${AppName}-api-audit-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: request_id, AttributeType: S }
+        - { AttributeName: seq, AttributeType: N }
+      KeySchema:
+        - { AttributeName: request_id, KeyType: HASH }
+        - { AttributeName: seq, KeyType: RANGE }
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-api-reviewer-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: lambda.amazonaws.com }, Action: sts:AssumeRole }]
+      Policies:
+        - PolicyName: least-priv
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - { Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:UpdateItem], Resource: [!GetAtt PendingTable.Arn, !GetAtt LedgerTable.Arn, !GetAtt AuditTable.Arn] }
+              - { Effect: Deny, Action: [dynamodb:UpdateItem, dynamodb:DeleteItem], Resource: !GetAtt AuditTable.Arn }
+              - { Effect: Allow, Action: [states:SendTaskSuccess, states:SendTaskFailure], Resource: "*" }
+              - { Effect: Allow, Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents], Resource: "*" }
+
+  GateOpenerFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AppName}-api-gate-opener-${Environment}"
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      Role: !GetAtt LambdaRole.Arn
+      Environment: { Variables: { PENDING_TABLE: !Ref PendingTable } }
+      Code:
+        ZipFile: |
+          import os, boto3
+          ddb = boto3.client("dynamodb"); T = os.environ["PENDING_TABLE"]
+          def handler(event, context):
+              e = event or {}; rid = e["request_id"]
+              ddb.put_item(TableName=T, Item={"request_id":{"S":rid},"task_token":{"S":e["taskToken"]},
+                  "agent_id":{"S":e.get("agentId","")},"tool_id":{"S":e.get("toolId","")},
+                  "args_hash":{"S":e.get("argsHash","")},"purpose":{"S":e.get("purpose","")},
+                  "requester":{"S":e.get("requester","")},"status":{"S":"pending"}})
+              return {"gate":"pending","request_id":rid}
+
+  WorkerFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AppName}-api-worker-${Environment}"
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      Role: !GetAtt LambdaRole.Arn
+      Environment: { Variables: { AUDIT_TABLE: !Ref AuditTable } }
+      Code:
+        ZipFile: |
+          import os, time, boto3
+          ddb = boto3.client("dynamodb"); A = os.environ["AUDIT_TABLE"]
+          def handler(event, context):
+              e = event or {}; rid = e["request_id"]; seq = int(e.get("seq",0)); step = e.get("step","step")
+              ddb.put_item(TableName=A, Item={"request_id":{"S":rid},"seq":{"N":str(seq)},
+                  "ts":{"N":str(int(time.time()))},"step":{"S":step},"decision":{"S":"allow"}},
+                  ConditionExpression="attribute_not_exists(request_id) AND attribute_not_exists(seq)")
+              return {"request_id":rid,"seq":seq+1,"step":step}
+
+  ReviewerFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AppName}-api-reviewer-${Environment}"
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      Role: !GetAtt LambdaRole.Arn
+      Environment:
+        Variables:
+          PENDING_TABLE: !Ref PendingTable
+          LEDGER_TABLE: !Ref LedgerTable
+          AUDIT_TABLE: !Ref AuditTable
+          SUPERVISOR_GROUP: !Ref SupervisorGroup
+      Code:
+        ZipFile: |
+          import os, time, json, hashlib, boto3
+          from botocore.exceptions import ClientError
+          ddb = boto3.client("dynamodb"); sfn = boto3.client("stepfunctions")
+          PENDING=os.environ["PENDING_TABLE"]; LEDGER=os.environ["LEDGER_TABLE"]
+          AUDIT=os.environ["AUDIT_TABLE"]; SUP=os.environ["SUPERVISOR_GROUP"]
+
+          def _audit(rid, seq, step, extra):
+              try:
+                  ddb.put_item(TableName=AUDIT, Item={"request_id":{"S":rid},"seq":{"N":str(seq)},
+                      "ts":{"N":str(int(time.time()))},"step":{"S":step},"detail":{"S":extra}},
+                      ConditionExpression="attribute_not_exists(request_id) AND attribute_not_exists(seq)")
+              except ClientError: pass
+
+          def _reply(code, body):
+              return {"statusCode": code, "headers": {"content-type":"application/json"}, "body": json.dumps(body)}
+
+          def _parse_groups(raw):
+              if isinstance(raw, list): return raw
+              if not raw: return []
+              return [g for g in raw.strip("[]").replace(",", " ").split() if g]
+
+          def handler(event, context):
+              e = event or {}
+              # HTTP API (payload v2) path: identity comes from the JWT authorizer's VERIFIED claims.
+              rc = e.get("requestContext", {})
+              if "authorizer" in rc:
+                  claims = rc["authorizer"]["jwt"]["claims"]
+                  reviewer = claims.get("cognito:username") or claims.get("username") or claims.get("sub")
+                  groups = _parse_groups(claims.get("cognito:groups", ""))
+                  body = json.loads(e.get("body") or "{}")
+                  rid = body.get("request_id")
+              else:  # direct invoke (offline/test) path
+                  reviewer = e.get("reviewer"); groups = e.get("reviewerGroups", []); rid = e.get("request_id")
+              if not rid or not reviewer:
+                  return _reply(400, {"error": "missing request_id or reviewer"})
+              g = ddb.get_item(TableName=PENDING, Key={"request_id":{"S":rid}}).get("Item")
+              if not g or g.get("status",{}).get("S") != "pending":
+                  return _reply(404, {"error": "no pending approval"})
+              requester = g["requester"]["S"]; token = g["task_token"]["S"]
+              if SUP not in groups:
+                  _audit(rid, 90, "approval_denied", "reviewer not in supervisor group")
+                  return _reply(403, {"error": "reviewer lacks supervisor role", "decision": "DENY"})
+              if reviewer == requester:
+                  _audit(rid, 91, "approval_denied", "separation-of-duties violation")
+                  return _reply(403, {"error": "separation of duties: approver == requester", "decision": "DENY"})
+              binding = "|".join([rid, g["agent_id"]["S"], g["tool_id"]["S"], g["args_hash"]["S"], g["purpose"]["S"], requester])
+              approval_id = hashlib.sha256(binding.encode()).hexdigest()
+              try:
+                  ddb.put_item(TableName=LEDGER, Item={"approval_id":{"S":approval_id},"request_id":{"S":rid},
+                      "reviewer":{"S":reviewer},"requester":{"S":requester},"ts":{"N":str(int(time.time()))},
+                      "expires_at":{"N":str(int(time.time())+3600)}},
+                      ConditionExpression="attribute_not_exists(approval_id)")
+              except ClientError as ex:
+                  if ex.response["Error"]["Code"] == "ConditionalCheckFailedException":
+                      _audit(rid, 92, "approval_replay_rejected", approval_id); return _reply(409, {"error":"replay rejected","decision":"DENY"})
+                  raise
+              _audit(rid, 1, "approved", "reviewer=%s approval_id=%s" % (reviewer, approval_id[:12]))
+              sfn.send_task_success(taskToken=token, output=json.dumps({"approved":True,"reviewer":reviewer,"approval_id":approval_id}))
+              ddb.update_item(TableName=PENDING, Key={"request_id":{"S":rid}}, UpdateExpression="SET #s=:c",
+                  ExpressionAttributeNames={"#s":"status"}, ExpressionAttributeValues={":c":{"S":"consumed"}})
+              return _reply(200, {"decision":"APPROVE","approval_id":approval_id,"reviewer":reviewer})
+
+  # ---------- front door: HTTP API + JWT authorizer ----------
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub "${AppName}-reviewer-api-${Environment}"
+      ProtocolType: HTTP
+
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource: ["$request.header.Authorization"]
+      Name: cognito-jwt
+      JwtConfiguration:
+        Audience: [!Ref UserPoolClient]
+        Issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
+
+  ReviewerIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ReviewerFn.Arn
+      PayloadFormatVersion: "2.0"
+
+  ApprovalsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: "POST /approvals"
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub "integrations/${ReviewerIntegration}"
+
+  DefaultStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties: { ApiId: !Ref HttpApi, StageName: "$default", AutoDeploy: true }
+
+  ReviewerInvokePerm:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ReviewerFn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/approvals"
+
+  # ---------- workflow ----------
+  StateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-api-sfn-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: states.amazonaws.com }, Action: sts:AssumeRole }]
+      Policies:
+        - PolicyName: invoke
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - { Effect: Allow, Action: lambda:InvokeFunction, Resource: [!GetAtt WorkerFn.Arn, !GetAtt GateOpenerFn.Arn] }
+
+  GatedStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub "${AppName}-api-gated-${Environment}"
+      StateMachineType: STANDARD
+      RoleArn: !GetAtt StateMachineRole.Arn
+      DefinitionSubstitutions: { WorkerArn: !GetAtt WorkerFn.Arn, GateOpenerArn: !GetAtt GateOpenerFn.Arn }
+      DefinitionString: |
+        {
+          "Comment": "Classify -> HumanGate(waitForTaskToken) -> Finalize",
+          "StartAt": "Classify",
+          "States": {
+            "Classify": {"Type":"Task","Resource":"${WorkerArn}","Parameters":{"request_id.$":"$.request_id","seq":0,"step":"classify"},"ResultPath":"$.classify","Next":"HumanGate"},
+            "HumanGate": {"Type":"Task","Resource":"arn:aws:states:::lambda:invoke.waitForTaskToken",
+              "Parameters":{"FunctionName":"${GateOpenerArn}","Payload":{"taskToken.$":"$$.Task.Token","request_id.$":"$.request_id","agentId.$":"$.agentId","toolId.$":"$.toolId","argsHash.$":"$.argsHash","purpose.$":"$.purpose","requester.$":"$.requester"}},
+              "ResultPath":"$.gate","TimeoutSeconds":3600,"Next":"Finalize"},
+            "Finalize": {"Type":"Task","Resource":"${WorkerArn}","Parameters":{"request_id.$":"$.request_id","seq":2,"step":"finalize"},"ResultPath":"$.finalize","End":true}
+          }
+        }
+
+Outputs:
+  ApiEndpoint: { Value: !GetAtt HttpApi.ApiEndpoint }
+  UserPoolId: { Value: !Ref UserPool }
+  AppClientId: { Value: !Ref UserPoolClient }
+  StateMachineArn: { Value: !Ref GatedStateMachine }

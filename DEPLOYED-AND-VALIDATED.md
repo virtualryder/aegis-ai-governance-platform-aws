@@ -144,3 +144,39 @@ Audit trail: `classify` -> `approval_denied (not supervisor)` -> `approval_denie
 valid, bound, single-use, separation-of-duties approval — the Run 2 placeholder is now a real service.
 
 **Teardown:** reviewer-service stack deleted. Details: `infra/golden-pilot/REVIEWER-SERVICE.md`.
+
+---
+
+## Run 6 (2026-07-01) — Immutable evidence retention (WORM proven)
+
+Deployed `infra/golden-pilot/evidence-worm.yaml` — an S3 bucket with Object Lock and a **default
+GOVERNANCE retention rule (1 day)** so every evidence object is written WORM automatically.
+
+- Wrote `evidence/appr-001.json`; `get-object-retention` -> **Mode GOVERNANCE, RetainUntilDate
+  2026-07-02** (retention was applied, not merely enabled).
+- `delete-object` on the locked version (no bypass) -> **AccessDenied: "object protected by object
+  lock"** — deletion is genuinely blocked.
+- Break-glass teardown: `delete-object --bypass-governance-retention` (requires
+  s3:BypassGovernanceRetention) succeeded (204), then the stack was deleted cleanly.
+
+This closes the "Object Lock enabled but no retention applied" gap. Profiles: **demo** = none;
+**pilot** = GOVERNANCE (bypassable by an authorized break-glass principal, as shown); **production**
+= COMPLIANCE (no deletion before expiry, even root) + legal hold + cross-account log archive.
+
+---
+
+## Run 7 (2026-07-01) — Reviewer front door: API Gateway + Cognito JWT authorizer
+
+Deployed `infra/golden-pilot/reviewer-api.yaml` — the reviewer service behind an **API Gateway HTTP
+API with a Cognito JWT authorizer** (hardened pool: MFA required + advanced security). The authorizer
+verifies the RS256 token (issuer + audience) before the Lambda runs; the Lambda reads the **verified**
+`cognito:username` / `cognito:groups` claims from `requestContext.authorizer`.
+
+- **Unauthenticated** `POST /approvals` (no token) -> **401**; garbage bearer token -> **401**.
+- **Authenticated** `POST /approvals` with a real `supervisor2` ID token (obtained via full MFA login)
+  and body `{request_id}` -> **200 APPROVE** (bound approval_id, reviewer=supervisor2); the gate was
+  released and the execution reached **SUCCEEDED**. Requester was `operator9`, so separation of duties
+  held. Identity is taken only from the authorizer's verified claims — never from the request body.
+
+This closes #22's front door: the reviewer service is now reachable only through an authenticated,
+JWT-verified API. **Teardown:** reviewer-api stack deleted.
