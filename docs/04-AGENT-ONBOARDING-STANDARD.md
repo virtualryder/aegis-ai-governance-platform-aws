@@ -1,5 +1,13 @@
 # 04 — Agent Onboarding Standard
 
+> **Status & maturity (read first).** The `[Impl]` / `[Cfg]` tags below describe *design intent
+> and the reference implementation* — not production authorization. For the authoritative
+> per-control maturity (Designed / Implemented-offline / Deployed-on-AWS / Integration-tested /
+> Production-enforced) see [`GAP-CLOSURE-BACKLOG.md`](GAP-CLOSURE-BACKLOG.md). As of 2026-06-30 the
+> append-only audit, WORM enablement, Bedrock Guardrail, human gate, and fail-closed gateway are
+> **deployed and live-validated on AWS**; Cedar policy enforcement, identity/MFA federation,
+> runtime masking, token budgets, and live connectors remain **offline reference or planned**.
+
 > The contract every agent — first-party or third-party add-on — must satisfy to run on Aegis.
 > The goal: a department or vendor knows *exactly what to build toward as a minimum*, and the
 > platform can refuse anything that doesn't meet the bar. Machine-readable schema:

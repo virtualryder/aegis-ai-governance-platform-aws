@@ -1,5 +1,13 @@
 # 09 — Review of `virtualryder/slg-ai-agents` and the Path to This Platform
 
+> **Status & maturity (read first).** The `[Impl]` / `[Cfg]` tags below describe *design intent
+> and the reference implementation* — not production authorization. For the authoritative
+> per-control maturity (Designed / Implemented-offline / Deployed-on-AWS / Integration-tested /
+> Production-enforced) see [`GAP-CLOSURE-BACKLOG.md`](GAP-CLOSURE-BACKLOG.md). As of 2026-06-30 the
+> append-only audit, WORM enablement, Bedrock Guardrail, human gate, and fail-closed gateway are
+> **deployed and live-validated on AWS**; Cedar policy enforcement, identity/MFA federation,
+> runtime masking, token budgets, and live connectors remain **offline reference or planned**.
+
 > Source reviewed: the public README and repository map of
 > [`github.com/virtualryder/slg-ai-agents`](https://github.com/virtualryder/slg-ai-agents)
 > (reviewed 2026-06-30). Verdict up front: **do not rebuild — generalize.** The SLG accelerator is

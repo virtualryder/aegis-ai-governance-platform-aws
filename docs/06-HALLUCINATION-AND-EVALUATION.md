@@ -1,5 +1,13 @@
 # 06 — Hallucination Control & Agent Evaluation
 
+> **Status & maturity (read first).** The `[Impl]` / `[Cfg]` tags below describe *design intent
+> and the reference implementation* — not production authorization. For the authoritative
+> per-control maturity (Designed / Implemented-offline / Deployed-on-AWS / Integration-tested /
+> Production-enforced) see [`GAP-CLOSURE-BACKLOG.md`](GAP-CLOSURE-BACKLOG.md). As of 2026-06-30 the
+> append-only audit, WORM enablement, Bedrock Guardrail, human gate, and fail-closed gateway are
+> **deployed and live-validated on AWS**; Cedar policy enforcement, identity/MFA federation,
+> runtime masking, token budgets, and live connectors remain **offline reference or planned**.
+
 > Hallucination control is a board-level trust question, not a model-tuning detail. Aegis layers
 > several independent controls so that ungrounded or unsound output is blocked or flagged before a
 > human ever acts on it, and every agent must prove its behavior with evals before it can be

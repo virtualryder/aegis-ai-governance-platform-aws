@@ -1,5 +1,12 @@
 # Aegis — Governed Agent Platform
 
+> **Status & maturity (read first).** "Implemented" in this repo spans several maturity levels.
+> The append-only audit, WORM enablement, Bedrock Guardrail, human gate, and fail-closed gateway
+> are **deployed and live-validated on AWS** ([`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md));
+> Cedar policy enforcement, identity/MFA federation, runtime masking, token budgets, and live
+> connectors remain **offline reference or planned**. The authoritative per-control maturity matrix
+> and the gap-closure plan are in [`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md).
+
 ### A whole-of-government and whole-of-enterprise governance layer for AI agents, built on AWS
 
 > **The agent is not the product. The governance that makes any agent deployable, auditable,
@@ -70,7 +77,7 @@ on the controls, AWS regions, retention, and evidence a given regime requires:
 - **`packs/enterprise`** — SOC 2, PCI DSS, ISO 27001, sector-agnostic data governance.
 
 Each pack maps to NIST 800-53 and the NIST AI RMF Generative AI Profile, and marks every control
-**Implemented** (platform-guaranteed) vs **Configurable** (customer-owned). See
+**Implemented** (offline reference and/or deployed IaC — see maturity matrix) vs **Configurable** (customer-owned). See
 [`docs/03-COMPLIANCE-OVERLAY-PACKS.md`](docs/03-COMPLIANCE-OVERLAY-PACKS.md).
 
 ## Onboarding a new agent
@@ -123,12 +130,3 @@ infra/                           CloudFormation IaC, deploy/teardown scripts, sm
 demo/                            Acceptance tests and demo harness
 tools/                           CLI utilities (e.g., add_agent.py for scaffolding new agents)
 ```
-
-## Status & honesty
-
-This is a **reference platform for architecture workshops, scoped pilots, and AWS/customer
-positioning** — not an AWS-authorized, ATO'd, production-certified system. Live connectors,
-production identity integration, third-party security testing, and authorization (ATO / GovRAMP /
-FedRAMP) are customer-engagement work. The candid shared-responsibility model is in
-[`docs/10-PRODUCTION-READINESS-RACI.md`](docs/10-PRODUCTION-READINESS-RACI.md). Every factual and
-compliance claim is cited in [`SOURCES.md`](SOURCES.md).

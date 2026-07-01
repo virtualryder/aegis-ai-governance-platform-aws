@@ -1,5 +1,13 @@
 # 02 — Reference Architecture (edge to data, on AWS)
 
+> **Status & maturity (read first).** The `[Impl]` / `[Cfg]` tags below describe *design intent
+> and the reference implementation* — not production authorization. For the authoritative
+> per-control maturity (Designed / Implemented-offline / Deployed-on-AWS / Integration-tested /
+> Production-enforced) see [`GAP-CLOSURE-BACKLOG.md`](GAP-CLOSURE-BACKLOG.md). As of 2026-06-30 the
+> append-only audit, WORM enablement, Bedrock Guardrail, human gate, and fail-closed gateway are
+> **deployed and live-validated on AWS**; Cedar policy enforcement, identity/MFA federation,
+> runtime masking, token budgets, and live connectors remain **offline reference or planned**.
+
 > Read alongside [`../SOURCES.md`](../SOURCES.md). Every AWS capability named here maps to a
 > cited source. Controls are marked **[Impl]** = platform-implemented or **[Cfg]** =
 > customer-configured under the AWS Shared Responsibility Model.

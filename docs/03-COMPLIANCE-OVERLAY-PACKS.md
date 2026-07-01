@@ -1,5 +1,13 @@
 # 03 — Compliance Overlay Packs
 
+> **Status & maturity (read first).** The `[Impl]` / `[Cfg]` tags below describe *design intent
+> and the reference implementation* — not production authorization. For the authoritative
+> per-control maturity (Designed / Implemented-offline / Deployed-on-AWS / Integration-tested /
+> Production-enforced) see [`GAP-CLOSURE-BACKLOG.md`](GAP-CLOSURE-BACKLOG.md). As of 2026-06-30 the
+> append-only audit, WORM enablement, Bedrock Guardrail, human gate, and fail-closed gateway are
+> **deployed and live-validated on AWS**; Cedar policy enforcement, identity/MFA federation,
+> runtime masking, token budgets, and live connectors remain **offline reference or planned**.
+
 > The governance core is industry-agnostic. A **pack** is a declarative bundle
 > (`packs/<pack>/pack.yaml`) that, when applied, switches on the right controls, AWS regions,
 > retention, masking entity sets, guardrail policy, and evidence artifacts for a regime — and

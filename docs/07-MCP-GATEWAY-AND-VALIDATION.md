@@ -1,5 +1,13 @@
 # 07 — MCP Gateway, Tool Registration & Validation/Invalidation
 
+> **Status & maturity (read first).** The `[Impl]` / `[Cfg]` tags below describe *design intent
+> and the reference implementation* — not production authorization. For the authoritative
+> per-control maturity (Designed / Implemented-offline / Deployed-on-AWS / Integration-tested /
+> Production-enforced) see [`GAP-CLOSURE-BACKLOG.md`](GAP-CLOSURE-BACKLOG.md). As of 2026-06-30 the
+> append-only audit, WORM enablement, Bedrock Guardrail, human gate, and fail-closed gateway are
+> **deployed and live-validated on AWS**; Cedar policy enforcement, identity/MFA federation,
+> runtime masking, token budgets, and live connectors remain **offline reference or planned**.
+
 > How agents reach tools, how every tool is registered and validated before any agent may use it, and
 > how a compromised or deprecated tool is revoked platform-wide. The gateway is the single secure
 > endpoint through which every tool call flows. Grounded in [`../SOURCES.md`](../SOURCES.md) §1.
