@@ -102,3 +102,24 @@ runbook so a customer SA doesn't lose an hour to it.
 
 **Teardown:** AVP policy-store stack deleted. See `infra/golden-pilot/GOLDEN-PILOT.md` for what this
 slice does and does not yet cover.
+
+---
+
+## Run 4 (2026-06-30) — Real identity: hardened Cognito + MFA + verified JWT -> Cedar
+
+Deployed `infra/golden-pilot/cognito-identity.yaml` — a Cognito pool with **software-token MFA
+REQUIRED** and **AdvancedSecurityMode ENFORCED** (verified live), an app client, and role groups.
+
+- **Real MFA login end to end.** Admin auth returned an `MFA_SETUP` challenge (proving enforcement);
+  associated a software token, computed a TOTP from the secret, `verify-software-token`=SUCCESS; a
+  fresh login returned `SOFTWARE_TOKEN_MFA` and, on responding with a live TOTP, issued a real signed
+  **ID token** with `cognito:groups=["service-desk-operator"]`.
+- **Cryptographic JWT verification** (`verify_jwt.py`, RS256 against the pool JWKS + iss/aud/exp/
+  token_use + alg-confusion guard): real token -> **VERIFY OK** (group extracted); tampered signature
+  -> **rejected**; wrong audience -> **rejected**.
+- **Identity -> authorization loop closed on AWS.** The verified `service-desk-operator` group mapped
+  (`role_map.json`) to Cedar context and evaluated on Amazon Verified Permissions: read `kb.search`
+  -> **ALLOW**; consequential `ticket.issue` (supervisor-only) -> **DENY**. Client-supplied roles are
+  never trusted — only the cryptographically verified `cognito:groups` claim.
+
+**Teardown:** identity + AVP stacks deleted. Details: `infra/golden-pilot/IDENTITY.md`.

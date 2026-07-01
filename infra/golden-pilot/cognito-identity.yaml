@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Aegis Golden Pilot - real identity. A hardened Amazon Cognito user pool that fixes the
+  "MFA off / no app client / no verified role" gap: software-token MFA REQUIRED, advanced
+  security ENFORCED, a strong password policy, an app client with explicit auth flows and
+  short-lived tokens, and two role groups whose names surface in the JWT `cognito:groups`
+  claim (which the gateway verifies and feeds into the Cedar authorization context).
+  Serverless; tears down cleanly.
+
+Parameters:
+  AppName:
+    Type: String
+    Default: aegis
+  Environment:
+    Type: String
+    AllowedValues: [dev, test, staging, prod]
+    Default: dev
+
+Resources:
+  IdentityUserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      UserPoolName: !Sub "${AppName}-identity-${Environment}"
+      MfaConfiguration: "ON"
+      EnabledMfas:
+        - SOFTWARE_TOKEN_MFA
+      UserPoolAddOns:
+        AdvancedSecurityMode: ENFORCED
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 14
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          TemporaryPasswordValidityDays: 7
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+      UsernameConfiguration:
+        CaseSensitive: false
+
+  IdentityUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${AppName}-service-desk-${Environment}"
+      UserPoolId: !Ref IdentityUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      IdTokenValidity: 60
+      AccessTokenValidity: 60
+      RefreshTokenValidity: 1
+      TokenValidityUnits:
+        IdToken: minutes
+        AccessToken: minutes
+        RefreshToken: days
+
+  OperatorGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: service-desk-operator
+      Description: Front-line operator; may run read + draft tools.
+      Precedence: 10
+      UserPoolId: !Ref IdentityUserPool
+
+  SupervisorGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: service-desk-supervisor
+      Description: Supervisor; may approve consequential actions (separation of duties).
+      Precedence: 5
+      UserPoolId: !Ref IdentityUserPool
+
+Outputs:
+  UserPoolId:
+    Value: !Ref IdentityUserPool
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolId"
+  AppClientId:
+    Value: !Ref IdentityUserPoolClient
+    Export:
+      Name: !Sub "${AWS::StackName}-AppClientId"
+  Issuer:
+    Description: JWT issuer (iss) to validate against.
+    Value: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${IdentityUserPool}"
+  JwksUri:
+    Value: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${IdentityUserPool}/.well-known/jwks.json"

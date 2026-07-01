@@ -1,0 +1,5 @@
+{
+  "_comment": "Maps a verified Cognito group (cognito:groups claim) to Cedar authorization context. The gateway trusts ONLY the cryptographically verified group, never a client-supplied role.",
+  "service-desk-operator":   {"userEntitlements": ["kb.search", "ticket.draft"], "userDataClasses": ["public"]},
+  "service-desk-supervisor": {"userEntitlements": ["kb.search", "ticket.draft", "ticket.issue"], "userDataClasses": ["public", "pii"]}
+}

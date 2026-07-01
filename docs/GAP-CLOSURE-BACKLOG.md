@@ -40,7 +40,7 @@ Legend: **D** Designed · **IO** Implemented offline (Python demo) · **DA** Dep
 | Fail-closed gateway | ✓ | ✓ | ✓ (template) |  |  | Fixed this session (guardrail error/intervention → deny); redeploy to prove |
 | Deny-by-default policy (full predicate) | ✓ | ✓ | ✓ | ✓ |  | **Cedar on Amazon Verified Permissions — deployed & live-tested** (1 ALLOW + 2 DENY, 2026-06-30); AgentCore Policy is the next target |
 | Real Bedrock invocation (Model Gateway) | ✓ | ✓ | ✓ | ✓ |  | Claude Haiku 4.5 via inference profile, live (2026-06-30) |
-| Cryptographic identity + MFA | ✓ | partial |  |  |  | Cognito pool deployed with **MFA OFF**, no IdP federation/authorizer yet |
+| Cryptographic identity + MFA | ✓ | ✓ | ✓ | ✓ |  | **MFA-required Cognito + advanced security deployed; real MFA login → RS256 JWT verified vs JWKS → verified group → Cedar decision** (2026-06-30). IdP federation + API GW authorizer + OBO still to wire |
 | PII/PHI/FTI/CJI masking | ✓ | ✓ |  |  |  | Regex offline; Comprehend/Macie not wired at runtime |
 | Token budgets + chargeback | ✓ | ✓ |  |  |  | Offline meter + AIP design; not deployed/reconciled |
 | Signed agent manifests | ✓ | partial |  |  |  | Signature **presence** check only; no cryptographic verification |
