@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Aegis Golden Pilot - governed connector to a system of record (task #20 tail). A ticket
+  system (DynamoDB) reached ONLY through a governed connector Lambda that enforces idempotency
+  (no duplicate writes on retry) and append-only audit, wrapped in a Step Functions SAGA with
+  automatic COMPENSATION (rollback) when a downstream step fails. Stands in for a real SaaS
+  connector (e.g. ServiceNow); swapping the DynamoDB system-of-record for a live API is a
+  credentials/endpoint change. Serverless; tears down cleanly.
+
+Parameters:
+  AppName: { Type: String, Default: aegis }
+  Environment: { Type: String, Default: dev }
+
+Resources:
+  TicketsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    Properties:
+      TableName: !Sub "${AppName}-tickets-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: ticket_id, AttributeType: S }]
+      KeySchema: [{ AttributeName: ticket_id, KeyType: HASH }]
+
+  IdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    Properties:
+      TableName: !Sub "${AppName}-idempotency-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: idempotency_key, AttributeType: S }]
+      KeySchema: [{ AttributeName: idempotency_key, KeyType: HASH }]
+      TimeToLiveSpecification: { AttributeName: expires_at, Enabled: true }
+
+  AuditTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    Properties:
+      TableName: !Sub "${AppName}-connector-audit-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: request_id, AttributeType: S }
+        - { AttributeName: seq, AttributeType: N }
+      KeySchema:
+        - { AttributeName: request_id, KeyType: HASH }
+        - { AttributeName: seq, KeyType: RANGE }
+
+  ConnectorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-connector-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: lambda.amazonaws.com }, Action: sts:AssumeRole }]
+      Policies:
+        - PolicyName: connector-least-priv
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - { Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:UpdateItem], Resource: [!GetAtt TicketsTable.Arn, !GetAtt IdempotencyTable.Arn, !GetAtt AuditTable.Arn] }
+              - { Effect: Deny, Action: [dynamodb:UpdateItem, dynamodb:DeleteItem], Resource: !GetAtt AuditTable.Arn }
+              - { Effect: Allow, Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents], Resource: "*" }
+
+  ConnectorFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AppName}-connector-${Environment}"
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      Role: !GetAtt ConnectorRole.Arn
+      Environment:
+        Variables:
+          TICKETS_TABLE: !Ref TicketsTable
+          IDEMPOTENCY_TABLE: !Ref IdempotencyTable
+          AUDIT_TABLE: !Ref AuditTable
+      Code:
+        ZipFile: |
+          import os, time, json, uuid, boto3
+          from botocore.exceptions import ClientError
+          ddb = boto3.client("dynamodb")
+          TICKETS=os.environ["TICKETS_TABLE"]; IDEMP=os.environ["IDEMPOTENCY_TABLE"]; AUDIT=os.environ["AUDIT_TABLE"]
+
+          def _audit(rid, seq, step, detail):
+              try:
+                  ddb.put_item(TableName=AUDIT, Item={"request_id":{"S":rid},"seq":{"N":str(seq)},
+                      "ts":{"N":str(int(time.time()))},"step":{"S":step},"detail":{"S":detail}},
+                      ConditionExpression="attribute_not_exists(request_id) AND attribute_not_exists(seq)")
+              except ClientError: pass
+
+          def create_ticket(e):
+              rid=e["request_id"]; idem=e["idempotency_key"]
+              # Idempotency: claim the key with a conditional put. If already claimed, return the
+              # ticket recorded for it (no duplicate write to the system of record).
+              try:
+                  ddb.put_item(TableName=IDEMP, Item={"idempotency_key":{"S":idem},
+                      "expires_at":{"N":str(int(time.time())+86400)}},
+                      ConditionExpression="attribute_not_exists(idempotency_key)")
+              except ClientError as ex:
+                  if ex.response["Error"]["Code"]=="ConditionalCheckFailedException":
+                      existing=ddb.get_item(TableName=IDEMP, Key={"idempotency_key":{"S":idem}}).get("Item",{})
+                      tid=existing.get("ticket_id",{}).get("S","")
+                      _audit(rid, 10, "create_ticket_idempotent_hit", "idem=%s ticket=%s" % (idem, tid))
+                      return {"ticket_id": tid, "idempotent": True}
+                  raise
+              _audit(rid, 0, "create_ticket_before", "idem=%s" % idem)
+              tid="TICK-"+uuid.uuid4().hex[:10]
+              ddb.put_item(TableName=TICKETS, Item={"ticket_id":{"S":tid},"request_id":{"S":rid},
+                  "status":{"S":"open"},"ts":{"N":str(int(time.time()))}})
+              ddb.update_item(TableName=IDEMP, Key={"idempotency_key":{"S":idem}},
+                  UpdateExpression="SET ticket_id=:t", ExpressionAttributeValues={":t":{"S":tid}})
+              _audit(rid, 1, "create_ticket_after", "ticket=%s status=open" % tid)
+              return {"ticket_id": tid, "idempotent": False}
+
+          def risky_notify(e):
+              # Simulated downstream (e.g. notify an external system). Fails on demand to
+              # exercise the saga's compensation path.
+              if e.get("fail"):
+                  _audit(e["request_id"], 2, "downstream_failed", "notify raised")
+                  raise RuntimeError("downstream notify failed")
+              _audit(e["request_id"], 2, "downstream_ok", "notified")
+              return {"notified": True}
+
+          def void_ticket(e):
+              # Compensation: roll back the create by voiding the ticket.
+              rid=e["request_id"]; tid=e.get("ticket_id","")
+              if tid:
+                  ddb.update_item(TableName=TICKETS, Key={"ticket_id":{"S":tid}},
+                      UpdateExpression="SET #s=:v", ExpressionAttributeNames={"#s":"status"},
+                      ExpressionAttributeValues={":v":{"S":"voided"}})
+              _audit(rid, 9, "compensated", "ticket=%s status=voided" % tid)
+              return {"ticket_id": tid, "status": "voided"}
+
+          def handler(event, context):
+              a=(event or {}).get("action")
+              if a=="create_ticket": return create_ticket(event)
+              if a=="risky_notify":  return risky_notify(event)
+              if a=="void_ticket":   return void_ticket(event)
+              raise ValueError("unknown action %s" % a)
+
+  SagaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-connector-saga-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: states.amazonaws.com }, Action: sts:AssumeRole }]
+      Policies:
+        - PolicyName: invoke
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement: [{ Effect: Allow, Action: lambda:InvokeFunction, Resource: !GetAtt ConnectorFn.Arn }]
+
+  SagaStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub "${AppName}-connector-saga-${Environment}"
+      StateMachineType: STANDARD
+      RoleArn: !GetAtt SagaRole.Arn
+      DefinitionSubstitutions: { ConnectorArn: !GetAtt ConnectorFn.Arn }
+      DefinitionString: |
+        {
+          "Comment": "Saga: CreateTicket -> RiskyNotify (Catch -> Compensate/void)",
+          "StartAt": "CreateTicket",
+          "States": {
+            "CreateTicket": {
+              "Type": "Task", "Resource": "${ConnectorArn}",
+              "Parameters": {"action":"create_ticket","request_id.$":"$.request_id","idempotency_key.$":"$.idempotency_key"},
+              "ResultPath": "$.created", "Next": "RiskyNotify"
+            },
+            "RiskyNotify": {
+              "Type": "Task", "Resource": "${ConnectorArn}",
+              "Parameters": {"action":"risky_notify","request_id.$":"$.request_id","fail.$":"$.fail"},
+              "ResultPath": "$.notify",
+              "Catch": [{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Compensate"}],
+              "Next": "Done"
+            },
+            "Compensate": {
+              "Type": "Task", "Resource": "${ConnectorArn}",
+              "Parameters": {"action":"void_ticket","request_id.$":"$.request_id","ticket_id.$":"$.created.ticket_id"},
+              "ResultPath": "$.compensation", "Next": "RolledBack"
+            },
+            "Done": {"Type":"Succeed"},
+            "RolledBack": {"Type":"Fail","Error":"CompensatedRollback","Cause":"downstream failed; ticket voided"}
+          }
+        }
+
+Outputs:
+  ConnectorFnName: { Value: !Ref ConnectorFn }
+  SagaArn: { Value: !Ref SagaStateMachine }
+  TicketsTableName: { Value: !Ref TicketsTable }
+  AuditTableName: { Value: !Ref AuditTable }

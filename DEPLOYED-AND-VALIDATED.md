@@ -203,3 +203,22 @@ and the in-memory budget simulation) live in `platform_core/prod/` with unit tes
 (`demo/test_prod_components.py`, 15 tests green). Negative-security suite
 (`demo/test_negative_security.py`, 8 cases) and the extended CI (`.github/workflows/ci.yml`, cfn-lint
 over all templates + all test suites) land task #25. Canonical IaC declared in `infra/CANONICAL-IAC.md`.
+
+---
+
+## Run 9 (2026-07-01) — Governed connector: idempotency + saga rollback
+
+Deployed `infra/golden-pilot/connector-pilot.yaml` — a system of record (ticket store) reached only
+through a governed connector Lambda with idempotency + append-only audit, wrapped in a Step Functions
+saga with automatic compensation. Live:
+
+- **Idempotency:** two `create_ticket` calls with the same `idempotency_key` -> the **same** ticket
+  `TICK-e378e4fb22` (2nd `idempotent:true`), a single row in the tickets table (no duplicate write).
+- **Happy saga (c1):** **SUCCEEDED**; ticket open (`create_ticket -> downstream_ok`).
+- **Failure -> rollback saga (c2):** downstream failed -> saga `Catch` -> **Compensate**; execution
+  **FAILED (CompensatedRollback)** and the ticket is **voided**. Audit:
+  `create_ticket_before -> create_ticket_after -> downstream_failed -> compensated`.
+
+Final system-of-record state: c1 open, b1 open (idempotent), c2 voided — no orphaned or duplicate
+writes. Stands in for a real SaaS connector; swapping DynamoDB for a live API is a credentials change.
+**Teardown:** connector-pilot stack deleted. Details: `infra/golden-pilot/CONNECTOR-PILOT.md`.

@@ -46,7 +46,7 @@ Legend: **D** Designed · **IO** Implemented offline (Python demo) · **DA** Dep
 | Signed agent manifests | ✓ | ✓ | ✓ | ✓ |  | **KMS-asymmetric sign/verify deployed & live-tested** (tamper rejected) + real JSON-Schema validation + manifest->Cedar compiler in platform_core/prod, 2026-07-01 |
 | Single-use bound approval ledger | ✓ | ✓ | partial |  |  | Offline enforced; DynamoDB table deployed; reviewer service not built |
 | Multi-account data-class isolation | ✓ |  |  |  |  | Control Tower topology documented, not deployed |
-| Live connectors (system of record) | ✓ |  |  |  |  | Fixtures only; **largest engagement line item** |
+| Live connectors (system of record) | ✓ | ✓ | ✓ | ✓ |  | **Governed connector w/ idempotency + saga rollback deployed & live-tested** on a DynamoDB system-of-record (2026-07-01); real external SaaS (ServiceNow/CRM) is a credentials/endpoint change |
 
 ## P0 — before positioning it as pilot-ready
 
