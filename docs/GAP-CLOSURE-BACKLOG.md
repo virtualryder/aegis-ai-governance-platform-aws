@@ -36,7 +36,7 @@ Legend: **D** Designed · **IO** Implemented offline (Python demo) · **DA** Dep
 | Append-only audit + explicit deny | ✓ | ✓ | ✓ | ✓ |  | Proven live via IAM simulation (Put=allow, Update/Delete=explicitDeny) |
 | WORM evidence (S3 Object Lock) | ✓ | ✓ | ✓ | partial |  | Object Lock **enabled** live; retention **not** applied (demo profile) — see P0 |
 | Bedrock Guardrail (grounding+PII+topic) | ✓ | ✓ | ✓ | ✓ |  | READY live; contextual grounding + PII filters confirmed |
-| Human gate (waitForTaskToken) | ✓ | ✓ | ✓ | ✓ |  | Proven live: paused → approved → completed; audit 4→5 records |
+| Human gate + reviewer service | ✓ | ✓ | ✓ | ✓ |  | **Reviewer service deployed & live-tested**: verified-supervisor role + SoD + bound single-use approval + audit + SendTaskSuccess (2026-07-01) |
 | Fail-closed gateway | ✓ | ✓ | ✓ (template) |  |  | Fixed this session (guardrail error/intervention → deny); redeploy to prove |
 | Deny-by-default policy (full predicate) | ✓ | ✓ | ✓ | ✓ |  | **Cedar on Amazon Verified Permissions — deployed & live-tested** (1 ALLOW + 2 DENY, 2026-06-30); AgentCore Policy is the next target |
 | Real Bedrock invocation (Model Gateway) | ✓ | ✓ | ✓ | ✓ |  | Claude Haiku 4.5 via inference profile, live (2026-06-30) |

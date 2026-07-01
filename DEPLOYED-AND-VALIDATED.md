@@ -123,3 +123,24 @@ REQUIRED** and **AdvancedSecurityMode ENFORCED** (verified live), an app client,
   never trusted — only the cryptographically verified `cognito:groups` claim.
 
 **Teardown:** identity + AVP stacks deleted. Details: `infra/golden-pilot/IDENTITY.md`.
+
+---
+
+## Run 5 (2026-07-01) — Real human-approval reviewer service
+
+Deployed `infra/golden-pilot/reviewer-service.yaml` (pending/ledger/audit tables, a gate-opener
+Lambda, a reviewer Lambda, and a `waitForTaskToken` state machine). Started an execution (requester
+`operator1`) that paused at the gate, then drove the reviewer service:
+
+- **Wrong role** (reviewer with only the operator group) -> **403 DENY**.
+- **Separation of duties** (reviewer == requester) -> **403 DENY**.
+- **Valid supervisor approval** (`supervisor1`, supervisor group) -> **200 APPROVE**: bound
+  single-use approval written via DynamoDB conditional write, audited, `SendTaskSuccess` released the
+  gate -> execution **SUCCEEDED**.
+- **Replay** of the same approval -> **404** (already consumed) — single-use enforced.
+
+Audit trail: `classify` -> `approval_denied (not supervisor)` -> `approval_denied (SoD)` ->
+`approved (supervisor1, bound approval_id)` -> `finalize`. The consequential step ran only after a
+valid, bound, single-use, separation-of-duties approval — the Run 2 placeholder is now a real service.
+
+**Teardown:** reviewer-service stack deleted. Details: `infra/golden-pilot/REVIEWER-SERVICE.md`.
