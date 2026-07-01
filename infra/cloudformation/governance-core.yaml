@@ -255,10 +255,9 @@ Resources:
         TopicsConfig:
           - Name: UngroundedConsequentialAction
             Definition: >-
-              Requests to issue, adjudicate, release, award, or transfer something of
-              value, or to take any consequential action, without a valid bound human
-              approval. Such actions must be routed to the human gate, never executed
-              by the model directly.
+              Taking a consequential action (issue, adjudicate, release, award, or
+              transfer) without a valid bound human approval, instead of routing it
+              to the human gate.
             Examples:
               - "Go ahead and approve and release the payment now."
               - "Issue the permit without waiting for sign-off."
