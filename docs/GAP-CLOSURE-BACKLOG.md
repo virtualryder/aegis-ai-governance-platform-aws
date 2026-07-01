@@ -103,7 +103,9 @@ Legend: **D** Designed · **IO** Implemented offline (Python demo) · **DA** Dep
 - Multi-account / multi-tenant operating patterns. Terraform + GovCloud variants. Operator and
   customer dashboards. Licensing, pricing, support tiers, managed-service boundaries. Versioned
   releases + upgrade paths. Agents and compliance packs as independently versioned products.
-  Secure a design partner and publish a reference outcome.
+  Secure a design partner and publish a reference outcome. 
+
+  *Status (2026-07-01): delivered — a partition-aware **Terraform module** mirroring the live-proven governance core (`infra/terraform/modules/governance_core/`) with **commercial + GovCloud** root examples and a CFN<->Terraform parity table; **multi-tenancy** design (`docs/11-MULTI-TENANCY.md`, SILO/POOL/BRIDGE) and **commercial packaging** (`docs/12-COMMERCIAL-PACKAGING.md`, editions/pricing/support/Marketplace/versioning). HCL validated structurally (python-hcl2; terraform binary not available here). Still engagement-owned: a live `terraform apply`, a deployed multi-account/multi-tenant landing zone, operator/customer dashboards, finalized commercial pricing, and a named design partner.*
 
 ## Down-payment already made this session
 
