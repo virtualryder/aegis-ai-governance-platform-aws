@@ -47,3 +47,33 @@ characters in `infra/cloudformation/governance-core.yaml`, and the redeploy reac
 See [`infra/DEPLOY-RUNBOOK.md`](infra/DEPLOY-RUNBOOK.md): `deploy.sh` → `smoke_test.sh` →
 `teardown.sh`. Prerequisites: AWS credentials, `us-east-1` (CloudFront-scoped WAF variants must live
 there), and Bedrock model access enabled for the account. Cost is pennies; tear down immediately.
+
+---
+
+## Run 2 (2026-06-30) — Sample agent + human gate, end to end
+
+Deployed `governance-core.yaml` + `sample-agent.yaml` (Step Functions Classify → Retrieve →
+Draft → Check → **HumanGate (waitForTaskToken)** → Finalize) and drove one execution to completion.
+
+**Proof the human gate holds a consequential action:**
+- Execution reached `HumanGate` and **paused** (status RUNNING). Audit table showed **4** records
+  (classify, retrieve, draft, check) — **Finalize did not run**.
+- Acting as approver, sent the bound task token via `states:SendTaskSuccess`. Execution resumed →
+  **SUCCEEDED**. Audit table then showed **5** records (finalize added).
+- This demonstrates the core thesis on live infrastructure: the consequential step cannot execute
+  without an explicit human approval carrying the task token.
+
+**Two more real bugs caught by the live run (cfn-lint could not):**
+1. **Cross-stack KMS access** — the agent's worker role could `PutItem` to the audit table but
+   lacked `kms:Decrypt`/`GenerateDataKey` on the core CMK, so writes to the SSE-KMS table failed
+   `AccessDenied`. Fixed by importing `${CoreStackName}-KmsKeyArn` into the step role.
+2. **Fail-open gateway** (flagged by external review) — the control-plane Lambda wrote
+   `decision=allow` and returned 200 even when the guardrail errored. Corrected to **fail closed**:
+   allow only on guardrail `NONE`; any intervention/error/unavailable → `deny` (403). The offline
+   gateway was hardened the same way (unregistered tool / policy / audit failure now deny), with
+   `demo/test_fail_closed.py`.
+
+**Teardown:** sample-agent then core deleted; `list-tables` → none, S3 bucket → 404, guardrails →
+none; CMK in the mandatory 7-day `PendingDeletion` window. Zero `aegis-*` runtime resources remain.
+
+> Full gap list from the four-perspective review: [`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md).
