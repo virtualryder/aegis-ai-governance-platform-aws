@@ -180,3 +180,26 @@ verifies the RS256 token (issuer + audience) before the Lambda runs; the Lambda 
 
 This closes #22's front door: the reviewer service is now reachable only through an authenticated,
 JWT-verified API. **Teardown:** reviewer-api stack deleted.
+
+---
+
+## Run 8 (2026-07-01) — Production components: KMS-signed manifests + atomic budget reservation
+
+Two of the "offline approximations" (task #24) replaced with production AWS-backed components and
+proven live:
+
+- **KMS-asymmetric signed-manifest verification** (replaces signature-presence-only). Created an
+  RSA_2048 SIGN_VERIFY KMS key, signed an agent manifest (`RSASSA_PSS_SHA_256`, 256-byte signature),
+  then `kms verify` -> **valid-manifest: True**; a **tampered** manifest -> **REJECTED
+  (KMSInvalidSignature)**. Key scheduled for deletion (7-day window).
+- **Concurrency-safe token-budget reservation** (replaces in-memory budgets). A single conditional
+  `UpdateItem` (`SET used = if_not_exists(used,:z)+:n` with `ConditionExpression used <= :room`) on a
+  DynamoDB table: reserve 800 -> used **800**; a second 800 that would exceed cap 1000 ->
+  **ConditionalCheckFailed (rejected)**; reserve 150 -> used **950**. Atomic conditional writes
+  serialize, so concurrent reservations cannot oversell the cap. Table deleted.
+
+Offline counterparts (real JSON-Schema validation, a manifest->Cedar compiler, local-RSA signing,
+and the in-memory budget simulation) live in `platform_core/prod/` with unit tests
+(`demo/test_prod_components.py`, 15 tests green). Negative-security suite
+(`demo/test_negative_security.py`, 8 cases) and the extended CI (`.github/workflows/ci.yml`, cfn-lint
+over all templates + all test suites) land task #25. Canonical IaC declared in `infra/CANONICAL-IAC.md`.

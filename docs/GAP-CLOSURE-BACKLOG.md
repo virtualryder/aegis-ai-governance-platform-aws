@@ -42,8 +42,8 @@ Legend: **D** Designed · **IO** Implemented offline (Python demo) · **DA** Dep
 | Real Bedrock invocation (Model Gateway) | ✓ | ✓ | ✓ | ✓ |  | Claude Haiku 4.5 via inference profile, live (2026-06-30) |
 | Cryptographic identity + MFA | ✓ | ✓ | ✓ | ✓ |  | **MFA-required Cognito + advanced security deployed; real MFA login → RS256 JWT verified vs JWKS → verified group → Cedar decision** (2026-06-30). IdP federation + API GW authorizer + OBO still to wire |
 | PII/PHI/FTI/CJI masking | ✓ | ✓ |  |  |  | Regex offline; Comprehend/Macie not wired at runtime |
-| Token budgets + chargeback | ✓ | ✓ |  |  |  | Offline meter + AIP design; not deployed/reconciled |
-| Signed agent manifests | ✓ | partial |  |  |  | Signature **presence** check only; no cryptographic verification |
+| Token budgets + chargeback | ✓ | ✓ | ✓ | ✓ |  | **Atomic DynamoDB reservation deployed & live-tested** (over-cap rejected, no oversell), 2026-07-01; AIP chargeback path proven Run 3 |
+| Signed agent manifests | ✓ | ✓ | ✓ | ✓ |  | **KMS-asymmetric sign/verify deployed & live-tested** (tamper rejected) + real JSON-Schema validation + manifest->Cedar compiler in platform_core/prod, 2026-07-01 |
 | Single-use bound approval ledger | ✓ | ✓ | partial |  |  | Offline enforced; DynamoDB table deployed; reviewer service not built |
 | Multi-account data-class isolation | ✓ |  |  |  |  | Control Tower topology documented, not deployed |
 | Live connectors (system of record) | ✓ |  |  |  |  | Fixtures only; **largest engagement line item** |

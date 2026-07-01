@@ -22,6 +22,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install test dependencies
+        run: pip install jsonschema cryptography pyyaml
+
       - name: Byte-compile control plane, demo, and tools
         run: python -m compileall platform_core demo tools
 
@@ -30,6 +33,12 @@ jobs:
 
       - name: Run fail-closed regression tests
         run: python demo/test_fail_closed.py
+
+      - name: Run production-component tests
+        run: python demo/test_prod_components.py
+
+      - name: Run negative-security suite
+        run: python demo/test_negative_security.py
 
   iac:
     name: iac (cfn-lint)
@@ -47,7 +56,7 @@ jobs:
         run: pip install cfn-lint
 
       - name: Lint CloudFormation templates
-        run: cfn-lint infra/cloudformation/*.yaml
+        run: cfn-lint infra/cloudformation/*.yaml infra/golden-pilot/*.yaml
 
   security:
     name: security (bandit + checkov)
