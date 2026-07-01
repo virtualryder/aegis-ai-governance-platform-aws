@@ -129,3 +129,23 @@ pulls Bedrock/AgentCore/GovCloud, co-sell and differentiation.
   intersection, a human gate withheld in code, WORM audit, per-department chargeback, or a compliance
   pack that survives a review board."
 - *"Lock-in?"* — "Readable code, AWS-native GA services, IaC you own in your account."
+
+## 10. First-customer engagement kit (hand to an AE or a customer)
+
+The sell + deliver motion is packaged so an account executive or SA can run it without you in the room:
+
+- **Internal (AE / rep):** [`DAVES-CHEAT-SHEET.md`](DAVES-CHEAT-SHEET.md) — one-page in-room script:
+  the one-liner, the four CISO answers, the nine-run proof, the two demos, objection handling, the ask,
+  and the "do not promise" list. [`CUSTOMER-PREP-AND-DEPLOY-PLAYBOOK.md`](CUSTOMER-PREP-AND-DEPLOY-PLAYBOOK.md)
+  — full prep (qualify, tailor, meeting flow) plus the **step-by-step deploy with the customer** (Phase
+  0-8, each with the "why") and an artifact map.
+- **Customer-facing:** [`PILOT-SOW-TEMPLATE.md`](PILOT-SOW-TEMPLATE.md) — a fill-in-the-blanks
+  fixed-scope pilot SOW (objective, acceptance criteria, synthetic-data policy, timeline, staffing,
+  cost placeholders, exit + production-conversion path); plus `Aegis-CISO-One-Pager.docx`,
+  `Aegis-Leadership-Status-Brief.docx`, `Aegis-ROI-Worksheet.xlsx`, and the proof log
+  [`../DEPLOYED-AND-VALIDATED.md`](../DEPLOYED-AND-VALIDATED.md).
+
+**The motion in one line:** qualify a low-blast-radius workflow -> tailor the deck + reproduce one live
+run -> sign the pilot SOW -> deploy the governed golden path on synthetic data in their account ->
+prove one outcome -> sign the RACI -> land-and-expand. Word/shareable versions of the cheat sheet,
+playbook, and SOW ship alongside this repo as `Aegis-*.docx`.

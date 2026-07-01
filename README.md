@@ -127,6 +127,20 @@ module [`infra/terraform/`](infra/terraform/). Security & ops review package:
 [`docs/security/`](docs/security/) and [`docs/ops/`](docs/ops/). Multi-tenancy and commercial
 packaging: [`docs/11-MULTI-TENANCY.md`](docs/11-MULTI-TENANCY.md), [`docs/12-COMMERCIAL-PACKAGING.md`](docs/12-COMMERCIAL-PACKAGING.md).
 
+## Sales & delivery kit
+
+Everything needed to take Aegis into a customer conversation and run a governed pilot:
+
+- **In the room (internal / AE):** [`docs/DAVES-CHEAT-SHEET.md`](docs/DAVES-CHEAT-SHEET.md) (+ `Aegis-Sales-Cheat-Sheet.docx`) — one-page script: the one-liner, four CISO answers, nine-run
+  proof, two demos, objection handling, the ask, and the "do not promise" list.
+- **Prep + deploy (internal / AE + delivery):** [`docs/CUSTOMER-PREP-AND-DEPLOY-PLAYBOOK.md`](docs/CUSTOMER-PREP-AND-DEPLOY-PLAYBOOK.md)
+  (+ `Aegis-Customer-Prep-and-Deploy-Playbook.docx`) — how to prepare, the meeting flow, and the
+  **step-by-step deploy with the customer** (Phase 0-8, each with the "why") + an artifact map.
+- **Customer-facing:** [`docs/PILOT-SOW-TEMPLATE.md`](docs/PILOT-SOW-TEMPLATE.md) (+ `Aegis-Pilot-SOW-Template.docx`) — fixed-scope pilot SOW; plus `Aegis-CISO-One-Pager.docx`,
+  `Aegis-Leadership-Status-Brief.docx`, `Aegis-ROI-Worksheet.xlsx`, `Aegis-Master-Deck.pptx`, and the
+  proof log [`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md).
+- **GTM narrative:** [`docs/08-GTM-AND-POSITIONING.md`](docs/08-GTM-AND-POSITIONING.md) (personas, talk track, first-customer engagement kit §10).
+
 ## Repository map
 
 ```
