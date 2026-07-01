@@ -166,7 +166,20 @@ class AuthorizationGateway:
             budget_ok=budget_ok,
             budget_reason=budget_reason,
         )
-        decision: Decision = self.policy.evaluate(ctx, manifest)
+        try:
+            decision: Decision = self.policy.evaluate(ctx, manifest)
+        except Exception as exc:  # noqa: BLE001 - policy fault must fail closed
+            rec = self.audit.append(
+                request_id=request_id, user=tc.user, agent_id=tc.agent_id,
+                tool_id=tc.tool_id, purpose=tc.purpose,
+                data_class=tc.data_classes, policy_decision="DENY",
+                decision_reason=f"policy_eval_fail_closed: {exc}",
+                masked_fields=masked_fields,
+            )
+            return GatewayResult(
+                Effect.DENY, f"policy_eval_fail_closed: {exc}",
+                audit_record=rec, masked_payload=masked_payload,
+            )
 
         # --- non-allow paths: audit and return ------------------------- #
         if decision.effect is not Effect.ALLOW:
@@ -209,13 +222,31 @@ class AuthorizationGateway:
                     Effect.DENY, f"approval_consume_failed: {exc}", audit_record=rec
                 )
 
+        # --- default-deny: a tool with no registered handler cannot run - #
+        # The gateway is fail-closed: policy may ALLOW, but if nothing is
+        # actually wired to service the call we DENY rather than fabricate
+        # a success. This closes the offline fail-open where an unregistered
+        # tool returned {"ok": True}.
+        handler = self._tools.get(tc.tool_id)
+        if handler is None:
+            rec = self.audit.append(
+                request_id=request_id, user=tc.user, agent_id=tc.agent_id,
+                tool_id=tc.tool_id, purpose=tc.purpose,
+                data_class=tc.data_classes, policy_decision="DENY",
+                decision_reason="tool-not-registered",
+                approval_id=tc.approval_id, masked_fields=masked_fields,
+            )
+            return GatewayResult(
+                Effect.DENY, "tool-not-registered",
+                audit_record=rec, masked_payload=masked_payload,
+            )
+
         # --- mint a scoped, per-call token (simulated OBO/STS) ---------- #
         scoped_token = self._mint_scoped_token(tc)
 
         # --- execute the tool ------------------------------------------- #
-        handler = self._tools.get(tc.tool_id)
         try:
-            output = handler(tc.arguments) if handler else {"ok": True}
+            output = handler(tc.arguments)
             exec_error = None
         except Exception as exc:  # noqa: BLE001 - boundary must capture all
             output, exec_error = None, str(exc)
@@ -249,17 +280,30 @@ class AuthorizationGateway:
         )
 
         # --- masked append-only audit ----------------------------------- #
-        rec = self.audit.append(
-            request_id=request_id, user=tc.user, agent_id=tc.agent_id,
-            tool_id=tc.tool_id, purpose=tc.purpose, data_class=tc.data_classes,
-            policy_decision=("ERROR" if exec_error else "ALLOW"),
-            decision_reason=(exec_error or decision.reason),
-            model_profile=tc.model_profile, prompt_version=tc.prompt_version,
-            retrieved_source_ids=tc.retrieved_source_ids,
-            input_hash=_hash(tc.arguments), output_hash=_hash(output),
-            approval_id=tc.approval_id, tokens_in=tokens_in, tokens_out=tokens_out,
-            cost_usd=cost_usd, masked_fields=masked_fields, grounded=tc.grounded,
-        )
+        # If the audit write fails on a consequential or sensitive call we
+        # DENY: an unauditable side effect is not permitted (fail closed).
+        consequential = set(manifest.get("grants", {}).get("consequential", []))
+        sensitive = bool(set(tc.data_classes or []) - {"public"})
+        try:
+            rec = self.audit.append(
+                request_id=request_id, user=tc.user, agent_id=tc.agent_id,
+                tool_id=tc.tool_id, purpose=tc.purpose, data_class=tc.data_classes,
+                policy_decision=("ERROR" if exec_error else "ALLOW"),
+                decision_reason=(exec_error or decision.reason),
+                model_profile=tc.model_profile, prompt_version=tc.prompt_version,
+                retrieved_source_ids=tc.retrieved_source_ids,
+                input_hash=_hash(tc.arguments), output_hash=_hash(output),
+                approval_id=tc.approval_id, tokens_in=tokens_in,
+                tokens_out=tokens_out, cost_usd=cost_usd,
+                masked_fields=masked_fields, grounded=tc.grounded,
+            )
+        except Exception as exc:  # noqa: BLE001 - audit fault handling
+            if tc.tool_id in consequential or sensitive:
+                return GatewayResult(
+                    Effect.DENY, f"audit_fail_closed: {exc}",
+                    masked_payload=masked_payload,
+                )
+            raise
 
         if exec_error:
             return GatewayResult(

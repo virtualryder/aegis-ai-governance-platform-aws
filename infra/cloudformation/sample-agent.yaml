@@ -107,6 +107,13 @@ Resources:
                   - states:SendTaskSuccess
                   - states:SendTaskFailure
                 Resource: "*"
+              - Sid: KmsForAuditTable
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                Resource:
+                  - Fn::ImportValue: !Sub "${CoreStackName}-KmsKeyArn"
               - Sid: LogsToOwnGroup
                 Effect: Allow
                 Action:

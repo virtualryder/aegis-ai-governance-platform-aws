@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: python (compile + acceptance)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Byte-compile control plane, demo, and tools
+        run: python -m compileall platform_core demo tools
+
+      - name: Run clean-account acceptance demo
+        run: python demo/clean_account_acceptance.py
+
+      - name: Run fail-closed regression tests
+        run: python demo/test_fail_closed.py
+
+  iac:
+    name: iac (cfn-lint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install cfn-lint
+        run: pip install cfn-lint
+
+      - name: Lint CloudFormation templates
+        run: cfn-lint infra/cloudformation/*.yaml
+
+  security:
+    name: security (bandit + checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scanners
+        run: pip install bandit checkov
+
+      - name: Run bandit (non-blocking)
+        continue-on-error: true
+        run: bandit -r platform_core tools
+
+      - name: Run checkov on IaC (non-blocking)
+        continue-on-error: true
+        run: checkov -d infra/cloudformation --quiet --compact

@@ -1,0 +1,27 @@
+# CODEOWNERS — default reviewers for Aegis.
+#
+# Order matters: the LAST matching pattern for a given path wins. These rules
+# require review from the listed owners before a pull request can merge into a
+# protected branch (see CONTRIBUTING.md).
+
+# Default owner for everything in the repo.
+*                       @virtualryder
+
+# Infrastructure-as-code (CloudFormation control plane + sample agent stacks).
+/infra/                 @virtualryder
+/infra/cloudformation/  @virtualryder
+
+# Governance: minimum bar, onboarding, manifests, compliance mappings.
+/governance/            @virtualryder
+
+# Compliance packs.
+/packs/                 @virtualryder
+
+# The offline control-plane core: gateway, policy engine, masking, audit,
+# budgets, approvals. Changes here can affect fail-closed behavior — review
+# is mandatory.
+/platform_core/         @virtualryder
+
+# Security policy and CI must not weaken the fail-closed posture.
+/SECURITY.md            @virtualryder
+/.github/               @virtualryder
