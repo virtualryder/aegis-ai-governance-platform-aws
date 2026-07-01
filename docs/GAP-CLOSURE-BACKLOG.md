@@ -94,7 +94,9 @@ Legend: **D** Designed · **IO** Implemented offline (Python demo) · **DA** Dep
   restore, RTO/RPO, regional-failure and model-fallback plans, incident response. Independent
   **penetration test**. Compliance **evidence package** (not just mappings). Privacy,
   accessibility (axe-core + manual, ahead of ADA Title II 2027/2028), records-management, and
-  model-risk validation. Fixed-scope **pilot SOW** + success metrics.
+  model-risk validation. Fixed-scope **pilot SOW** + success metrics. 
+
+  *Status (2026-07-01): security package authored — `docs/security/` (THREAT-MODEL, SECURITY-ARCHITECTURE with sequence diagrams, ENCRYPTION-AND-LOGGING-MATRIX, SUPPLY-CHAIN-SECURITY, PENTEST-SCOPE, COMPLIANCE-EVIDENCE-INDEX) and `docs/ops/` (OPS-READINESS with SLO/DR/RTO-RPO/fallback, INCIDENT-RESPONSE with key-compromise + prompt-injection playbooks). Grounded in Runs 1-9. Still customer/engagement-owned: the independent third-party pen test itself, a live DR game day, accessibility CI (axe-core), and the signed pilot SOW.*
 
 ## P2 — before commercial scale
 
