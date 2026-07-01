@@ -1,11 +1,16 @@
 # Aegis — Governed Agent Platform
 
-> **Status & maturity (read first).** "Implemented" in this repo spans several maturity levels.
-> The append-only audit, WORM enablement, Bedrock Guardrail, human gate, and fail-closed gateway
-> are **deployed and live-validated on AWS** ([`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md));
-> Cedar policy enforcement, identity/MFA federation, runtime masking, token budgets, and live
-> connectors remain **offline reference or planned**. The authoritative per-control maturity matrix
-> and the gap-closure plan are in [`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md).
+> **Status & maturity (read first).** Aegis is a **live-validated reference platform**, not an
+> authorized product. Across **nine documented AWS runs** ([`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md))
+> the deny-by-default **Cedar authorization** (Verified Permissions), **hardened identity** (Cognito
+> MFA + cryptographic JWT verification), the **human-approval reviewer service** behind an API Gateway
+> JWT authorizer, **append-only audit + WORM retention**, **KMS-signed manifests + atomic token
+> budgets**, and a **governed connector** (idempotency + saga rollback) were each **deployed, exercised
+> with real requests, and torn down**. Still customer/engagement-owned: ATO/GovRAMP authorization, an
+> independent pen test, a live external-SaaS connector, multi-account/multi-tenant deployment, and
+> operator dashboards. Authoritative per-control maturity + plan:
+> [`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md); one-page exec view:
+> [`LEADERSHIP-STATUS-BRIEF.md`](LEADERSHIP-STATUS-BRIEF.md).
 
 ### A whole-of-government and whole-of-enterprise governance layer for AI agents, built on AWS
 
@@ -98,6 +103,30 @@ classes, guardrails, budgets, and audit. This is the path to selling agents as a
 industries without re-doing governance each time. See
 [`docs/08-GTM-AND-POSITIONING.md`](docs/08-GTM-AND-POSITIONING.md).
 
+## Proven on AWS (nine live runs)
+
+The hard controls have each been deployed to AWS, exercised with real requests, and torn down — full
+log in [`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md); one-page exec view in
+[`LEADERSHIP-STATUS-BRIEF.md`](LEADERSHIP-STATUS-BRIEF.md).
+
+| Run | Proven live, then torn down |
+|---|---|
+| 1 | Governance core: KMS CMK, append-only audit, WORM, Bedrock Guardrail, Cognito, gateway |
+| 2 | Human gate holds the consequential step until approval |
+| 3 | Cedar authorization (Verified Permissions) ALLOW/DENY + real Bedrock (Haiku 4.5) |
+| 4 | Hardened Cognito MFA + cryptographic JWT verification -> Cedar |
+| 5 | Reviewer service: role + separation-of-duties + single-use approval |
+| 6 | S3 Object Lock retention: locked-object delete denied |
+| 7 | Reviewer behind API Gateway + Cognito JWT authorizer (401 -> authorized approve) |
+| 8 | KMS-signed manifests + atomic (no-oversell) token budgets |
+| 9 | Governed connector: idempotency + saga rollback/compensation |
+
+Reproduce from [`infra/`](infra/) (CloudFormation + `deploy`/`smoke`/`teardown`), run the laptop-only
+demo `python demo/clean_account_acceptance.py` (no AWS, no API key), or use the Terraform + GovCloud
+module [`infra/terraform/`](infra/terraform/). Security & ops review package:
+[`docs/security/`](docs/security/) and [`docs/ops/`](docs/ops/). Multi-tenancy and commercial
+packaging: [`docs/11-MULTI-TENANCY.md`](docs/11-MULTI-TENANCY.md), [`docs/12-COMMERCIAL-PACKAGING.md`](docs/12-COMMERCIAL-PACKAGING.md).
+
 ## Repository map
 
 ```
@@ -128,5 +157,28 @@ sample_agents/
   service-desk-triage/           Enterprise service desk triage agent
 infra/                           CloudFormation IaC, deploy/teardown scripts, smoke tests
 demo/                            Acceptance tests and demo harness
-tools/                           CLI utilities (e.g., add_agent.py for scaffolding new agents)
+tools/                               add_agent.py — one-command agent scaffolder
+platform_core/prod/              Production components: real JSON-Schema validation, manifest->Cedar compiler, KMS-signed manifests, atomic budgets
+infra/cloudformation/            governance-core + sample-agent templates, params, deploy/smoke/teardown scripts
+infra/golden-pilot/              Live-validated slices: AVP Cedar, Cognito identity, reviewer service + API front door, WORM evidence, connector saga
+infra/terraform/                 Terraform module (governance_core) + commercial & GovCloud root examples
+docs/11-MULTI-TENANCY.md         Silo / pool / bridge tenancy models
+docs/12-COMMERCIAL-PACKAGING.md  Editions, pricing, support tiers, Marketplace, versioning
+docs/GAP-CLOSURE-BACKLOG.md      Control-status maturity matrix + prioritized gap plan (P0/P1/P2)
+docs/security/                   Threat model, security architecture, encryption/logging matrix, pentest scope, evidence index
+docs/ops/                        Ops readiness (SLO / DR / RTO-RPO / fallback) + incident-response runbook
+DEPLOYED-AND-VALIDATED.md        Evidence log of 9 live AWS runs (deploy -> verify -> teardown)
+LEADERSHIP-STATUS-BRIEF.md       One-page executive status brief
+.github/workflows/ci.yml         CI: cfn-lint all templates + acceptance / fail-closed / prod / negative-security tests
+LICENSE  SECURITY.md  CONTRIBUTING.md  CHANGELOG.md  .github/CODEOWNERS
 ```
+
+## Status & honesty
+
+A **live-validated reference platform** for architecture workshops, scoped pilots, and AWS/customer
+positioning — **not** an AWS-authorized, ATO'd, production-certified product. The nine runs in
+[`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md) prove the control plane on real AWS; the
+remaining path to a funded production pilot (ATO/GovRAMP, independent pen test, a live external-SaaS
+connector, multi-account deployment, dashboards) is scoped and customer/engagement-owned in
+[`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md). Every factual and compliance claim is
+cited in [`SOURCES.md`](SOURCES.md).
