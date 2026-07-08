@@ -1,0 +1,100 @@
+{
+  "_comment": "Aegis governance operations dashboard — CloudWatch dashboard body (reference). Create with: aws cloudwatch put-dashboard --dashboard-name Aegis-Governance --dashboard-body file://cloudwatch-dashboard.json. Assumes the gateway/reviewer Lambdas emit EMF custom metrics in namespace 'Aegis/Governance' with dimension Environment. Replace <ENV>, <REGION>, and metric names to match your deployment. This is the live-telemetry counterpart to operator-console.html.",
+  "widgets": [
+    {
+      "type": "metric", "x": 0, "y": 0, "width": 6, "height": 6,
+      "properties": {
+        "title": "Gateway decisions (allow vs deny)",
+        "region": "<REGION>",
+        "stacked": false,
+        "metrics": [
+          ["Aegis/Governance", "ToolCallAllowed", "Environment", "<ENV>", {"stat": "Sum", "color": "#01A88D"}],
+          ["Aegis/Governance", "ToolCallDenied", "Environment", "<ENV>", {"stat": "Sum", "color": "#DD344C"}]
+        ],
+        "period": 300, "view": "timeSeries"
+      }
+    },
+    {
+      "type": "metric", "x": 6, "y": 0, "width": 6, "height": 6,
+      "properties": {
+        "title": "Deny reasons",
+        "region": "<REGION>",
+        "metrics": [
+          ["Aegis/Governance", "DenyUnregisteredTool", "Environment", "<ENV>", {"stat": "Sum"}],
+          ["Aegis/Governance", "DenyNoApproval", "Environment", "<ENV>", {"stat": "Sum"}],
+          ["Aegis/Governance", "DenySeparationOfDuties", "Environment", "<ENV>", {"stat": "Sum"}],
+          ["Aegis/Governance", "DenyBudgetExceeded", "Environment", "<ENV>", {"stat": "Sum"}],
+          ["Aegis/Governance", "DenyReplay", "Environment", "<ENV>", {"stat": "Sum"}]
+        ],
+        "period": 300, "view": "timeSeries", "stacked": true
+      }
+    },
+    {
+      "type": "metric", "x": 12, "y": 0, "width": 6, "height": 6,
+      "properties": {
+        "title": "Human-approval queue depth / latency",
+        "region": "<REGION>",
+        "metrics": [
+          ["Aegis/Governance", "ApprovalsPending", "Environment", "<ENV>", {"stat": "Maximum", "color": "#FF9900"}],
+          ["Aegis/Governance", "ApprovalLatencySeconds", "Environment", "<ENV>", {"stat": "p90", "yAxis": "right", "color": "#8C4FFF"}]
+        ],
+        "period": 300, "view": "timeSeries"
+      }
+    },
+    {
+      "type": "metric", "x": 18, "y": 0, "width": 6, "height": 6,
+      "properties": {
+        "title": "Token budget utilization (%)",
+        "region": "<REGION>",
+        "metrics": [
+          ["Aegis/Governance", "TokenBudgetUtilizationPct", "Environment", "<ENV>", {"stat": "Average", "color": "#FF9900"}]
+        ],
+        "period": 300, "view": "gauge",
+        "yAxis": {"left": {"min": 0, "max": 100}},
+        "annotations": {"horizontal": [{"label": "soft cap", "value": 80}, {"label": "hard cap", "value": 100, "color": "#DD344C"}]}
+      }
+    },
+    {
+      "type": "metric", "x": 0, "y": 6, "width": 12, "height": 6,
+      "properties": {
+        "title": "Masking events & PII redactions",
+        "region": "<REGION>",
+        "metrics": [
+          ["Aegis/Governance", "MaskingApplied", "Environment", "<ENV>", {"stat": "Sum", "color": "#01A88D"}],
+          ["Aegis/Governance", "MaskingFailClosed", "Environment", "<ENV>", {"stat": "Sum", "color": "#DD344C"}]
+        ],
+        "period": 300, "view": "timeSeries"
+      }
+    },
+    {
+      "type": "metric", "x": 12, "y": 6, "width": 6, "height": 6,
+      "properties": {
+        "title": "Audit write success (append-only sink)",
+        "region": "<REGION>",
+        "metrics": [
+          ["AWS/DynamoDB", "SuccessfulRequestLatency", "TableName", "aegis-audit-<ENV>", "Operation", "PutItem", {"stat": "Average"}],
+          ["AWS/DynamoDB", "ThrottledRequests", "TableName", "aegis-audit-<ENV>", {"stat": "Sum", "yAxis": "right", "color": "#DD344C"}]
+        ],
+        "period": 300, "view": "timeSeries"
+      }
+    },
+    {
+      "type": "metric", "x": 18, "y": 6, "width": 6, "height": 6,
+      "properties": {
+        "title": "Guardrail interventions (Bedrock)",
+        "region": "<REGION>",
+        "metrics": [
+          ["AWS/Bedrock", "InvocationsIntervened", {"stat": "Sum", "color": "#DD344C"}],
+          ["AWS/Bedrock", "Invocations", {"stat": "Sum", "yAxis": "right", "color": "#B0B8C0"}]
+        ],
+        "period": 300, "view": "timeSeries"
+      }
+    },
+    {
+      "type": "text", "x": 0, "y": 12, "width": 24, "height": 2,
+      "properties": {
+        "markdown": "**Aegis Governance Dashboard** — allow/deny, deny reasons, approval queue, token budget, masking, append-only audit health, and guardrail interventions. Custom metrics (`Aegis/Governance/*`) are emitted by the gateway and reviewer Lambdas via CloudWatch EMF. Pair with `operator-console.html` for the operator UX and the append-only DynamoDB audit table for the record of every decision. Reference config — not an AWS service."
+      }
+    }
+  ]
+}

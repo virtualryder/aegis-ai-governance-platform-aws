@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<!--
+  Aegis Operator Console — reference mock (single file, no dependencies, no network).
+  A governed-agent operations view: approval queue, live audit stream, token-budget
+  meters, deny-event feed, and per-agent health. This is a UX REFERENCE, not a live
+  console — it renders illustrative in-memory data so a customer/architect can see
+  what "operating the governed platform" looks like. Wire the panels to the real
+  DynamoDB audit table, the reviewer service, and CloudWatch metrics per
+  ops/cloudwatch-dashboard.json. AWS palette; no real data.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aegis Operator Console (reference mock)</title>
+<style>
+  :root{--ink:#232F3E;--ink2:#2c3a4a;--orange:#FF9900;--teal:#01A88D;--red:#DD344C;
+        --purple:#8C4FFF;--grey:#B0B8C0;--panel:#1b2530;--line:#33414f;--bg:#141c25;}
+  *{box-sizing:border-box;font-family:'Segoe UI',Arial,sans-serif}
+  body{margin:0;background:var(--bg);color:#eef2f5}
+  header{background:var(--ink);padding:14px 20px;display:flex;align-items:center;gap:14px;border-bottom:2px solid var(--orange)}
+  header h1{font-size:17px;margin:0;font-weight:700}
+  header .env{margin-left:auto;font-size:12px;color:var(--grey)}
+  .badge{background:var(--orange);color:var(--ink);font-weight:700;font-size:11px;padding:2px 8px;border-radius:10px}
+  .disclaimer{background:#3a2a10;color:#ffd48a;font-size:11px;padding:6px 20px;border-bottom:1px solid var(--line)}
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;padding:16px;max-width:1400px;margin:0 auto}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-height:120px}
+  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--grey);margin:0 0 10px}
+  .kpis{grid-column:1/-1;display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .kpi .n{font-size:26px;font-weight:700}
+  .kpi .l{font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:.5px}
+  .kpi.ok .n{color:var(--teal)} .kpi.warn .n{color:var(--orange)} .kpi.bad .n{color:var(--red)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--grey);font-weight:600;font-size:11px}
+  .tag{font-size:10px;font-weight:700;padding:1px 7px;border-radius:9px}
+  .allow{background:rgba(1,168,141,.15);color:var(--teal)}
+  .deny{background:rgba(221,52,76,.15);color:var(--red)}
+  .pending{background:rgba(255,153,0,.15);color:var(--orange)}
+  .mono{font-family:Consolas,monospace;font-size:11.5px;color:#cdd6df}
+  .bar{height:8px;background:#0d141b;border-radius:5px;overflow:hidden;margin-top:4px}
+  .bar > span{display:block;height:100%}
+  .btn{background:var(--teal);color:#04231d;border:none;border-radius:6px;padding:4px 10px;font-weight:700;font-size:11px;cursor:pointer}
+  .btn.reject{background:var(--red);color:#2a0810;margin-left:4px}
+  .agentrow{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .foot{color:var(--grey);font-size:11px;padding:6px 20px 20px;max-width:1400px;margin:0 auto}
+  a{color:var(--orange)}
+</style>
+</head>
+<body>
+<header>
+  <span class="badge">AEGIS</span>
+  <h1>Operator Console</h1>
+  <span class="env">reference mock · synthetic data · env: dev · region: us-east-1</span>
+</header>
+<div class="disclaimer">Reference UX mock — renders illustrative in-memory data, not a live system. Wire panels to the DynamoDB audit table, the reviewer service, and CloudWatch (see <code>ops/cloudwatch-dashboard.json</code>). Not an AWS service.</div>
+
+<div class="grid">
+  <div class="kpis">
+    <div class="kpi ok"><div class="n" id="k-allow">—</div><div class="l">Allowed (24h)</div></div>
+    <div class="kpi bad"><div class="n" id="k-deny">—</div><div class="l">Denied (24h)</div></div>
+    <div class="kpi warn"><div class="n" id="k-pending">—</div><div class="l">Approvals pending</div></div>
+    <div class="kpi ok"><div class="n" id="k-audit">—</div><div class="l">Audit records (24h)</div></div>
+    <div class="kpi warn"><div class="n" id="k-budget">—</div><div class="l">Token budget used</div></div>
+  </div>
+
+  <div class="panel" style="grid-column:1/2">
+    <h2>Human-approval queue (SoD)</h2>
+    <table id="approvals"><thead><tr><th>Case</th><th>Action</th><th>Requester</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="panel" style="grid-column:2/4">
+    <h2>Live audit stream (append-only)</h2>
+    <table id="audit"><thead><tr><th>Time</th><th>Agent</th><th>Tool</th><th>Decision</th><th>Detail (masked)</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="panel" style="grid-column:1/2">
+    <h2>Deny events (24h)</h2>
+    <table id="denies"><thead><tr><th>Reason</th><th>Count</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="panel" style="grid-column:2/3">
+    <h2>Token budget by department</h2>
+    <div id="budgets"></div>
+  </div>
+
+  <div class="panel" style="grid-column:3/4">
+    <h2>Agent health</h2>
+    <div id="agents"></div>
+  </div>
+</div>
+<div class="foot">Aegis reference operator console · governance telemetry: identity → deny-by-default gateway → human gate → append-only WORM audit · <a href="../docs/07-MCP-GATEWAY-AND-VALIDATION.md">gateway docs</a></div>
+
+<script>
+// ---- Illustrative in-memory data (NOT live). Swap for callMcpTool/CloudWatch in production. ----
+const now = Date.now();
+const t = m => new Date(now - m*60000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const audit = [
+  [1,'benefits-caseworker','eligibility.read','allow','case CASE-8842 · applicant [MASKED]'],
+  [2,'public-safety','ticket.submit','deny','consequential — no bound approval'],
+  [3,'resident-311','kb.search_policy','allow','query: pothole reporting hours'],
+  [4,'benefits-caseworker','payments.transfer','deny','tool not registered (deny-by-default)'],
+  [5,'foia','records.redact','allow','doc DOC-221 · SSN [MASKED]'],
+  [6,'permitting','license.issue','pending','awaiting supervisor approval (SoD)'],
+  [7,'procurement','vendor.lookup','allow','vendor V-104'],
+  [8,'public-safety','cji.query','deny','self-approval rejected (SoD 403)'],
+  [9,'benefits-caseworker','eligibility.read','allow','case CASE-8845 · applicant [MASKED]'],
+  [10,'resident-311','ticket.create_draft','allow','draft only — no submit authority'],
+];
+const approvals = [
+  ['LIC-5521','license.issue','operator9'],
+  ['BEN-3390','benefit.approve','caseworker4'],
+  ['GRV-118','grievance.escalate','operator2'],
+];
+const denies = [['deny-by-default (unregistered tool)',7],['consequential — no approval',5],['separation-of-duties (self-approval)',3],['token budget exceeded',1],['replay (spent approval)',1]];
+const budgets = [['Health & Human Services',72],['Public Safety',54],['Permitting',33],['311 / Resident',88]];
+const agents = [['resident-311','ok'],['benefits-caseworker','ok'],['public-safety','warn'],['foia','ok'],['permitting','ok'],['procurement','ok'],['govops-desk','ok'],['forms-idp','ok']];
+
+const $ = s => document.querySelector(s);
+$('#k-allow').textContent = audit.filter(a=>a[3]==='allow').length*137;
+$('#k-deny').textContent  = denies.reduce((s,d)=>s+d[1],0);
+$('#k-pending').textContent = approvals.length;
+$('#k-audit').textContent = '4,281';
+$('#k-budget').textContent = '61%';
+
+$('#audit tbody').innerHTML = audit.map(a=>`<tr><td class="mono">${t(a[0])}</td><td>${a[1]}</td><td class="mono">${a[2]}</td><td><span class="tag ${a[3]}">${a[3].toUpperCase()}</span></td><td>${a[4]}</td></tr>`).join('');
+$('#approvals tbody').innerHTML = approvals.map(a=>`<tr><td class="mono">${a[0]}</td><td>${a[1]}</td><td>${a[2]}</td><td><button class="btn">Approve</button><button class="btn reject">Reject</button></td></tr>`).join('');
+$('#denies tbody').innerHTML = denies.map(d=>`<tr><td>${d[0]}</td><td><span class="tag deny">${d[1]}</span></td></tr>`).join('');
+$('#budgets').innerHTML = budgets.map(b=>{const c=b[1]>85?'var(--red)':b[1]>65?'var(--orange)':'var(--teal)';return `<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:12px"><span>${b[0]}</span><span class="mono">${b[1]}%</span></div><div class="bar"><span style="width:${b[1]}%;background:${c}"></span></div></div>`}).join('');
+$('#agents').innerHTML = agents.map(a=>{const c=a[1]==='ok'?'var(--teal)':a[1]==='warn'?'var(--orange)':'var(--red)';return `<div class="agentrow"><span class="dot" style="background:${c}"></span><span style="flex:1">${a[0]}</span><span class="mono" style="color:${c}">${a[1]==='ok'?'healthy':'degraded'}</span></div>`}).join('');
+
+// Approve/Reject are illustrative — POST to the reviewer service in production.
+document.querySelectorAll('.btn').forEach(b=>b.onclick=e=>{e.target.closest('tr').style.opacity=.35;e.target.closest('td').innerHTML='<span class="mono" style="color:var(--grey)">recorded → audit</span>';});
+</script>
+</body>
+</html>
