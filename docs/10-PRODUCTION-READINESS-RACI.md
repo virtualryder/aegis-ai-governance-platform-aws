@@ -3,10 +3,16 @@
 > **Status & maturity (read first).** The `[Impl]` / `[Cfg]` tags below describe *design intent
 > and the reference implementation* — not production authorization. For the authoritative
 > per-control maturity (Designed / Implemented-offline / Deployed-on-AWS / Integration-tested /
-> Production-enforced) see [`GAP-CLOSURE-BACKLOG.md`](GAP-CLOSURE-BACKLOG.md). As of 2026-06-30 the
-> append-only audit, WORM enablement, Bedrock Guardrail, human gate, and fail-closed gateway are
-> **deployed and live-validated on AWS**; Cedar policy enforcement, identity/MFA federation,
-> runtime masking, token budgets, and live connectors remain **offline reference or planned**.
+> Production-enforced) see [`GAP-CLOSURE-BACKLOG.md`](GAP-CLOSURE-BACKLOG.md). **Updated 2026-07-08
+> to reconcile with the ten-run evidence in [`../DEPLOYED-AND-VALIDATED.md`](../DEPLOYED-AND-VALIDATED.md).**
+> **Deployed and live-validated on AWS:** append-only audit, WORM enablement, Bedrock Guardrail, human
+> gate, fail-closed gateway (Run 1–2); **Cedar policy enforcement** (Verified Permissions, Run 3);
+> **identity/MFA federation** (Cognito MFA + JWT verification, Run 4); **atomic token budgets** (Run 8);
+> the reviewer service + API-Gateway JWT authorizer (Runs 5/7); and a **live MCP JSON-RPC endpoint**
+> (Run 10). **Still offline reference / customer-engagement work:** ML-based runtime masking (the
+> deployed masker is the deterministic regex analog), live (non-fixture) external-SaaS connectors, and
+> enterprise IdP (SAML/OIDC) federation login. Per-control detail is in the README maturity matrix and
+> `GAP-CLOSURE-BACKLOG.md`.
 
 > The candid doc. Aegis is a **reference platform for architecture workshops, scoped pilots, and
 > AWS/customer positioning** — not an AWS-authorized, ATO'd, production-certified system. This page
