@@ -35,6 +35,8 @@ Live-AWS cells reflect the ten documented deploy/validate/teardown runs ([`DEPLO
 
 Nothing in this repository is production-certified; see [`docs/10-PRODUCTION-READINESS-RACI.md`](docs/10-PRODUCTION-READINESS-RACI.md) for the full RACI.
 
+*Governance once, agents as add-ons: this repo's `platform_core` is the **canonical reference implementation of the Aegis Governance Pattern (AGP) v1.0** — the versioned governance contract every suite conforms to. See [`docs/14-GOVERNANCE-PATTERN-VERSIONING.md`](docs/14-GOVERNANCE-PATTERN-VERSIONING.md).*
+
 > **Validation update (2026-07-07/08).** All deployment claims were independently re-verified against the validation account (stack history, CloudTrail, KMS deletion markers), and **Run 10 added a live MCP JSON-RPC gateway endpoint** — JWT authN (401s proven), deny-by-default tool allow-list, approval gate, fail-closed masking, IAM-level append-only audit — deployed, exercised over HTTPS, and torn down. Sanitized proof pack: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
 
 ### A whole-of-government and whole-of-enterprise governance layer for AI agents, built on AWS
@@ -118,6 +120,10 @@ Each pack maps to NIST 800-53 and the NIST AI RMF Generative AI Profile, and mar
 **Implemented** (offline reference and/or deployed IaC — see maturity matrix) vs **Configurable** (customer-owned). See
 [`docs/03-COMPLIANCE-OVERLAY-PACKS.md`](docs/03-COMPLIANCE-OVERLAY-PACKS.md).
 
+> **Auditors / GRC reviewers:** the [`assurance/`](assurance/README.md) packet is a single
+> curated cover sheet indexing every threat-model, control-mapping, evidence, and
+> shared-responsibility artifact under standard assurance headings.
+
 ## Onboarding a new agent
 
 Every agent — first-party or add-on — is described by a signed **agent manifest**
@@ -154,9 +160,10 @@ log in [`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md).
 | 9 | Governed connector: idempotency + saga rollback/compensation |
 | 10 | **A real MCP JSON-RPC endpoint**: API GW + Cognito JWT authorizer -> MCP server (deny-by-default allow-list, approval gate, fail-closed masking, append-only audit); all deny paths exercised over HTTPS |
 
-Reproduce from [`infra/`](infra/) (CloudFormation + `deploy`/`smoke`/`teardown`), run the laptop-only
-demo `python demo/clean_account_acceptance.py` (no AWS, no API key), or use the Terraform + GovCloud
-module [`infra/terraform/`](infra/terraform/). Security & ops review package:
+**Canonical deployment path.** The one supported deploy path is the **CloudFormation golden pilots** — [`infra/cloudformation/governance-core.yaml`](infra/cloudformation/governance-core.yaml) plus the slices in [`infra/golden-pilot/`](infra/golden-pilot/) — driven by the `deploy` / `smoke_test` / `teardown` scripts in [`infra/scripts/`](infra/scripts/) (declaration: [`infra/CANONICAL-IAC.md`](infra/CANONICAL-IAC.md)). The Terraform + GovCloud module ([`infra/terraform/`](infra/terraform/)) is a **parity reference**, not a second supported path. The canonical path is the one validated in the sanitized proof pack [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
+
+Reproduce from [`infra/`](infra/) (CloudFormation + `deploy`/`smoke`/`teardown`) or run the laptop-only
+demo `python demo/clean_account_acceptance.py` (no AWS, no API key). Security & ops review package:
 [`docs/security/`](docs/security/) and [`docs/ops/`](docs/ops/). Multi-tenancy and commercial
 packaging: [`docs/11-MULTI-TENANCY.md`](docs/11-MULTI-TENANCY.md), [`docs/12-COMMERCIAL-PACKAGING.md`](docs/12-COMMERCIAL-PACKAGING.md).
 
@@ -172,6 +179,7 @@ Everything needed to take Aegis into a customer conversation and run a governed 
 - **Customer-facing:** [`docs/PILOT-SOW-TEMPLATE.md`](docs/PILOT-SOW-TEMPLATE.md) (+ `Aegis-Pilot-SOW-Template.docx`) — fixed-scope pilot SOW; plus `Aegis-CISO-One-Pager.docx`,
   `Aegis-ROI-Worksheet.xlsx`, `Aegis-Master-Deck.pptx`, and the
   proof log [`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md).
+  Monthly run-cost model (pilot vs production): [`docs/13-COST-MODEL.md`](docs/13-COST-MODEL.md).
 - **GTM narrative:** [`docs/08-GTM-AND-POSITIONING.md`](docs/08-GTM-AND-POSITIONING.md) (personas, talk track, first-customer engagement kit §10).
 
 ## Repository map
@@ -199,4 +207,33 @@ governance/
   finops/budget-policy.example.yaml     Token budget + chargeback policy example
 packs/{slg,education,healthcare-lifesciences,enterprise}/pack.yaml  Overlay pack definitions
 sample_agents/
-  billing-inquiry/
+  billing-inquiry/               Enterprise billing inquiry agent (manifest, prompts, evals, runbook)
+  resident-services-311/         SLG 311 resident services agent
+  service-desk-triage/           Enterprise service desk triage agent
+infra/                           CloudFormation IaC, deploy/teardown scripts, smoke tests (CANONICAL-IAC.md)
+demo/                            Acceptance tests and demo harness
+tools/                           add_agent.py — one-command agent scaffolder
+platform_core/prod/              Production components: real JSON-Schema validation, manifest->Cedar compiler, KMS-signed manifests, atomic budgets
+infra/cloudformation/            governance-core + sample-agent templates, params, deploy/smoke/teardown scripts
+infra/golden-pilot/              Live-validated slices: AVP Cedar, Cognito identity, reviewer service + API front door, WORM evidence, connector saga, MCP gateway
+infra/terraform/                 Terraform module (governance_core) + commercial & GovCloud root examples — parity reference
+docs/11-MULTI-TENANCY.md         Silo / pool / bridge tenancy models
+docs/12-COMMERCIAL-PACKAGING.md  Editions, pricing, support tiers, Marketplace, versioning
+docs/GAP-CLOSURE-BACKLOG.md      Control-status maturity matrix + prioritized gap plan (P0/P1/P2)
+docs/security/                   Threat model, security architecture, encryption/logging matrix, pentest scope, evidence index
+docs/ops/                        Ops readiness (SLO / DR / RTO-RPO / fallback) + incident-response runbook
+DEPLOYED-AND-VALIDATED.md        Evidence log of ten live AWS runs (deploy -> verify -> teardown)
+evidence/CLEAN-ACCOUNT-ACCEPTANCE.md  Sanitized clean-account acceptance proof pack
+.github/workflows/ci.yml         CI: cfn-lint all templates + acceptance / fail-closed / prod / negative-security tests
+LICENSE  SECURITY.md  CONTRIBUTING.md  CHANGELOG.md  .github/CODEOWNERS
+```
+
+## Status & honesty
+
+A **live-validated reference platform** for architecture workshops, scoped pilots, and AWS/customer
+positioning — **not** an AWS-authorized, ATO'd, production-certified product. The ten runs in
+[`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md) prove the control plane on real AWS; the
+remaining path to a funded production pilot (ATO/GovRAMP, independent pen test, a live external-SaaS
+connector, multi-account deployment, dashboards) is scoped and customer/engagement-owned in
+[`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md). Every factual and compliance claim is
+cited in [`SOURCES.md`](SOURCES.md).

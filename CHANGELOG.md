@@ -10,6 +10,14 @@ heading describes the current state of the `main` branch.
 ## [Unreleased]
 
 ### Added
+- **Aegis Governance Pattern (AGP) versioning** (`docs/14-GOVERNANCE-PATTERN-VERSIONING.md`).
+  Formalizes the "governance once, agents as add-ons" model: AGP **v1.0** is the versioned
+  governance contract (the eight required controls); `platform_core` is now a versioned package
+  (`aegis-platform-core` 0.1.0, `pyproject.toml`) and the canonical reference implementation of
+  AGP 1.0. `platform_core.__init__` exposes `__version__` and `AEGIS_GOVERNANCE_PATTERN_VERSION`;
+  a conformance test (`platform_core/tests/test_agp_conformance.py`) guards it. The SLG, HPP,
+  HCLS, and EDU suites each declare AGP-1.0 conformance in their platform `__init__` and
+  `pyproject.toml` (`[tool.aegis] governance_pattern = "1.0"`) with matching conformance tests.
 
 - **Governance control-plane core** (`platform_core/`) — an offline, stdlib-only
   analog of the production AWS control plane:

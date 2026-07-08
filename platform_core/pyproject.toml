@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aegis-platform-core"
+version = "0.1.0"
+description = "Aegis governance control plane — the canonical reference implementation of the Aegis Governance Pattern (AGP): deny-by-default MCP authorization gateway, fail-closed masking, bound single-use SoD approvals, append-only + WORM audit, token budgets, model gateway. Stdlib-only, laptop-runnable."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "David Ryder" }]
+keywords = ["aegis-governance-pattern", "agp-1.0", "ai-governance", "mcp-gateway"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+include = ["platform_core*"]
+
+# Aegis Governance Pattern conformance (see docs/14-GOVERNANCE-PATTERN-VERSIONING.md).
+# This package is the CANONICAL reference implementation of AGP 1.0.
+[tool.aegis]
+role = "reference-implementation"
+governance_pattern = "1.0"
+
+[tool.pytest.ini_options]
+addopts = "-q"

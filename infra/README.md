@@ -1,9 +1,11 @@
 # Aegis — Infrastructure as Code
 
-> The deployable core here — `cloudformation/governance-core.yaml` + `sample-agent.yaml` and the
-> `golden-pilot/` stacks — is real and has been **deployed live** (nine deploy/smoke/teardown runs;
-> see [`../DEPLOYED-AND-VALIDATED.md`](../DEPLOYED-AND-VALIDATED.md) and
-> [`DEPLOY-RUNBOOK.md`](DEPLOY-RUNBOOK.md)). The full eight-tier decomposition described in
+> **This is the canonical deployment path for Aegis** (see [`CANONICAL-IAC.md`](CANONICAL-IAC.md);
+> `terraform/` is a parity reference). The deployable core here — `cloudformation/governance-core.yaml` + `sample-agent.yaml` and the
+> `golden-pilot/` stacks — is real and has been **deployed live** (ten deploy/smoke/teardown runs;
+> see [`../DEPLOYED-AND-VALIDATED.md`](../DEPLOYED-AND-VALIDATED.md),
+> [`DEPLOY-RUNBOOK.md`](DEPLOY-RUNBOOK.md), and the proof pack
+> [`../evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](../evidence/CLEAN-ACCOUNT-ACCEPTANCE.md)). The full eight-tier decomposition described in
 > [`cloudformation/STACKS.md`](cloudformation/STACKS.md) is the target layout; most of those tiers
 > are **planned, not yet present** as templates (list below). The architecture itself is in
 > [`../docs/02-REFERENCE-ARCHITECTURE.md`](../docs/02-REFERENCE-ARCHITECTURE.md).

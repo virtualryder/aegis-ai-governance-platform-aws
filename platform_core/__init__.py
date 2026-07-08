@@ -19,6 +19,11 @@ Modules:
     gateway          -- the MCP authorization gateway tying it all together
 """
 
+# Versioning — see docs/14-GOVERNANCE-PATTERN-VERSIONING.md
+__version__ = "0.1.0"  # aegis-platform-core implementation version
+AEGIS_GOVERNANCE_PATTERN_VERSION = "1.0"  # canonical reference implementation of AGP 1.0
+
+
 __all__ = [
     "manifest_loader",
     "policy_engine",
