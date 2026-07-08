@@ -1,0 +1,132 @@
+<svg viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="aO" markerWidth="9" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#FF9900"/></marker>
+    <marker id="aP" markerWidth="9" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#8C4FFF"/></marker>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="900" fill="#FFFFFF"/>
+  <text x="48" y="38" font-size="22" font-weight="bold" fill="#232F3E">Aegis — Governed Agent Platform · Reference Architecture (five layers)</text>
+
+  <!-- Layer bands -->
+  <rect x="48" y="64"  width="1304" height="118" rx="8" fill="#F2F3F3"/>
+  <rect x="48" y="234" width="1304" height="132" rx="8" fill="#F2F3F3"/>
+  <rect x="48" y="384" width="1304" height="132" rx="8" fill="#F2F3F3"/>
+  <rect x="48" y="534" width="1304" height="132" rx="8" fill="#F2F3F3"/>
+  <rect x="48" y="684" width="1304" height="118" rx="8" fill="#F2F3F3"/>
+
+  <!-- Trust boundary: customer AWS account -->
+  <rect x="36" y="200" width="1328" height="616" rx="12" fill="none" stroke="#545B64" stroke-width="2" stroke-dasharray="8,6"/>
+  <text x="56" y="222" font-size="12" font-weight="bold" fill="#545B64" letter-spacing="1">CUSTOMER AWS ACCOUNT — PRIVATE SUBNETS · TRUST BOUNDARY</text>
+
+  <!-- Layer labels -->
+  <text x="64" y="88"  font-size="13" font-weight="bold" fill="#545B64" letter-spacing="1">LAYER 1 — EDGE &amp; IDENTITY</text>
+  <text x="64" y="258" font-size="13" font-weight="bold" fill="#545B64" letter-spacing="1">LAYER 2 — GOVERNED CONTROL PLANE</text>
+  <text x="64" y="406" font-size="13" font-weight="bold" fill="#545B64" letter-spacing="1">LAYER 3 — MODEL TIER: REASONING &amp; GROUNDING</text>
+  <text x="64" y="558" font-size="13" font-weight="bold" fill="#545B64" letter-spacing="1">LAYER 4 — DATA &amp; EVIDENCE</text>
+  <text x="64" y="708" font-size="13" font-weight="bold" fill="#545B64" letter-spacing="1">LAYER 5 — FINOPS &amp; OBSERVABILITY (CROSS-CUTTING)</text>
+
+  <!-- Layer 1 boxes -->
+  <rect x="64" y="102" width="300" height="64" rx="8" fill="#232F3E"/>
+  <text x="214" y="128" font-size="14" fill="#FFFFFF" text-anchor="middle">Amazon CloudFront</text>
+  <text x="214" y="146" font-size="14" fill="#FFFFFF" text-anchor="middle">+ AWS WAF + Shield</text>
+
+  <rect x="424" y="102" width="360" height="64" rx="8" fill="#8C4FFF"/>
+  <text x="604" y="128" font-size="14" fill="#FFFFFF" text-anchor="middle">Amazon Cognito — federated IdP</text>
+  <text x="604" y="146" font-size="14" fill="#FFFFFF" text-anchor="middle">(SAML / OIDC) · MFA</text>
+
+  <rect x="844" y="102" width="280" height="64" rx="8" fill="#FFFFFF" stroke="#8C4FFF" stroke-width="2"/>
+  <text x="984" y="139" font-size="14" fill="#232F3E" text-anchor="middle">Short-lived JWT (RS256)</text>
+
+  <line x1="368" y1="134" x2="416" y2="134" stroke="#FF9900" stroke-width="2" marker-end="url(#aO)"/>
+  <line x1="788" y1="134" x2="836" y2="134" stroke="#8C4FFF" stroke-width="2" marker-end="url(#aP)"/>
+
+  <!-- Layer 2 boxes -->
+  <rect x="64" y="272" width="240" height="76" rx="8" fill="#232F3E"/>
+  <text x="184" y="306" font-size="14" fill="#FFFFFF" text-anchor="middle">Amazon API Gateway</text>
+  <text x="184" y="324" font-size="14" fill="#FFFFFF" text-anchor="middle">JWT authorizer</text>
+
+  <rect x="364" y="272" width="960" height="76" rx="8" fill="#232F3E"/>
+  <text x="380" y="296" font-size="15" font-weight="bold" fill="#FFFFFF">MCP Authorization Gateway — governed control plane</text>
+  <rect x="380" y="306" width="196" height="30" rx="6" fill="#FFFFFF"/>
+  <text x="478" y="325" font-size="11" fill="#232F3E" text-anchor="middle">Deny-by-default (Cedar / AVP)</text>
+  <rect x="584" y="306" width="210" height="30" rx="6" fill="#01A88D"/>
+  <text x="689" y="325" font-size="11" fill="#FFFFFF" text-anchor="middle">Bound single-use SoD approvals</text>
+  <rect x="802" y="306" width="160" height="30" rx="6" fill="#FFFFFF"/>
+  <text x="882" y="325" font-size="11" fill="#232F3E" text-anchor="middle">Scoped per-call tokens</text>
+  <rect x="970" y="306" width="186" height="30" rx="6" fill="#FFFFFF"/>
+  <text x="1063" y="325" font-size="11" fill="#232F3E" text-anchor="middle">Fail-closed PII/PHI masking</text>
+  <rect x="1164" y="306" width="110" height="30" rx="6" fill="#FFFFFF"/>
+  <text x="1219" y="325" font-size="11" fill="#232F3E" text-anchor="middle">Token budgets</text>
+
+  <line x1="308" y1="310" x2="356" y2="310" stroke="#FF9900" stroke-width="2" marker-end="url(#aO)"/>
+
+  <!-- Layer 3: PrivateLink boundary -->
+  <rect x="72" y="414" width="968" height="96" rx="8" fill="none" stroke="#232F3E" stroke-width="1.5" stroke-dasharray="6,5"/>
+  <text x="88" y="426" font-size="11" font-weight="bold" fill="#545B64">AWS SERVICE BOUNDARY · PRIVATELINK</text>
+
+  <rect x="88" y="430" width="290" height="70" rx="8" fill="#232F3E"/>
+  <text x="233" y="461" font-size="14" fill="#FFFFFF" text-anchor="middle">Amazon Bedrock</text>
+  <text x="233" y="479" font-size="14" fill="#FFFFFF" text-anchor="middle">(Claude models)</text>
+
+  <rect x="402" y="430" width="300" height="70" rx="8" fill="#232F3E"/>
+  <text x="552" y="461" font-size="14" fill="#FFFFFF" text-anchor="middle">Bedrock Guardrails</text>
+  <text x="552" y="479" font-size="14" fill="#FFFFFF" text-anchor="middle">PII filters · grounding checks</text>
+
+  <rect x="726" y="430" width="296" height="70" rx="8" fill="#232F3E"/>
+  <text x="874" y="461" font-size="14" fill="#FFFFFF" text-anchor="middle">Bedrock Knowledge Bases</text>
+  <text x="874" y="479" font-size="14" fill="#FFFFFF" text-anchor="middle">governed RAG</text>
+
+  <text x="1056" y="446" font-size="12" fill="#545B64">Reached via AWS PrivateLink /</text>
+  <text x="1056" y="464" font-size="12" fill="#545B64">VPC endpoint — private networking,</text>
+  <text x="1056" y="482" font-size="12" fill="#545B64">no egress to external AI APIs</text>
+
+  <!-- Layer 4 boxes -->
+  <rect x="64" y="572" width="350" height="76" rx="8" fill="#232F3E"/>
+  <text x="239" y="606" font-size="14" fill="#FFFFFF" text-anchor="middle">Amazon DynamoDB</text>
+  <text x="239" y="624" font-size="14" fill="#FFFFFF" text-anchor="middle">append-only audit (PutItem only)</text>
+
+  <rect x="454" y="572" width="330" height="76" rx="8" fill="#232F3E"/>
+  <text x="619" y="606" font-size="14" fill="#FFFFFF" text-anchor="middle">Amazon S3 Object Lock</text>
+  <text x="619" y="624" font-size="14" fill="#FFFFFF" text-anchor="middle">WORM evidence &amp; records</text>
+
+  <rect x="824" y="572" width="330" height="76" rx="8" fill="#232F3E"/>
+  <text x="989" y="606" font-size="14" fill="#FFFFFF" text-anchor="middle">AWS KMS — customer-managed</text>
+  <text x="989" y="624" font-size="14" fill="#FFFFFF" text-anchor="middle">CMK per data class</text>
+
+  <!-- Layer 5 boxes -->
+  <rect x="64" y="722" width="200" height="64" rx="8" fill="#232F3E"/>
+  <text x="164" y="758" font-size="14" fill="#FFFFFF" text-anchor="middle">AWS CloudTrail</text>
+
+  <rect x="284" y="722" width="310" height="64" rx="8" fill="#232F3E"/>
+  <text x="439" y="750" font-size="14" fill="#FFFFFF" text-anchor="middle">Amazon CloudWatch</text>
+  <text x="439" y="768" font-size="14" fill="#FFFFFF" text-anchor="middle">alarms · dashboards</text>
+
+  <rect x="614" y="722" width="330" height="64" rx="8" fill="#232F3E"/>
+  <text x="779" y="750" font-size="14" fill="#FFFFFF" text-anchor="middle">Cost-allocation tags</text>
+  <text x="779" y="768" font-size="14" fill="#FFFFFF" text-anchor="middle">→ chargeback (FinOps)</text>
+
+  <rect x="964" y="722" width="360" height="64" rx="8" fill="#232F3E"/>
+  <text x="1144" y="750" font-size="14" fill="#FFFFFF" text-anchor="middle">GuardDuty · Security Hub</text>
+  <text x="1144" y="768" font-size="14" fill="#FFFFFF" text-anchor="middle">· AWS Config</text>
+
+  <!-- Inter-layer arrows -->
+  <path d="M604,166 L604,191 L42,191 L42,310 L58,310" fill="none" stroke="#8C4FFF" stroke-width="2" marker-end="url(#aP)"/>
+  <path d="M554,348 L554,424" fill="none" stroke="#FF9900" stroke-width="2" marker-end="url(#aO)"/>
+  <text x="564" y="380" font-size="11" fill="#545B64">governed calls only</text>
+  <path d="M554,500 L554,526 L619,526 L619,566" fill="none" stroke="#FF9900" stroke-width="2" marker-end="url(#aO)"/>
+  <path d="M1310,348 L1310,526 L989,526 L989,566" fill="none" stroke="#FF9900" stroke-width="2" marker-end="url(#aO)"/>
+  <text x="1120" y="520" font-size="11" fill="#545B64">masked audit events</text>
+  <path d="M239,648 L239,672 L520,672 L520,716" fill="none" stroke="#FF9900" stroke-width="2" marker-end="url(#aO)"/>
+
+  <!-- Legend -->
+  <rect x="64" y="840" width="26" height="16" rx="3" fill="#232F3E"/>
+  <text x="98" y="853" font-size="12" fill="#232F3E">Platform / AWS component</text>
+  <rect x="300" y="840" width="26" height="16" rx="3" fill="#8C4FFF"/>
+  <text x="334" y="853" font-size="12" fill="#232F3E">Identity</text>
+  <rect x="430" y="840" width="26" height="16" rx="3" fill="#01A88D"/>
+  <text x="464" y="853" font-size="12" fill="#232F3E">Human approval (SoD)</text>
+  <line x1="640" y1="848" x2="690" y2="848" stroke="#FF9900" stroke-width="2" marker-end="url(#aO)"/>
+  <text x="700" y="853" font-size="12" fill="#232F3E">Governed flow</text>
+  <rect x="820" y="840" width="26" height="16" rx="3" fill="none" stroke="#545B64" stroke-width="2" stroke-dasharray="5,4"/>
+  <text x="854" y="853" font-size="12" fill="#232F3E">Trust boundary</text>
+</svg>

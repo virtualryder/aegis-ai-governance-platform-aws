@@ -99,7 +99,7 @@ controls:
       ferpa: Human authorization on disclosure of education records.
 
   - id: in-account-inference-guardrails
-    name: In-account inference + Bedrock Guardrails over PrivateLink
+    name: Private-connectivity inference + Bedrock Guardrails over PrivateLink
     description: >-
       Inference uses Amazon Bedrock over AWS PrivateLink with mandatory Guardrails on
       input and output: sensitive-information (PII) filters and denied topics. The

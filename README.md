@@ -1,16 +1,41 @@
 # Aegis — Governed Agent Platform
 
 > **Status & maturity (read first).** Aegis is a **live-validated reference platform**, not an
-> authorized product. Across **nine documented AWS runs** ([`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md))
+> authorized product. Across **ten documented AWS runs** ([`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md))
 > the deny-by-default **Cedar authorization** (Verified Permissions), **hardened identity** (Cognito
 > MFA + cryptographic JWT verification), the **human-approval reviewer service** behind an API Gateway
 > JWT authorizer, **append-only audit + WORM retention**, **KMS-signed manifests + atomic token
-> budgets**, and a **governed connector** (idempotency + saga rollback) were each **deployed, exercised
-> with real requests, and torn down**. Still customer/engagement-owned: ATO/GovRAMP authorization, an
+> budgets**, a **governed connector** (idempotency + saga rollback), and a **live MCP JSON-RPC
+> gateway endpoint** (JWT authN, deny-by-default allow-list, approval gate, masked audit) were each
+> **deployed, exercised with real requests, and torn down**. Still customer/engagement-owned: ATO/GovRAMP authorization, an
 > independent pen test, a live external-SaaS connector, multi-account/multi-tenant deployment, and
 > operator dashboards. Authoritative per-control maturity + plan:
-> [`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md); one-page exec view:
-> [`LEADERSHIP-STATUS-BRIEF.md`](LEADERSHIP-STATUS-BRIEF.md).
+> [`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md).
+
+## Capability maturity matrix
+
+✅ = evidence in this repo (code + tests, or a documented live AWS run) · ◻ = not done here / engagement work.
+Live-AWS cells reflect the ten documented deploy/validate/teardown runs ([`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md), 2026-06-30 → 2026-07-07); per-control detail is in [`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md).
+
+| Capability | Designed | Implemented (offline/tested) | Deployed on AWS (validated) | Integration-tested on AWS | Production-ready | Owner (Repo/Customer) |
+|---|:--:|:--:|:--:|:--:|:--:|---|
+| Identity / authN | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (enterprise IdP federation: Customer) |
+| MCP / tool authorization gateway | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (Run 10: live MCP JSON-RPC endpoint, allow+deny paths over HTTPS; AgentCore Gateway: Customer) |
+| Policy enforcement (deny-by-default) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo |
+| Human approval (SoD, single-use) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo |
+| PII/PHI masking | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (regex masking live-proven in Run 10; runtime Comprehend/Macie wiring: Customer) |
+| Audit (append-only + WORM) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo |
+| Bedrock + Guardrails | ✅ | ✅ | ✅ | ✅ | ◻ | Repo |
+| IaC deploy (golden path) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo |
+| Live connectors | ✅ | ✅ | ◻ | ◻ | ◻ | Customer (fixtures/stand-ins here; real SaaS is engagement work) |
+| CI/CD | ✅ | ✅ | ◻ | ◻ | ◻ | Repo (lint + tests; no cloud deploys in CI) / Customer |
+| Monitoring / alerts | ✅ | ◻ | ◻ | ◻ | ◻ | Customer |
+| DR / backup | ✅ | ◻ | ◻ | ◻ | ◻ | Customer |
+| Compliance evidence | ✅ | ✅ | ◻ | ◻ | ◻ | Repo (mappings + evidence index) / Customer (ATO/GovRAMP evidence) |
+
+Nothing in this repository is production-certified; see [`docs/10-PRODUCTION-READINESS-RACI.md`](docs/10-PRODUCTION-READINESS-RACI.md) for the full RACI.
+
+> **Validation update (2026-07-07/08).** All deployment claims were independently re-verified against the validation account (stack history, CloudTrail, KMS deletion markers), and **Run 10 added a live MCP JSON-RPC gateway endpoint** — JWT authN (401s proven), deny-by-default tool allow-list, approval gate, fail-closed masking, IAM-level append-only audit — deployed, exercised over HTTPS, and torn down. Sanitized proof pack: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
 
 ### A whole-of-government and whole-of-enterprise governance layer for AI agents, built on AWS
 
@@ -48,12 +73,16 @@ GA services — no black box, no lock-in.
 | Persona | Their question | How Aegis answers it |
 |---|---|---|
 | **CIO / CDO** | "How do I get out of the pilot trap and scale AI safely without a one-off project per agent?" | One governed paved road; every agent inherits it. Onboard agent-by-agent on a funded, repeatable pattern. |
-| **CISO** | "Can the AI act on its own? Can I trust identity? Will the audit hold up? Where does data go?" | Consequential actions withheld in code + human gate; cryptographic identity; append-only WORM audit; in-account inference with guardrails. |
+| **CISO** | "Can the AI act on its own? Can I trust identity? Will the audit hold up? Where does data go?" | Consequential actions withheld in code + human gate; cryptographic identity; append-only WORM audit; private-connectivity inference (Bedrock via PrivateLink) with guardrails. |
 | **Director / Chief Architect** | "Is this one maintainable pattern or eight integrations?" | A single reference architecture reused across every agent; IaC; standard agent manifest; no per-agent re-architecture. |
 | **CFO / Budget owner** | "How do I control and allocate AI spend across departments?" | Token budgets with hard caps + per-department **showback/chargeback** via Bedrock application inference profiles and cost-allocation tags. |
 | **CEO / Agency head** | "What's the business case and the risk story?" | Documented outcomes per workflow + a candid shared-responsibility model that survives a review board. |
 
 ## The platform in five layers
+
+![Aegis platform architecture](docs/diagrams/aegis-platform-architecture.png)
+
+Editable source: the SVG in [`docs/diagrams/`](docs/diagrams/) (open in draw.io, Inkscape, or any text editor).
 
 1. **Edge & identity** — CloudFront + WAF + Shield → Amazon Cognito / federated IdP → short-lived
    JWT → API Gateway authorizer.
@@ -67,6 +96,10 @@ GA services — no black box, no lock-in.
    Macie/Comprehend for discovery + masking, data-class isolation (CJI / FTI / PHI / EDU / public).
 5. **FinOps & observability** — application inference profiles + cost-allocation tags →
    Cost Explorer / CUR for chargeback; CloudTrail, GuardDuty, Security Hub, Config, X-Ray.
+
+The control-plane enforcement sequence — every request, token, approval, and deny path:
+
+![Aegis MCP gateway authorization flow](docs/diagrams/mcp-gateway-auth-flow.png)
 
 See [`docs/02-REFERENCE-ARCHITECTURE.md`](docs/02-REFERENCE-ARCHITECTURE.md) for the full
 edge-to-data architecture, per-component talking points, and the control→regime mapping.
@@ -103,11 +136,10 @@ classes, guardrails, budgets, and audit. This is the path to selling agents as a
 industries without re-doing governance each time. See
 [`docs/08-GTM-AND-POSITIONING.md`](docs/08-GTM-AND-POSITIONING.md).
 
-## Proven on AWS (nine live runs)
+## Proven on AWS (ten live runs)
 
 The hard controls have each been deployed to AWS, exercised with real requests, and torn down — full
-log in [`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md); one-page exec view in
-[`LEADERSHIP-STATUS-BRIEF.md`](LEADERSHIP-STATUS-BRIEF.md).
+log in [`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md).
 
 | Run | Proven live, then torn down |
 |---|---|
@@ -120,6 +152,7 @@ log in [`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md); one-page exec v
 | 7 | Reviewer behind API Gateway + Cognito JWT authorizer (401 -> authorized approve) |
 | 8 | KMS-signed manifests + atomic (no-oversell) token budgets |
 | 9 | Governed connector: idempotency + saga rollback/compensation |
+| 10 | **A real MCP JSON-RPC endpoint**: API GW + Cognito JWT authorizer -> MCP server (deny-by-default allow-list, approval gate, fail-closed masking, append-only audit); all deny paths exercised over HTTPS |
 
 Reproduce from [`infra/`](infra/) (CloudFormation + `deploy`/`smoke`/`teardown`), run the laptop-only
 demo `python demo/clean_account_acceptance.py` (no AWS, no API key), or use the Terraform + GovCloud
@@ -131,13 +164,13 @@ packaging: [`docs/11-MULTI-TENANCY.md`](docs/11-MULTI-TENANCY.md), [`docs/12-COM
 
 Everything needed to take Aegis into a customer conversation and run a governed pilot:
 
-- **In the room (internal / AE):** [`docs/DAVES-CHEAT-SHEET.md`](docs/DAVES-CHEAT-SHEET.md) (+ `Aegis-Sales-Cheat-Sheet.docx`) — one-page script: the one-liner, four CISO answers, nine-run
+- **In the room (internal / AE):** [`docs/DAVES-CHEAT-SHEET.md`](docs/DAVES-CHEAT-SHEET.md) (+ `Aegis-Sales-Cheat-Sheet.docx`) — one-page script: the one-liner, four CISO answers, ten-run
   proof, two demos, objection handling, the ask, and the "do not promise" list.
 - **Prep + deploy (internal / AE + delivery):** [`docs/CUSTOMER-PREP-AND-DEPLOY-PLAYBOOK.md`](docs/CUSTOMER-PREP-AND-DEPLOY-PLAYBOOK.md)
   (+ `Aegis-Customer-Prep-and-Deploy-Playbook.docx`) — how to prepare, the meeting flow, and the
   **step-by-step deploy with the customer** (Phase 0-8, each with the "why") + an artifact map.
 - **Customer-facing:** [`docs/PILOT-SOW-TEMPLATE.md`](docs/PILOT-SOW-TEMPLATE.md) (+ `Aegis-Pilot-SOW-Template.docx`) — fixed-scope pilot SOW; plus `Aegis-CISO-One-Pager.docx`,
-  `Aegis-Leadership-Status-Brief.docx`, `Aegis-ROI-Worksheet.xlsx`, `Aegis-Master-Deck.pptx`, and the
+  `Aegis-ROI-Worksheet.xlsx`, `Aegis-Master-Deck.pptx`, and the
   proof log [`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md).
 - **GTM narrative:** [`docs/08-GTM-AND-POSITIONING.md`](docs/08-GTM-AND-POSITIONING.md) (personas, talk track, first-customer engagement kit §10).
 
@@ -166,33 +199,4 @@ governance/
   finops/budget-policy.example.yaml     Token budget + chargeback policy example
 packs/{slg,education,healthcare-lifesciences,enterprise}/pack.yaml  Overlay pack definitions
 sample_agents/
-  billing-inquiry/               Enterprise billing inquiry agent (manifest, prompts, evals, runbook)
-  resident-services-311/         SLG 311 resident services agent
-  service-desk-triage/           Enterprise service desk triage agent
-infra/                           CloudFormation IaC, deploy/teardown scripts, smoke tests
-demo/                            Acceptance tests and demo harness
-tools/                               add_agent.py — one-command agent scaffolder
-platform_core/prod/              Production components: real JSON-Schema validation, manifest->Cedar compiler, KMS-signed manifests, atomic budgets
-infra/cloudformation/            governance-core + sample-agent templates, params, deploy/smoke/teardown scripts
-infra/golden-pilot/              Live-validated slices: AVP Cedar, Cognito identity, reviewer service + API front door, WORM evidence, connector saga
-infra/terraform/                 Terraform module (governance_core) + commercial & GovCloud root examples
-docs/11-MULTI-TENANCY.md         Silo / pool / bridge tenancy models
-docs/12-COMMERCIAL-PACKAGING.md  Editions, pricing, support tiers, Marketplace, versioning
-docs/GAP-CLOSURE-BACKLOG.md      Control-status maturity matrix + prioritized gap plan (P0/P1/P2)
-docs/security/                   Threat model, security architecture, encryption/logging matrix, pentest scope, evidence index
-docs/ops/                        Ops readiness (SLO / DR / RTO-RPO / fallback) + incident-response runbook
-DEPLOYED-AND-VALIDATED.md        Evidence log of 9 live AWS runs (deploy -> verify -> teardown)
-LEADERSHIP-STATUS-BRIEF.md       One-page executive status brief
-.github/workflows/ci.yml         CI: cfn-lint all templates + acceptance / fail-closed / prod / negative-security tests
-LICENSE  SECURITY.md  CONTRIBUTING.md  CHANGELOG.md  .github/CODEOWNERS
-```
-
-## Status & honesty
-
-A **live-validated reference platform** for architecture workshops, scoped pilots, and AWS/customer
-positioning — **not** an AWS-authorized, ATO'd, production-certified product. The nine runs in
-[`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md) prove the control plane on real AWS; the
-remaining path to a funded production pilot (ATO/GovRAMP, independent pen test, a live external-SaaS
-connector, multi-account deployment, dashboards) is scoped and customer/engagement-owned in
-[`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md). Every factual and compliance claim is
-cited in [`SOURCES.md`](SOURCES.md).
+  billing-inquiry/

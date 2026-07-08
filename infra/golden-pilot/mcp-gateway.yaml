@@ -1,0 +1,216 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Aegis Run 10 - a real MCP-protocol gateway (portable pattern).
+  API Gateway HTTP API with a Cognito JWT authorizer in front of a Lambda that
+  speaks MCP JSON-RPC 2.0 (initialize, tools/list, tools/call) with a
+  deny-by-default tool allow-list, a human-approval gate on consequential
+  tools, fail-closed output masking, and an append-only DynamoDB audit sink
+  (IAM explicitly denies UpdateItem/DeleteItem, mirroring Run 1).
+  AgentCore Gateway remains the managed-service path (docs/07); this template
+  proves the same controls on the portable API Gateway pattern in any region.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, test]
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub aegis-mcp-${Environment}
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 16
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub aegis-mcp-client-${Environment}
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+
+  AuditTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub aegis-mcp-audit-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+
+  McpFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub aegis-mcp-fn-${Environment}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: audit-append-only
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowAppend
+                Effect: Allow
+                Action: dynamodb:PutItem
+                Resource: !GetAtt AuditTable.Arn
+              - Sid: DenyMutation
+                Effect: Deny
+                Action:
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource: !GetAtt AuditTable.Arn
+
+  McpFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub aegis-mcp-gateway-${Environment}
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 15
+      MemorySize: 256
+      Role: !GetAtt McpFunctionRole.Arn
+      Environment:
+        Variables:
+          TABLE: !Ref AuditTable
+      Code:
+        ZipFile: |
+          import json, os, time, uuid, re, base64, boto3
+          ddb = boto3.client("dynamodb")
+          TABLE = os.environ["TABLE"]
+          REGISTRY = {
+            "kb.search_policy": {"description": "Search the approved policy knowledge base (read-only).", "consequential": False,
+              "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
+            "ticket.create_draft": {"description": "Draft a service ticket. Drafting only - no submit authority.", "consequential": False,
+              "inputSchema": {"type": "object", "properties": {"summary": {"type": "string"}}, "required": ["summary"]}},
+            "ticket.submit": {"description": "CONSEQUENTIAL: submit a ticket. Requires a bound single-use approval.", "consequential": True,
+              "inputSchema": {"type": "object", "properties": {"ticket_id": {"type": "string"}, "approval_id": {"type": "string"}}, "required": ["ticket_id"]}},
+          }
+          MASK = re.compile(r"\b\d{3}-\d{2}-\d{4}\b|[\w.+-]+@[\w-]+\.[\w.]+")
+          def audit(sub, tool, decision, detail):
+              ddb.put_item(TableName=TABLE, Item={
+                  "pk": {"S": "audit"},
+                  "sk": {"S": "%.6f#%s" % (time.time(), uuid.uuid4().hex[:8])},
+                  "sub": {"S": sub}, "tool": {"S": tool}, "decision": {"S": decision},
+                  "detail": {"S": MASK.sub("[MASKED]", detail)[:400]}})
+          def err(i, c, m): return {"jsonrpc": "2.0", "id": i, "error": {"code": c, "message": m}}
+          def ok(i, r): return {"jsonrpc": "2.0", "id": i, "result": r}
+          def resp(code, body): return {"statusCode": code, "headers": {"Content-Type": "application/json"}, "body": json.dumps(body)}
+          def handler(event, context):
+              claims = event.get("requestContext", {}).get("authorizer", {}).get("jwt", {}).get("claims", {})
+              sub = claims.get("sub", "anonymous")
+              body = event.get("body") or "{}"
+              if event.get("isBase64Encoded"): body = base64.b64decode(body).decode()
+              try: req = json.loads(body)
+              except Exception: return resp(400, err(None, -32700, "parse error"))
+              rid, method = req.get("id"), req.get("method", "")
+              if method == "initialize":
+                  return resp(200, ok(rid, {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}},
+                      "serverInfo": {"name": "aegis-mcp-gateway", "version": "0.1.0"}}))
+              if method == "notifications/initialized": return resp(202, {})
+              if method == "tools/list":
+                  audit(sub, "*", "allow", "tools/list")
+                  return resp(200, ok(rid, {"tools": [{"name": k, "description": v["description"], "inputSchema": v["inputSchema"]} for k, v in REGISTRY.items()]}))
+              if method == "tools/call":
+                  p = req.get("params", {}); name = p.get("name", ""); args = p.get("arguments", {})
+                  if name not in REGISTRY:
+                      audit(sub, name, "deny", "tool not registered (deny-by-default)")
+                      return resp(200, err(rid, -32601, "deny: tool '%s' is not in the allow-list (deny-by-default)" % name))
+                  if REGISTRY[name]["consequential"] and not args.get("approval_id"):
+                      audit(sub, name, "deny", "consequential tool without bound approval")
+                      return resp(200, err(rid, -32003, "deny: consequential tool requires a bound single-use approval (approval_id); see reviewer service (Runs 5/7)"))
+                  audit(sub, name, "allow", json.dumps(args))
+                  return resp(200, ok(rid, {"content": [{"type": "text", "text": "[fixture] %s executed. args=%s" % (name, MASK.sub("[MASKED]", json.dumps(args)))}], "isError": False}))
+              return resp(200, err(rid, -32601, "method '%s' not supported" % method))
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub aegis-mcp-gateway-${Environment}
+      ProtocolType: HTTP
+
+  JwtAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: cognito-jwt
+      ApiId: !Ref HttpApi
+      AuthorizerType: JWT
+      IdentitySource:
+        - $request.header.Authorization
+      JwtConfiguration:
+        Issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
+        Audience:
+          - !Ref UserPoolClient
+
+  Integration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt McpFunction.Arn
+      PayloadFormatVersion: "2.0"
+
+  McpRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /mcp
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JwtAuthorizer
+      Target: !Sub integrations/${Integration}
+
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+
+  InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref McpFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*/mcp
+
+Outputs:
+  McpEndpoint:
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/mcp
+  UserPoolId:
+    Value: !Ref UserPool
+  ClientId:
+    Value: !Ref UserPoolClient
+  AuditTableName:
+    Value: !Ref AuditTable

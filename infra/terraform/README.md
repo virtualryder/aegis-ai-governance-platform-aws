@@ -10,8 +10,9 @@ in both the commercial (`aws`) and GovCloud (`aws-us-gov`) partitions.
 ## Maturity — read first
 
 - The **CloudFormation governance core was deployed to a real AWS account and torn
-  down cleanly** (DEPLOYED-AND-VALIDATED.md **Run 1**, account `864217980669`,
-  region `us-east-1`). It is the authoritative definition.
+  down cleanly** (DEPLOYED-AND-VALIDATED.md **Run 1**, account `<VALIDATION-ACCOUNT-ID>`
+  — real account ID redacted; evidence available on request — region `us-east-1`).
+  It is the authoritative definition.
 - This **Terraform module is validated structurally** here — every `.tf` parses and
   the resource graph mirrors the proven stack. A live `terraform apply` is a
   **customer step** in the customer's own account; it is not part of this

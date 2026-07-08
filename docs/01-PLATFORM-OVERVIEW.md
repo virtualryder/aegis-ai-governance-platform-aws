@@ -48,7 +48,7 @@ Summarized from the [README](../README.md) and [`02-REFERENCE-ARCHITECTURE.md`](
 |---|---|---|---|
 | 1 | **Edge & identity** | TLS, WAF/OWASP rules, DDoS absorption; federated IdP issuing short-lived JWTs with verified role claims | CloudFront, AWS WAF, Shield, Cognito, API Gateway |
 | 2 | **Governed control plane (the core)** | Deny-by-default MCP authorization gateway: least-privilege *intersection*, scoped per-call tokens, human gate, token-budget check, append-only audit | AgentCore Gateway (or API Gateway + policy engine) |
-| 3 | **Reasoning & grounding** | In-account inference with mandatory Guardrails (PII filters + contextual grounding + automated reasoning) and governed RAG | Bedrock over PrivateLink, Bedrock Guardrails, Bedrock Knowledge Base |
+| 3 | **Reasoning & grounding** | Private-connectivity inference with mandatory Guardrails (PII filters + contextual grounding + automated reasoning) and governed RAG | Bedrock over PrivateLink, Bedrock Guardrails, Bedrock Knowledge Base |
 | 4 | **Data & evidence** | Per-data-class keys, immutable audit, WORM evidence, fail-closed masking, class isolation (CJI/FTI/PHI/EDU/public) | KMS CMK, DynamoDB, S3 Object Lock, Macie, Comprehend |
 | 5 | **FinOps & observability** | Per-department cost attribution and chargeback; continuous monitoring and tracing | Application inference profiles + cost-allocation tags → Cost Explorer/CUR; CloudTrail, GuardDuty, Security Hub, Config, X-Ray |
 
@@ -60,7 +60,7 @@ record is a governance, audit, and least-privilege problem before it is a model 
 | Persona | Their question | How Aegis answers it |
 |---|---|---|
 | **CIO / CDO** | "How do I escape the pilot trap and scale safely without a project per agent?" | One paved road; onboard agent-by-agent on a funded, repeatable pattern. |
-| **CISO** | "Can the AI act on its own? Is identity trustworthy? Will the audit hold up? Where does data go?" | Consequential actions withheld in code + human gate; cryptographic identity; append-only WORM audit; in-account inference with Guardrails. |
+| **CISO** | "Can the AI act on its own? Is identity trustworthy? Will the audit hold up? Where does data go?" | Consequential actions withheld in code + human gate; cryptographic identity; append-only WORM audit; private-connectivity inference (Bedrock via PrivateLink) with Guardrails. |
 | **Director / Chief Architect** | "Is this one maintainable pattern or eight integrations?" | A single reference architecture, IaC, and a standard agent manifest — no per-agent re-architecture. |
 | **CFO / Budget owner** | "How do I control and allocate AI spend?" | Token budgets with hard caps + per-department showback/chargeback via application inference profiles and cost-allocation tags. |
 | **CEO / Agency head** | "What's the business case and the risk story?" | Documented per-workflow outcomes + a candid shared-responsibility model that survives a review board. |

@@ -1,6 +1,7 @@
 # Aegis governance_core - dev example, COMMERCIAL partition (aws), us-east-1.
 # This is the same region/account family that live-validated the CloudFormation
-# core (DEPLOYED-AND-VALIDATED.md Run 1, account 864217980669, us-east-1).
+# core (DEPLOYED-AND-VALIDATED.md Run 1, account 000000000000 # replace with your
+# account ID — real validation account ID redacted, us-east-1).
 
 terraform {
   required_version = ">= 1.5"

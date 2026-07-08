@@ -23,7 +23,7 @@ hallucination risk, cost control, and *who has authority to act*.
 - **"Where does data go?"** In-account Bedrock over PrivateLink, mandatory Guardrails, masking fails
   closed. (Runs 1 / 3.)
 
-## Proof — nine live AWS runs (deployed, exercised, torn down)
+## Proof — ten live AWS runs (deployed, exercised, torn down)
 1 Governance core (KMS/audit/WORM/Guardrail/Cognito/gateway) · 2 Human gate holds the action ·
 3 Cedar authz (Verified Permissions) ALLOW+2 DENY + real Bedrock · 4 Cognito MFA + JWT verify ·
 5 Reviewer: role + SoD + single-use · 6 WORM delete denied · 7 API Gateway + JWT authorizer
@@ -45,7 +45,7 @@ hallucination risk, cost control, and *who has authority to act*.
 
 ## Per-persona leave-behind
 CISO → `Aegis-CISO-One-Pager.docx` · CFO → `Aegis-ROI-Worksheet.xlsx` (edit to their numbers live) ·
-Architect → `docs/02` + `docs/security/SECURITY-ARCHITECTURE.md` · Sponsor → `Aegis-Leadership-Status-Brief.docx`.
+Architect → `docs/02` + `docs/security/SECURITY-ARCHITECTURE.md` · Sponsor → `DEPLOYED-AND-VALIDATED.md` (proof log).
 
 ## The ask
 A **fixed-scope, paid pilot** in their AWS account: one low-blast-radius workflow (IT service desk /
@@ -55,4 +55,4 @@ outcome → sign the RACI → land-and-expand.
 ## Do NOT promise
 An ATO/authorization · production PII/PHI/CJI in the pilot (synthetic only until security review; BAA
 for healthcare) · a live third-party SaaS connector on day one (pattern is proven; their sandbox gets
-wired in Phase 5) · a dashboard UI (evidence is via the audit tables / evidence report today).
+wired in Phase 5) · a dashboard UI (evidence is via the audit tables / evidence report today

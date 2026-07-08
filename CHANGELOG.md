@@ -29,7 +29,7 @@ heading describes the current state of the `main` branch.
   schema-validated agent manifest, and a manifest loader/validator.
 - **FinOps design** — per-agent/department token budgets with hard/soft caps,
   threshold alerts, and per-department chargeback reporting.
-- **Offline demo** (`demo/clean_account_acceptance.py`) — a 17-step, no-AWS,
+- **Offline demo** (`demo/clean_account_acceptance.py`) — an 18-step, no-AWS,
   no-network, no-API-key clean-account acceptance run exercising the entire
   control plane end to end with PASS/FAIL per step.
 - **Deployable Infrastructure-as-Code** (`infra/cloudformation/`) — a

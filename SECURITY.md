@@ -12,10 +12,9 @@ seriously.
 Report suspected vulnerabilities privately so we can triage and remediate before
 details are public:
 
-- Preferred: open a private advisory via **GitHub Security Advisories**
-  (repository → *Security* tab → *Report a vulnerability*).
-- Alternatively, email the maintainers at **security@aegis.example** with the
-  subject line `SECURITY` and, if possible, an encrypted body.
+Report vulnerabilities privately via GitHub Security Advisories: use the *Security*
+tab → *Report a vulnerability* on this repository. Please do not open public issues
+for security reports.
 
 Please include:
 

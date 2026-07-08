@@ -1,6 +1,7 @@
 # Real Identity (task #21) — hardened Cognito + MFA + verified JWT -> Cedar
 
-> Deployed and live-tested on AWS account 864217980669 (us-east-1) on 2026-06-30, then torn down.
+> Deployed and live-tested on AWS account `<VALIDATION-ACCOUNT-ID>` (real account ID redacted;
+> evidence available on request) (us-east-1) on 2026-06-30, then torn down.
 > This closes the "MFA off / no app client / no verified role" gap and links identity to the Cedar
 > authorization proven in [`GOLDEN-PILOT.md`](GOLDEN-PILOT.md).
 

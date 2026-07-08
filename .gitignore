@@ -7,3 +7,7 @@ demo_out/
 .~lock.*
 _pgcheck/
 .claude/
+.pytest_cache/
+node_modules/
+.aws-sam/
+_qa*/

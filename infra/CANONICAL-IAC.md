@@ -16,7 +16,8 @@ authoritative, live-validated definition.
 
 Every template below has been deployed to a real AWS account and torn down
 cleanly. Evidence is recorded in `DEPLOYED-AND-VALIDATED.md` (Runs 1–7,
-account `864217980669`, region `us-east-1`). This document only cross-references
+account `<VALIDATION-ACCOUNT-ID>` — real account ID redacted; evidence available
+on request — region `us-east-1`). This document only cross-references
 those runs; it does not restate the evidence.
 
 ### `infra/cloudformation/` — platform baseline

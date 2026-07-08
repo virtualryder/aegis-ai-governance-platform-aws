@@ -4,7 +4,7 @@
 > stack was deployed to a live AWS account, verified at runtime, and torn down. It caught a real
 > bug that `cfn-lint` did not — exactly the value of a live deploy.
 
-**Run:** 2026-06-30 · Account `864217980669` · Region `us-east-1` · Stack `aegis-governance-core-dev`
+**Run:** 2026-06-30 · Account `<VALIDATION-ACCOUNT-ID>` (real account ID redacted; evidence available on request) · Region `us-east-1` · Stack `aegis-governance-core-dev`
 · Pack `enterprise` · DataClass `pii`.
 
 ## Result: CREATE_COMPLETE, all controls verified, clean teardown
@@ -221,4 +221,39 @@ saga with automatic compensation. Live:
 
 Final system-of-record state: c1 open, b1 open (idempotent), c2 voided — no orphaned or duplicate
 writes. Stands in for a real SaaS connector; swapping DynamoDB for a live API is a credentials change.
-**Teardown:** connector-pilot stack deleted. Details: `infra/golden-pilot/CONNECTOR-PILOT.md`.
+**Teardown:** connector-pi
+---
+
+## Run 10 (2026-07-07) — A real MCP-protocol gateway endpoint (portable pattern)
+
+Deployed `infra/golden-pilot/mcp-gateway.yaml` (stack `aegis-mcp-gateway`, CREATE_COMPLETE) — the
+control the platform is named for, now proven as a **live MCP JSON-RPC 2.0 endpoint** rather than
+only as offline logic + individually proven controls (Runs 3/4/7). Architecture: API Gateway HTTP
+API (`POST /mcp`) with a **Cognito JWT authorizer** in front of a Lambda MCP server
+(`initialize`, `tools/list`, `tools/call`) with a deny-by-default tool allow-list, a
+human-approval gate on consequential tools, fail-closed regex masking of tool arguments, and an
+append-only DynamoDB audit sink.
+
+Exercised live over HTTPS (all seven cases, in order):
+
+| # | Case | Result |
+|---|---|---|
+| 1 | `tools/list` with **no token** | **HTTP 401** (rejected at the authorizer — never reaches the gateway) |
+| 2 | `tools/list` with a **garbage token** | **HTTP 401** |
+| 3 | `tools/list` with a valid Cognito ID token (JWT RS256) | allow-list returned: `kb.search_policy`, `ticket.create_draft`, `ticket.submit` |
+| 4 | `tools/call kb.search_policy` with an SSN + email in the arguments | executed; audit + response show `SSN [MASKED] [MASKED]` — **masking fail-closed before audit write** |
+| 5 | `tools/call payments.transfer` (**unregistered tool**) | JSON-RPC error `-32601` — "not in the allow-list (**deny-by-default**)" |
+| 6 | `tools/call ticket.submit` (consequential) **without approval_id** | JSON-RPC error `-32003` — bound single-use approval required (reviewer service, Runs 5/7) |
+| 7 | MCP `initialize` handshake | `aegis-mcp-gateway v0.1.0`, protocol `2025-03-26` |
+
+Audit table after the run: **4 records** (2 allow, 2 deny), every record bound to the caller's
+Cognito `sub`, args masked. IAM simulation on the gateway role against the audit table:
+`PutItem = allowed`, `UpdateItem/DeleteItem = explicitDeny` — the audit sink is append-only at the
+IAM layer, mirroring Run 1.
+
+**What this does and does not prove.** It proves the portable MCP gateway pattern (API GW + JWT +
+allow-list + HITL gate + masked append-only audit) end-to-end on a real MCP protocol surface.
+The managed **AgentCore Gateway** deployment and live (non-fixture) connectors remain
+customer-engagement work, per `docs/07-MCP-GATEWAY-AND-VALIDATION.md` §8.
+**Teardown:** stack deleted after the run; zero `aegis-mcp-*` resources remain (verified via
+CloudFormation, DynamoDB, Cognito, API Gateway list calls).

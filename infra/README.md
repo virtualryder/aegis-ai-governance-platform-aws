@@ -1,34 +1,57 @@
-# Aegis — Infrastructure as Code (skeleton)
+# Aegis — Infrastructure as Code
 
-> **This is a skeleton.** The stack files described here are stubs to be completed during a
-> customer engagement. The purpose of this directory is to fix the *layout*, the *decomposition*,
-> the *deploy order*, and *how a compliance pack parameterizes a deployment* — so the templates can
-> be filled in without re-litigating the architecture. The architecture itself is in
+> The deployable core here — `cloudformation/governance-core.yaml` + `sample-agent.yaml` and the
+> `golden-pilot/` stacks — is real and has been **deployed live** (nine deploy/smoke/teardown runs;
+> see [`../DEPLOYED-AND-VALIDATED.md`](../DEPLOYED-AND-VALIDATED.md) and
+> [`DEPLOY-RUNBOOK.md`](DEPLOY-RUNBOOK.md)). The full eight-tier decomposition described in
+> [`cloudformation/STACKS.md`](cloudformation/STACKS.md) is the target layout; most of those tiers
+> are **planned, not yet present** as templates (list below). The architecture itself is in
 > [`../docs/02-REFERENCE-ARCHITECTURE.md`](../docs/02-REFERENCE-ARCHITECTURE.md).
 
 ## What's here
 
-Two IaC dialects, kept at parity, across two cloud partitions:
+What is actually on disk in this directory:
 
 ```
 infra/
-  cloudformation/        # AWS CloudFormation templates (primary; AgentCore supports CFN)
-    STACKS.md            # one-page description of every stack
-    edge.yaml            # (stub) CloudFront + WAF + Shield
-    network.yaml         # (stub) VPC, subnets, PrivateLink endpoints
-    security.yaml        # (stub) KMS CMKs per data class, IAM, guardrail wiring
-    data.yaml            # (stub) DynamoDB append-only audit, S3 Object Lock (WORM)
-    gateway.yaml         # (stub) MCP authorization gateway (AgentCore Gateway / APIGW + policy)
-    agent.yaml           # (stub) agent runtime + inference-profile binding
-    finops.yaml          # (stub) application inference profiles, cost-allocation tags, budgets
-    observability.yaml   # (stub) CloudTrail, GuardDuty, Security Hub, Config, X-Ray
-  terraform/             # Terraform equivalents, same decomposition (stubs)
-    modules/{edge,network,security,data,gateway,agent,finops,observability}/
-    envs/{commercial,govcloud}/
+  README.md                  # this file
+  DEPLOY-RUNBOOK.md          # customer-run deploy -> smoke -> teardown sequence
+  CANONICAL-IAC.md           # which IaC artifact is canonical for each capability
+  cloudformation/            # AWS CloudFormation (primary; AgentCore supports CFN)
+    STACKS.md                # one-page description of every stack tier (incl. planned ones)
+    governance-core.yaml     # DEPLOYABLE: KMS CMK, append-only audit table, approval ledger,
+                             #   WORM evidence bucket, Bedrock Guardrail, Cognito, gateway fn
+    sample-agent.yaml        # DEPLOYABLE: Step Functions agent workflow with human gate
+    params/                  # example parameter files
+      enterprise-service-desk.json
+      slg-311.json
+  golden-pilot/              # deployable pilot stacks + docs (identity, AVP/Cedar authz,
+                             #   reviewer service/API, governed connector, WORM evidence)
+    GOLDEN-PILOT.md, IDENTITY.md, REVIEWER-SERVICE.md, CONNECTOR-PILOT.md
+    cognito-identity.yaml, avp-cedar.yaml, reviewer-service.yaml, reviewer-api.yaml,
+    connector-pilot.yaml, evidence-worm.yaml
+    authz/                   # Cedar authorization test fixtures
+    run_authz_tests.sh, verify_jwt.py, role_map.json, real_permit.json
+  scripts/                   # deploy.sh, smoke_test.sh, teardown.sh, validate.sh
+  terraform/                 # Terraform equivalent of the governance core
+    README.md
+    modules/governance_core/ # main.tf, outputs.tf, index.py
+    environments/dev-commercial/main.tf
+    environments/dev-govcloud/main.tf
 ```
 
-- **CloudFormation + Terraform parity.** Some customers standardize on one or the other; both
-  express the same stacks and parameters so a pack deploys identically in either.
+### Planned (not yet present)
+
+The remaining STACKS.md tiers do not exist as templates yet; they are customer-engagement work:
+`edge.yaml` (CloudFront + WAF + Shield), `network.yaml` (VPC, subnets, PrivateLink),
+`agent.yaml` (agent runtime + inference-profile binding), `finops.yaml` (application inference
+profiles, cost tags, budgets), `observability.yaml` (CloudTrail, GuardDuty, Security Hub, Config,
+X-Ray), and the matching Terraform modules beyond `governance_core`. (The security/data/gateway
+tiers are realized today inside `governance-core.yaml` rather than as separate templates.)
+
+- **CloudFormation + Terraform parity (goal).** Some customers standardize on one or the other;
+  the governance core exists in both dialects today, and the planned tiers will keep the same
+  decomposition and parameters so a pack deploys identically in either.
 - **Commercial + GovCloud.** Commercial (US Moderate) for general workloads; **AWS GovCloud (US)**
   for High-impact / CJI / FTI. CloudFront-scoped WAF is always deployed in `us-east-1`. IaC parity
   is maintained across partitions; ARNs and partition strings (`aws` vs `aws-us-gov`) are
@@ -64,9 +87,11 @@ parameters on top of the pack: tool grants, grounding KB, token cap, inference p
 mode, and the packs the agent requires. Deploy fails if a required pack is not active in the target
 environment (minimum bar point 9).
 
-## Deploy order
+## Deploy order (target decomposition)
 
-Stacks have dependencies; deploy in this order (reverse to tear down):
+This is the dependency order for the full eight-tier layout (most tiers are still planned — see
+above; today `governance-core.yaml` covers security/data/gateway in one stack). Deploy in this
+order (reverse to tear down):
 
 1. **network** — VPC, subnets, route tables, PrivateLink endpoints. (Foundational; everything runs here.)
 2. **security** — KMS CMKs per data class, IAM roles/policies, Bedrock Guardrail policy. (Needs the VPC; everything else references the keys/roles.)
@@ -82,6 +107,9 @@ Stacks have dependencies; deploy in this order (reverse to tear down):
 
 ## Status
 
-These templates are intentionally stubs. Live connectors, production identity integration,
-third-party security testing, and authorization (ATO / GovRAMP / FedRAMP) are customer-engagement
-work — see [`../docs/10-PRODUCTION-READINESS-RACI.md`](../docs/10-PRODUCTION-READINESS-RACI.md).
+The governance core and golden-pilot stacks are deployable and have been validated live (see
+[`../DEPLOYED-AND-VALIDATED.md`](../DEPLOYED-AND-VALIDATED.md)). The remaining tiers listed under
+**Planned (not yet present)** are not written yet. Live connectors, production identity
+integration, third-party security testing, and authorization (ATO / GovRAMP / FedRAMP) are
+customer-engagement work — see
+[`../docs/10-PRODUCTION-READINESS-RACI.md`](../docs/10-PRODUCTION-READINESS-RACI.md).

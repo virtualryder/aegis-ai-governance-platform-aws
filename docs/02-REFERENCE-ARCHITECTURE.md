@@ -203,7 +203,7 @@ operational visibility for day-2. NIST 800-53 CA-7, SI-4, AU-6.
 | Cryptographic identity + MFA | ✔ | ✔ (MFA) | ✔ | ✔ | ✔ |  | ✔ | ✔ |  | Human-AI Config |
 | Deny-by-default gateway / least-priv intersection | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Manage |
 | Human gate (bound, single-use, SoD) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ (e-sig) | ✔ |  |  | Human-AI Config |
-| In-account inference + Guardrails | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |  | Data Privacy |
+| Private-connectivity inference + Guardrails | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |  | Data Privacy |
 | Contextual grounding + automated reasoning | — | — | — | ✔ |  | ✔ |  |  |  | Confabulation / Info Integrity |
 | Append-only audit + WORM | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |  | ✔ | Measure |
 | Masking (PII/PHI/FTI/CJI/card), fail-closed | ✔ | ✔ | ✔ | ✔ | ✔ | — | ✔ | ✔ (biometric) | ✔ | Data Privacy |

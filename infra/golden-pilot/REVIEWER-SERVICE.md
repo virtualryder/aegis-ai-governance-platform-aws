@@ -1,7 +1,8 @@
 # Human-Approval Reviewer Service (task #22)
 
 > Replaces the Run 2 placeholder human gate with a real authenticated reviewer service.
-> Deployed + live-tested on AWS account 864217980669 (us-east-1) on 2026-07-01, then torn down.
+> Deployed + live-tested on AWS account `<VALIDATION-ACCOUNT-ID>` (real account ID redacted;
+> evidence available on request) (us-east-1) on 2026-07-01, then torn down.
 
 ## What is real now (`reviewer-service.yaml`)
 

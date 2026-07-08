@@ -28,7 +28,7 @@ slide is what separates you from vendors who only have a diagram.
 - **CISO** -> `Aegis-CISO-One-Pager.docx` + `docs/security/THREAT-MODEL.md` + `10-PRODUCTION-READINESS-RACI.md`
 - **CFO** -> `Aegis-ROI-Worksheet.xlsx` (edit inputs to their volumes live)
 - **Architect** -> `docs/02-REFERENCE-ARCHITECTURE.md` + `docs/security/SECURITY-ARCHITECTURE.md`
-- **CEO / sponsor** -> `Aegis-Leadership-Status-Brief.docx`
+- **CEO / sponsor** -> `DEPLOYED-AND-VALIDATED.md` (the nine runs)
 - **The skeptic** -> `DEPLOYED-AND-VALIDATED.md` (the nine runs)
 
 ### A4. Rehearse two demos

@@ -135,8 +135,15 @@ referenced by profile ARN — so adding or swapping a model is a config change, 
 
 ## 8. Honest limits
 
-In this reference repo the gateway runs as the readable offline policy engine and connectors are
-fixtures; deploying **AgentCore Gateway** as the production control plane and building **at least one
-live connector** end-to-end are customer-engagement work. Publisher-trust roots and OAuth/IdP
+**Update (Run 10, 2026-07-07):** the portable MCP gateway pattern is now live-validated end-to-end —
+`infra/golden-pilot/mcp-gateway.yaml` deploys an API Gateway HTTP API (`POST /mcp`) with a Cognito
+JWT authorizer in front of a Lambda MCP JSON-RPC 2.0 server (deny-by-default tool allow-list,
+human-approval gate on consequential tools, fail-closed masking, append-only audit with IAM-level
+Update/Delete deny). All allow and deny paths were exercised live over HTTPS; see
+`DEPLOYED-AND-VALIDATED.md` Run 10.
+
+What remains: in this reference repo the richer gateway logic runs as the readable offline policy
+engine and connectors are fixtures; deploying **AgentCore Gateway** as the managed production
+control plane and building **at least one live connector** end-to-end are customer-engagement work. Publisher-trust roots and OAuth/IdP
 integration for backend authorization are customer-configured. These items are tracked in
 [`10-PRODUCTION-READINESS-RACI.md`](10-PRODUCTION-READINESS-RACI.md).

@@ -1,8 +1,9 @@
 # Aegis - Deploy Runbook (governance core + one sample agent)
 
-> **Customer-run.** These templates deploy into **your** AWS account. Anthropic/Aegis
-> does **not** deploy them for you. The author of this repo cannot deploy them either
-> (no credentials, no network) - they are validated **offline** with `cfn-lint` only.
+> **Customer-run.** These templates deploy into **your** AWS account. The Aegis project
+> does **not** deploy them for you. The templates are validated offline with `cfn-lint`
+> **and have been deployed live** - nine deploy/smoke/teardown runs in a validation
+> account (see [`../DEPLOYED-AND-VALIDATED.md`](../DEPLOYED-AND-VALIDATED.md)).
 > This runbook is the exact deploy -> smoke -> teardown sequence to run yourself.
 
 This realizes a minimal, low-cost, **cleanly-removable** subset of the eight stacks in

@@ -2,8 +2,8 @@
 
 > Task #20. This is the first end-to-end-real slice: **authorization enforced by Cedar on Amazon
 > Verified Permissions** (the production analog of `platform_core/policy_engine.py`) and a **real
-> Amazon Bedrock invocation**. Both were deployed and live-tested on AWS account 864217980669
-> (us-east-1) on 2026-06-30, then torn down. Full record in [`../../DEPLOYED-AND-VALIDATED.md`](../../DEPLOYED-AND-VALIDATED.md).
+> Amazon Bedrock invocation**. Both were deployed and live-tested on AWS account `<VALIDATION-ACCOUNT-ID>`
+> (real account ID redacted; evidence available on request) (us-east-1) on 2026-06-30, then torn down. Full record in [`../../DEPLOYED-AND-VALIDATED.md`](../../DEPLOYED-AND-VALIDATED.md).
 
 ## What is real now
 

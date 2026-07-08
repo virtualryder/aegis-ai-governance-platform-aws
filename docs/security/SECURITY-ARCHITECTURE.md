@@ -16,7 +16,7 @@
 | API Gateway JWT authorizer | Verifies RS256 token (issuer/audience/expiry, alg-confusion guard) before any Lambda runs | DA (Run 7) |
 | Cedar / Amazon Verified Permissions (AVP) | Deterministic authorization outside the agent loop (default-deny predicate) | DA (Run 3) |
 | Gateway Lambda (control plane) | Re-validates identity, evaluates the predicate, mints scoped token, applies guardrail, writes audit, fails closed | DA (Run 1, Run 2) |
-| Bedrock + Guardrails (over PrivateLink) | In-account inference; PII filters + contextual grounding + denied topics | DA (Run 1) |
+| Bedrock + Guardrails (over PrivateLink) | Private-connectivity inference to the regional Bedrock service; PII filters + contextual grounding + denied topics | DA (Run 1) |
 | DynamoDB append-only audit + approval ledger | Tamper-evident record; single-use bound approvals | DA (Run 1, Run 5) |
 | S3 Object Lock (WORM) | Immutable evidence retention | DA (Run 6) |
 | Reviewer service (API GW + Cognito authorizer) | Human gate: verified-role, separation-of-duties, bound single-use approval | DA (Run 5, Run 7) |
