@@ -2,6 +2,8 @@
 
 > ⚠️ **Before you cite anything here:** read [**What we will *not* claim**](NOT-CLAIMS.md) — this is an independent reference accelerator that runs on AWS. It is **not** an AWS service, **not** AWS-supported, **not** an official AWS solution, and **not** a compliance certification. That page governs if any wording elsewhere reads stronger.
 
+> 📊 **Honest status, one source of truth:** per-agent maturity, clean-account evidence, connector tiers, and the test count live in machine-readable [`MATURITY.yaml`](MATURITY.yaml); the four connector-maturity terms are defined in [`docs/CONNECTOR-MATURITY.md`](docs/CONNECTOR-MATURITY.md). Prose defers to `MATURITY.yaml`; a portfolio drift-checker (`tools/check_maturity.py`) keeps them aligned.
+
 > **Status & maturity (read first).** Aegis is a **live-validated reference platform**, not an
 > authorized product. Across **ten documented AWS runs** ([`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md))
 > the deny-by-default **Cedar authorization** (Verified Permissions), **hardened identity** (Cognito

@@ -1,0 +1,46 @@
+# MATURITY.yaml — machine-readable single source of truth for this repo's maturity claims.
+# Prose should agree with this file; THIS FILE governs on drift. Taxonomy: docs/CONNECTOR-MATURITY.md
+# Boundaries: NOT-CLAIMS.md
+schema_version: 1
+repo: aegis-ai-governance-platform-aws
+display_name: Aegis Governed Agent Platform (whole-of-government control plane)
+role: platform                                 # the horizontal pattern the vertical packs conform to
+governance_pattern: "Aegis Governance Pattern (AGP) v1.0"   # defines the contract
+positioning: reference-accelerator
+updated: 2026-07-09
+
+tests:
+  offline_total: 32                            # demo/ + platform_core/tests (incl. negative-security, fail-closed, AGP conformance)
+  reproduce: "PYTHONPATH=platform_core:. pytest demo platform_core/tests -q"
+  last_verified: 2026-07-09
+
+clean_account_deploy:
+  status: platform-controls-validated
+  detail: "10 live AWS runs of the governance core -> MCP endpoint (deployed, exercised with real
+           requests, torn down). Live external SaaS connectors, monitoring, DR, and production
+           certification remain OUTSIDE the repo (engagement/customer-owned)."
+  evidence: evidence/CLEAN-ACCOUNT-ACCEPTANCE.md
+
+is_the_platform: true
+components:
+  - {id: policy_engine, name: Deny-by-default policy (least-privilege intersection), maturity: deploy-validated}
+  - {id: gateway, name: MCP authorization gateway, maturity: deploy-validated}
+  - {id: approval_ledger, name: Bound single-use SoD approvals, maturity: deploy-validated}
+  - {id: masker, name: Fail-closed PII/PHI masking, maturity: implemented}
+  - {id: audit_ledger, name: Append-only + WORM audit, maturity: deploy-validated}
+  - {id: token_budget, name: Token budgets / cost control, maturity: implemented}
+  - {id: model_gateway, name: Model gateway (Bedrock), maturity: implemented}
+  - {id: prod_cedar, name: Cedar/Verified-Permissions compiler (prod), maturity: implemented}
+
+out_of_repo:                                   # what Aegis needs before "operating proof" is complete
+  - live external SaaS systems-of-record connectors
+  - monitoring / alerting operations
+  - disaster recovery
+  - production security certification / ATO
+
+references:
+  readme: README.md
+  agp_contract: docs/14-GOVERNANCE-PATTERN-VERSIONING.md
+  connector_taxonomy: docs/CONNECTOR-MATURITY.md
+  not_claims: NOT-CLAIMS.md
+  clean_account_evidence: evidence/CLEAN-ACCOUNT-ACCEPTANCE.md
