@@ -113,6 +113,13 @@ Editable source: the SVG in [`docs/diagrams/`](docs/diagrams/) (open in draw.io,
 5. **FinOps & observability** — application inference profiles + cost-allocation tags →
    Cost Explorer / CUR for chargeback; CloudTrail, GuardDuty, Security Hub, Config, X-Ray.
 
+The network and edge tiers now ship as **minimal, cfn-lint-clean reference stacks** —
+[`infra/cloudformation/network.yaml`](infra/cloudformation/network.yaml) (private VPC + PrivateLink
+interface endpoints for bedrock-runtime/kms/logs/sts/secretsmanager/states plus S3/DynamoDB gateway
+endpoints) and [`infra/cloudformation/edge.yaml`](infra/cloudformation/edge.yaml) (regional WAFv2 Web
+ACL: AWS managed common + known-bad-inputs rules + a per-IP rate limit) — to harden and extend, not
+turnkey production; see [`infra/cloudformation/STACKS.md`](infra/cloudformation/STACKS.md).
+
 The control-plane enforcement sequence — every request, token, approval, and deny path:
 
 ![Aegis MCP gateway authorization flow](docs/diagrams/mcp-gateway-auth-flow.png)
@@ -242,7 +249,7 @@ infra/                           CloudFormation IaC, deploy/teardown scripts, sm
 demo/                            Acceptance tests and demo harness
 tools/                           add_agent.py — one-command agent scaffolder
 platform_core/prod/              Production components: real JSON-Schema validation, manifest->Cedar compiler, KMS-signed manifests, atomic budgets
-infra/cloudformation/            governance-core + sample-agent templates, params, deploy/smoke/teardown scripts
+infra/cloudformation/            governance-core + sample-agent templates, network.yaml (VPC/PrivateLink) + edge.yaml (WAFv2) minimal reference stacks, params, deploy/smoke/teardown scripts
 infra/golden-pilot/              Live-validated slices: AVP Cedar, Cognito identity, reviewer service + API front door, WORM evidence, connector saga, MCP gateway
 infra/terraform/                 Terraform module (governance_core) + commercial & GovCloud root examples — parity reference
 docs/11-MULTI-TENANCY.md         Silo / pool / bridge tenancy models

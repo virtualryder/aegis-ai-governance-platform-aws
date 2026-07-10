@@ -6,8 +6,10 @@
 > see [`../DEPLOYED-AND-VALIDATED.md`](../DEPLOYED-AND-VALIDATED.md),
 > [`DEPLOY-RUNBOOK.md`](DEPLOY-RUNBOOK.md), and the proof pack
 > [`../evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](../evidence/CLEAN-ACCOUNT-ACCEPTANCE.md)). The full eight-tier decomposition described in
-> [`cloudformation/STACKS.md`](cloudformation/STACKS.md) is the target layout; most of those tiers
-> are **planned, not yet present** as templates (list below). The architecture itself is in
+> [`cloudformation/STACKS.md`](cloudformation/STACKS.md) is the target layout; the network and edge
+> tiers now also ship as **minimal, cfn-lint-clean reference stacks** (`network.yaml`, `edge.yaml` —
+> cfn-lint-clean, not yet live-run), and the remaining tiers are still **planned, not yet present**
+> as templates (list below). The architecture itself is in
 > [`../docs/02-REFERENCE-ARCHITECTURE.md`](../docs/02-REFERENCE-ARCHITECTURE.md).
 
 ## What's here
@@ -23,6 +25,11 @@ infra/
     STACKS.md                # one-page description of every stack tier (incl. planned ones)
     governance-core.yaml     # DEPLOYABLE: KMS CMK, append-only audit table, approval ledger,
                              #   WORM evidence bucket, Bedrock Guardrail, Cognito, gateway fn
+    network.yaml             # REFERENCE (cfn-lint-clean): private VPC + PrivateLink interface
+                             #   endpoints (bedrock-runtime/kms/logs/sts/secretsmanager/states)
+                             #   + S3/DynamoDB gateway endpoints
+    edge.yaml                # REFERENCE (cfn-lint-clean): regional WAFv2 Web ACL (AWS managed
+                             #   common + known-bad-inputs + per-IP rate limit)
     sample-agent.yaml        # DEPLOYABLE: Step Functions agent workflow with human gate
     params/                  # example parameter files
       enterprise-service-desk.json
@@ -45,11 +52,12 @@ infra/
 ### Planned (not yet present)
 
 The remaining STACKS.md tiers do not exist as templates yet; they are customer-engagement work:
-`edge.yaml` (CloudFront + WAF + Shield), `network.yaml` (VPC, subnets, PrivateLink),
 `agent.yaml` (agent runtime + inference-profile binding), `finops.yaml` (application inference
 profiles, cost tags, budgets), `observability.yaml` (CloudTrail, GuardDuty, Security Hub, Config,
 X-Ray), and the matching Terraform modules beyond `governance_core`. (The security/data/gateway
-tiers are realized today inside `governance-core.yaml` rather than as separate templates.)
+tiers are realized today inside `governance-core.yaml` rather than as separate templates; the
+network and edge tiers now ship as the minimal reference `network.yaml` / `edge.yaml` above —
+cfn-lint-clean but not yet part of a live deploy run.)
 
 - **CloudFormation + Terraform parity (goal).** Some customers standardize on one or the other;
   the governance core exists in both dialects today, and the planned tiers will keep the same

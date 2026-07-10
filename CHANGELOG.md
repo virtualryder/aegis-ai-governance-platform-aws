@@ -9,6 +9,31 @@ heading describes the current state of the `main` branch.
 
 ## [Unreleased]
 
+### 2026-07-10 — Sprint-0 pilot-prep hardening (landed in `main`)
+
+- **Approval-ledger enforcement at the deployed endpoint.** The deployed MCP gateway
+  (`infra/golden-pilot/mcp-gateway.yaml`) now validates a consequential-tool `approval_id`
+  against the reviewer-service ledger with an **atomic single-use consume bound to the calling
+  identity** (`requester == sub`). An arbitrary, replayed, expired, or unbound string is denied,
+  and the gate **fails closed** when no ledger is wired — it no longer accepts any non-empty
+  string (previously presence-only).
+- **Network & edge reference stacks shipped.** `infra/cloudformation/network.yaml` (private VPC +
+  PrivateLink interface endpoints for bedrock-runtime/kms/logs/sts/secretsmanager/states plus
+  S3/DynamoDB gateway endpoints) and `infra/cloudformation/edge.yaml` (regional WAFv2 Web ACL: AWS
+  managed common + known-bad-inputs rules + a per-IP rate limit) now ship as **minimal, cfn-lint-clean
+  reference stacks** (previously prose-only). See `infra/cloudformation/STACKS.md`.
+- **Drift-checker shipped.** `tools/check_maturity.py` now exists: it re-collects the test suite named
+  by `MATURITY.yaml`'s `tests.reproduce` and fails on drift against the declared `offline_total`
+  (`--update` rewrites it). The README's drift-checker reference is now real. `MATURITY.yaml`'s
+  `offline_total` was regenerated to the actual collected count.
+- **Dependencies pinned; pip-audit blocking.** `platform_core/requirements-lock.txt` (hash-pinned)
+  ships, and CI's `pip-audit` runs against it with the `|| true` **dropped** — a known-vulnerable
+  dependency now fails CI (was report-only/advisory).
+- **Real-data PII masking fails closed.** The masker now supports an `ALLOW_REAL_DATA` mode in which
+  the NER engine is **mandatory**; if it is unavailable the masker **raises (fails closed)** rather
+  than silently falling back to structured-identifier regex only. Free-text names require the NER
+  engine (production: Amazon Comprehend).
+
 ### Added
 - **Aegis Governance Pattern (AGP) versioning** (`docs/14-GOVERNANCE-PATTERN-VERSIONING.md`).
   Formalizes the "governance once, agents as add-ons" model: AGP **v1.0** is the versioned
