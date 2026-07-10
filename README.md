@@ -6,6 +6,12 @@
 
 > 🔗 **Conforms to the Aegis Governance Pattern (AGP) v1.0.** The 8 required controls (identity, deny-by-default gateway, least-privilege intersection, bound SoD approval, fail-closed masking, append-only+WORM audit, token budgets, model gateway+grounding) are mapped to their implementing module and proving test in [`AGP-CONFORMANCE.md`](AGP-CONFORMANCE.md).
 
+> ™ **Brand & trademark:** collateral follows two tracks — an **internal-AWS** track (approved templates only) and a **customer-safe public** track (neutral branding, plain-text "Built on AWS", no AWS logo). Rules in [`BRAND-AND-TRADEMARK.md`](BRAND-AND-TRADEMARK.md). Nothing here implies AWS sponsorship or endorsement.
+
+> 🧭 **Part of the governed-agent portfolio — this is the hub.** Aegis defines the **Aegis Governance Pattern (AGP v1.0)**; the vertical packs (HCLS, SLG, HPP, EDU) conform to it. Portfolio map + how the packs flow together: [`PORTFOLIO-START-HERE.md`](PORTFOLIO-START-HERE.md). Deploy everything end-to-end: [`DEPLOY-EVERYTHING.md`](DEPLOY-EVERYTHING.md).
+
+> 📚 **Governance & readiness docs (this repo):** [`NOT-CLAIMS`](NOT-CLAIMS.md) · [`MATURITY.yaml`](MATURITY.yaml) · [`Connector maturity`](docs/CONNECTOR-MATURITY.md) · [`AGP conformance`](AGP-CONFORMANCE.md) · [`Operating model`](OPERATING-MODEL.md) · [`Release packet`](RELEASE-PACKET.md) · [`AWS run-cost`](AWS-RUN-COST.md) · [`Brand & trademark`](BRAND-AND-TRADEMARK.md)
+
 > **Status & maturity (read first).** Aegis is a **live-validated reference platform**, not an
 > authorized product. Across **ten documented AWS runs** ([`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md))
 > the deny-by-default **Cedar authorization** (Verified Permissions), **hardened identity** (Cognito
