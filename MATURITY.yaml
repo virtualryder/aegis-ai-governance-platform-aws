@@ -10,7 +10,7 @@ positioning: reference-accelerator
 updated: 2026-07-09
 
 tests:
-  offline_total: 32                            # demo/ + platform_core/tests (incl. negative-security, fail-closed, AGP conformance)
+  offline_total: 37                            # collected-test count; verified by tools/check_maturity.py
   reproduce: "PYTHONPATH=platform_core:. pytest demo platform_core/tests -q"
   last_verified: 2026-07-09
 
