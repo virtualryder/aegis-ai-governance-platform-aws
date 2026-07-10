@@ -23,10 +23,13 @@ jobs:
           python-version: "3.12"
 
       - name: Install test dependencies
-        run: pip install jsonschema cryptography pyyaml
+        run: pip install pytest jsonschema cryptography pyyaml
 
       - name: Byte-compile control plane, demo, and tools
         run: python -m compileall platform_core demo tools
+
+      - name: Check MATURITY.yaml test count (drift gate)
+        run: python tools/check_maturity.py
 
       - name: Run clean-account acceptance demo
         run: python demo/clean_account_acceptance.py
