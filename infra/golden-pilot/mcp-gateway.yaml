@@ -14,6 +14,17 @@ Parameters:
     Type: String
     Default: dev
     AllowedValues: [dev, test]
+  LedgerTableName:
+    Type: String
+    Default: ""
+    Description: >-
+      Name of the reviewer-service approval ledger DynamoDB table (from reviewer-api.yaml,
+      e.g. aegis-api-ledger-dev). When set, consequential tool calls are validated against
+      this ledger with an atomic single-use consume bound to the calling identity. When empty,
+      the gateway DENIES all consequential tools (fail-closed) rather than trusting the caller.
+
+Conditions:
+  HasLedger: !Not [!Equals [!Ref LedgerTableName, ""]]
 
 Resources:
   UserPool:
@@ -91,6 +102,13 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                 Resource: !GetAtt AuditTable.Arn
+              - !If
+                - HasLedger
+                - Sid: ConsumeApproval
+                  Effect: Allow
+                  Action: dynamodb:UpdateItem
+                  Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LedgerTableName}
+                - !Ref AWS::NoValue
 
   McpFunction:
     Type: AWS::Lambda::Function
@@ -104,11 +122,13 @@ Resources:
       Environment:
         Variables:
           TABLE: !Ref AuditTable
+          LEDGER: !If [HasLedger, !Ref LedgerTableName, ""]
       Code:
         ZipFile: |
           import json, os, time, uuid, re, base64, boto3
           ddb = boto3.client("dynamodb")
           TABLE = os.environ["TABLE"]
+          LEDGER = os.environ.get("LEDGER", "")
           REGISTRY = {
             "kb.search_policy": {"description": "Search the approved policy knowledge base (read-only).", "consequential": False,
               "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
@@ -147,9 +167,33 @@ Resources:
                   if name not in REGISTRY:
                       audit(sub, name, "deny", "tool not registered (deny-by-default)")
                       return resp(200, err(rid, -32601, "deny: tool '%s' is not in the allow-list (deny-by-default)" % name))
-                  if REGISTRY[name]["consequential"] and not args.get("approval_id"):
-                      audit(sub, name, "deny", "consequential tool without bound approval")
-                      return resp(200, err(rid, -32003, "deny: consequential tool requires a bound single-use approval (approval_id); see reviewer service (Runs 5/7)"))
+                  if REGISTRY[name]["consequential"]:
+                      aid = args.get("approval_id")
+                      if not aid:
+                          audit(sub, name, "deny", "consequential tool without bound approval")
+                          return resp(200, err(rid, -32003, "deny: consequential tool requires a bound single-use approval (approval_id); see reviewer service (Runs 5/7)"))
+                      # Fail-closed: without a wired approval ledger we cannot validate the
+                      # approval, so we DENY rather than trust a caller-supplied string.
+                      if not LEDGER:
+                          audit(sub, name, "deny", "approval ledger not configured (fail-closed)")
+                          return resp(200, err(rid, -32003, "deny: approval ledger not configured; cannot validate approval (fail-closed). Set LedgerTableName."))
+                      # Atomic single-use consume: the approval must exist, be unconsumed,
+                      # be unexpired, AND be bound to the calling identity (requester == sub).
+                      # Any other case (unknown/expired/replayed/unbound string) fails the
+                      # condition and is denied. This is what makes an arbitrary approval_id
+                      # string useless.
+                      now = int(time.time())
+                      try:
+                          ddb.update_item(TableName=LEDGER, Key={"approval_id": {"S": str(aid)}},
+                              UpdateExpression="SET consumed_at = :now",
+                              ConditionExpression="attribute_exists(approval_id) AND attribute_not_exists(consumed_at) AND expires_at > :now AND requester = :sub",
+                              ExpressionAttributeValues={":now": {"N": str(now)}, ":sub": {"S": sub}})
+                      except ddb.exceptions.ConditionalCheckFailedException:
+                          audit(sub, name, "deny", "approval invalid/expired/replayed/unbound")
+                          return resp(200, err(rid, -32003, "deny: approval is invalid, expired, already used, or not bound to this identity"))
+                      except Exception:
+                          audit(sub, name, "deny", "approval validation error (fail-closed)")
+                          return resp(200, err(rid, -32003, "deny: approval validation error (fail-closed)"))
                   audit(sub, name, "allow", json.dumps(args))
                   return resp(200, ok(rid, {"content": [{"type": "text", "text": "[fixture] %s executed. args=%s" % (name, MASK.sub("[MASKED]", json.dumps(args)))}], "isError": False}))
               return resp(200, err(rid, -32601, "method '%s' not supported" % method))
