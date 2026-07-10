@@ -41,10 +41,10 @@ Legend: **D** Designed · **IO** Implemented offline (Python demo) · **DA** Dep
 | Deny-by-default policy (full predicate) | ✓ | ✓ | ✓ | ✓ |  | **Cedar on Amazon Verified Permissions — deployed & live-tested** (1 ALLOW + 2 DENY, 2026-06-30); AgentCore Policy is the next target |
 | Real Bedrock invocation (Model Gateway) | ✓ | ✓ | ✓ | ✓ |  | Claude Haiku 4.5 via inference profile, live (2026-06-30) |
 | Cryptographic identity + MFA | ✓ | ✓ | ✓ | ✓ |  | **MFA-required Cognito + advanced security deployed; real MFA login → RS256 JWT verified vs JWKS → verified group → Cedar decision** (2026-06-30). IdP federation + API GW authorizer + OBO still to wire |
-| PII/PHI/FTI/CJI masking | ✓ | ✓ |  |  |  | Regex offline; Comprehend/Macie not wired at runtime |
+| PII/PHI/FTI/CJI masking | ✓ | ✓ |  |  |  | Deterministic Safe Harbor regex covers **structured** identifiers; **free-text names need the NER engine**, which is **mandatory and fail-closed in real-data mode** (`ALLOW_REAL_DATA`). Comprehend/Macie not wired at runtime (customer work) |
 | Token budgets + chargeback | ✓ | ✓ | ✓ | ✓ |  | **Atomic DynamoDB reservation deployed & live-tested** (over-cap rejected, no oversell), 2026-07-01; AIP chargeback path proven Run 3 |
 | Signed agent manifests | ✓ | ✓ | ✓ | ✓ |  | **KMS-asymmetric sign/verify deployed & live-tested** (tamper rejected) + real JSON-Schema validation + manifest->Cedar compiler in platform_core/prod, 2026-07-01 |
-| Single-use bound approval ledger | ✓ | ✓ | partial |  |  | Offline enforced; DynamoDB table deployed; reviewer service not built |
+| Single-use bound approval ledger | ✓ | ✓ | ✓ | ✓ |  | Offline enforced; reviewer service deployed (Runs 5/7); the **deployed MCP gateway** (`infra/golden-pilot/mcp-gateway.yaml`) now validates a consequential-tool `approval_id` against the ledger with an **atomic single-use consume bound to the calling identity** (`requester == sub`) — arbitrary/replayed/expired/unbound denied, fail-closed if no ledger wired (no longer presence-only) |
 | Multi-account data-class isolation | ✓ |  |  |  |  | Control Tower topology documented, not deployed |
 | Live connectors (system of record) | ✓ | ✓ | ✓ | ✓ |  | **Governed connector w/ idempotency + saga rollback deployed & live-tested** on a DynamoDB system-of-record (2026-07-01); real external SaaS (ServiceNow/CRM) is a credentials/endpoint change |
 

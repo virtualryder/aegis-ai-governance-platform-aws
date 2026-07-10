@@ -230,6 +230,15 @@ the per-regime narrative in [`03-COMPLIANCE-OVERLAY-PACKS.md`](03-COMPLIANCE-OVE
   departments. The same agents become saga steps unchanged.
 - **Regions.** Commercial (US Moderate) and **AWS GovCloud (US)** for High-impact / CJI / FTI; deploy
   CloudFront-scoped WAF in `us-east-1`. IaC parity across CloudFormation + Terraform.
+- **Network & edge stacks (shipped, minimal reference).** The edge tier (§1) and the private-network
+  substrate now ship as minimal, cfn-lint-clean CloudFormation reference stacks:
+  [`../infra/cloudformation/network.yaml`](../infra/cloudformation/network.yaml) (private VPC +
+  PrivateLink interface endpoints for bedrock-runtime/kms/logs/sts/secretsmanager/states plus
+  S3/DynamoDB gateway endpoints) and
+  [`../infra/cloudformation/edge.yaml`](../infra/cloudformation/edge.yaml) (regional WAFv2 Web ACL:
+  AWS managed common + known-bad-inputs rules + a per-IP rate limit). They are reference stacks to
+  harden and extend — cfn-lint-clean but not yet part of a live deploy run — see
+  [`../infra/cloudformation/STACKS.md`](../infra/cloudformation/STACKS.md).
 
 ## 11. What we deliberately do **not** claim
 

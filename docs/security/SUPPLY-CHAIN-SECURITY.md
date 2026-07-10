@@ -42,10 +42,13 @@ suppression policy; add secret scanning (for example gitleaks) to the pull-reque
 
 ## 3. Dependency pinning
 
-- Python test/runtime dependencies are installed explicitly in CI (`jsonschema`, `cryptography`,
-  `pyyaml`, `cfn-lint`, `bandit`, `checkov`). **Plan:** move to a fully pinned lockfile
-  (hash-pinned `requirements.txt` or equivalent) so builds are reproducible and a compromised
-  transitive dependency cannot silently enter. **P.**
+- **Landed:** the platform core now ships a hash-pinned lockfile,
+  [`../../platform_core/requirements-lock.txt`](../../platform_core/requirements-lock.txt)
+  (`jsonschema`, `cryptography`, and their transitive closure with hashes), so builds are
+  reproducible and a compromised transitive dependency cannot silently enter. The blocking security
+  harness (`.github/workflows/security.yml`, [`../../SECURITY-CI.md`](../../SECURITY-CI.md)) runs
+  **pip-audit against this lockfile as a blocking gate** — the `|| true` was dropped, so a known CVE
+  fails CI. **DA.** Extending the lockfile to every CI tool remains follow-on work.
 - GitHub Actions are pinned to major-version tags today (`@v4`, `@v5`). **Plan:** pin actions to
   commit SHAs to remove tag-mutation risk. **P.**
 
@@ -91,7 +94,9 @@ it did not declare.
 ## 8. What is proven vs planned
 
 - **Proven (DA):** KMS-asymmetric signed-manifest verify + tamper rejection (Run 8); CI with
-  cfn-lint (blocking) and bandit/checkov (advisory); minimum-bar onboarding gate design + schema.
-- **Planned (P):** SBOM per release; blocking security scans with suppression policy; hash-pinned
-  dependency lockfile; SHA-pinned actions; release-artifact signing + verify-at-deploy; secret
-  scanning; base-image policy enforcement if containers are introduced.
+  cfn-lint (blocking); the `security.yml` harness with **bandit + detect-secrets + pip-audit
+  blocking** (pip-audit against the hash-pinned `platform_core/requirements-lock.txt`) and Semgrep +
+  checkov advisory; a CycloneDX SBOM published every run; minimum-bar onboarding gate design + schema.
+- **Planned (P):** SHA-pinned actions; promoting Semgrep/checkov to blocking with a suppression
+  policy; release-artifact signing + verify-at-deploy; base-image policy enforcement if containers
+  are introduced.

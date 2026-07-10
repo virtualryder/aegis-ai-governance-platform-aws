@@ -246,6 +246,14 @@ Exercised live over HTTPS (all seven cases, in order):
 | 6 | `tools/call ticket.submit` (consequential) **without approval_id** | JSON-RPC error `-32003` — bound single-use approval required (reviewer service, Runs 5/7) |
 | 7 | MCP `initialize` handshake | `aegis-mcp-gateway v0.1.0`, protocol `2025-03-26` |
 
+> **Update (2026-07-10):** the deployed gateway template (`mcp-gateway.yaml`) no longer treats a
+> *present* `approval_id` as sufficient. It now performs an **atomic single-use consume** of the
+> `approval_id` against the reviewer-service ledger via a DynamoDB `ConditionExpression`
+> (`attribute_exists(approval_id) AND attribute_not_exists(consumed_at) AND expires_at > now AND
+> requester == sub`), so an arbitrary, replayed, expired, or unbound string is denied, and the gate
+> **fails closed** if no ledger is wired. Case 6 above exercised the missing-approval deny path;
+> the present-but-invalid path is now enforced by the same code.
+
 Audit table after the run: **4 records** (2 allow, 2 deny), every record bound to the caller's
 Cognito `sub`, args masked. IAM simulation on the gateway role against the audit table:
 `PutItem = allowed`, `UpdateItem/DeleteItem = explicitDeny` — the audit sink is append-only at the
