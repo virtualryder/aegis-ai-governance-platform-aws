@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Aegis edge protection (minimal reference). A regional AWS WAFv2 Web ACL that
+  the MCP gateway's API can associate with, carrying the AWS managed common rule
+  set, the known-bad-inputs set, and a per-IP rate limit. This is the baseline
+  every agent inherits; a CloudFront + Shield front door (Web ACL scope
+  CLOUDFRONT, us-east-1) is an optional add-on documented in STACKS.md. Minimal
+  and cfn-lint-clean — extend with regime-specific rules per the pack.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, test, prod]
+  RateLimitPer5Min:
+    Type: Number
+    Default: 2000
+    MinValue: 100
+    Description: Max requests per 5-minute window per source IP before blocking.
+
+Resources:
+  GatewayWebAcl:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: !Sub "aegis-${Environment}-gateway-waf"
+      Scope: REGIONAL
+      Description: Baseline WAF for the Aegis MCP gateway API - managed rules plus per-IP rate limit.
+      DefaultAction:
+        Allow: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub "aegis-${Environment}-gateway-waf"
+      Rules:
+        - Name: AWSManagedCommon
+          Priority: 0
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: aws-managed-common
+        - Name: AWSManagedKnownBadInputs
+          Priority: 1
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesKnownBadInputsRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: aws-managed-known-bad-inputs
+        - Name: PerIpRateLimit
+          Priority: 2
+          Action:
+            Block: {}
+          Statement:
+            RateBasedStatement:
+              Limit: !Ref RateLimitPer5Min
+              AggregateKeyType: IP
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: per-ip-rate-limit
+
+Outputs:
+  WebAclArn:
+    Description: Associate with the MCP gateway API stage via AWS::WAFv2::WebACLAssociation.
+    Value: !GetAtt GatewayWebAcl.Arn
+    Export: { Name: !Sub "aegis-${Environment}-gateway-waf-arn" }

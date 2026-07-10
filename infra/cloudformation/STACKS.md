@@ -1,16 +1,18 @@
 # Aegis — CloudFormation Stacks (one-page reference)
 
 > The eight stacks that make up a standalone governed agent, mirroring the tiers in
-> [`../../docs/02-REFERENCE-ARCHITECTURE.md`](../../docs/02-REFERENCE-ARCHITECTURE.md). Each is a
-> stub in this skeleton; this page fixes purpose, key resources, and which **pack parameters** and
-> **manifest fields** drive each one. Deploy order is in [`../README.md`](../README.md).
+> [`../../docs/02-REFERENCE-ARCHITECTURE.md`](../../docs/02-REFERENCE-ARCHITECTURE.md). `governance-core.yaml`,
+> `network.yaml`, and `edge.yaml` ship as **minimal, cfn-lint-clean reference stacks** here (to harden and
+> extend, not turnkey production); the remaining tiers are documented stubs. This page fixes purpose, key
+> resources, and which **pack parameters** and **manifest fields** drive each one. Deploy order is in
+> [`../README.md`](../README.md).
 
 Partition note: every stack parameterizes the partition (`aws` vs `aws-us-gov`) and region so the
 same template deploys to commercial or GovCloud.
 
 ---
 
-## `network.yaml` — Network foundation
+## `network.yaml` — Network foundation  ✅ *shipped (minimal reference)*
 - **Purpose.** Private network the agent and control plane run in; keeps inference and tool traffic off the public internet.
 - **Key resources.** `AWS::EC2::VPC`, private/public subnets, route tables, NAT, `AWS::EC2::VPCEndpoint` (PrivateLink) for Bedrock and AWS APIs, security groups.
 - **Pack-driven.** `data_classes` → number/shape of isolated VPCs/subnets (CJI and FTI get isolated networks); `regions` → partition/region.
@@ -28,7 +30,7 @@ same template deploys to commercial or GovCloud.
 - **Pack-driven.** `retention` → S3 Object Lock mode (COMPLIANCE/GOVERNANCE) and retention period; `data_classes` → bucket/table partitioning per class (e.g. SUD segregated audit).
 - **Manifest-driven.** audit fields recorded per agent decision; masked-field set from `metadata.classification`.
 
-## `edge.yaml` — Edge protection
+## `edge.yaml` — Edge protection  ✅ *shipped (minimal reference)*
 - **Purpose.** Public attack-surface protection inherited by every agent.
 - **Key resources.** `AWS::CloudFront::Distribution`, `AWS::WAFv2::WebACL` (OWASP managed rules + rate limit; **deployed in `us-east-1`** for CloudFront scope), AWS Shield.
 - **Pack-driven.** `regions` (origin region) and any regime-specific WAF rule additions; all packs inherit the edge baseline.
