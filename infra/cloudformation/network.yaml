@@ -1,0 +1,203 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Aegis network foundation (minimal reference). A private VPC with two
+  private subnets across two AZs and PrivateLink (interface) endpoints for the
+  AWS services the governed agent + control plane call — so inference (Amazon
+  Bedrock) and tool traffic stay on AWS private networking, off the public
+  internet. Gateway endpoints cover S3/DynamoDB. This is a minimal, hardened
+  starting point to extend (per-data-class isolation, NAT for approved egress,
+  Network Firewall FQDN allow-lists) — not a full production network.
+  Partition/region are parameterized so it deploys to commercial or GovCloud.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, test, prod]
+  VpcCidr:
+    Type: String
+    Default: 10.60.0.0/16
+    AllowedPattern: '^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$'
+    Description: CIDR for the VPC.
+  PrivateSubnet1Cidr:
+    Type: String
+    Default: 10.60.0.0/20
+  PrivateSubnet2Cidr:
+    Type: String
+    Default: 10.60.16.0/20
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - { Key: Name, Value: !Sub "aegis-${Environment}-vpc" }
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - { Key: Name, Value: !Sub "aegis-${Environment}-private-1" }
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - { Key: Name, Value: !Sub "aegis-${Environment}-private-2" }
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - { Key: Name, Value: !Sub "aegis-${Environment}-private-rt" }
+
+  PrivateSubnet1RouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateSubnet2RouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet2
+
+  # SG for the interface endpoints: allow HTTPS only from inside the VPC.
+  EndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTPS from the VPC to interface VPC endpoints (PrivateLink).
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr
+          Description: HTTPS from within the VPC
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr
+          Description: HTTPS within the VPC
+      Tags:
+        - { Key: Name, Value: !Sub "aegis-${Environment}-endpoints-sg" }
+
+  # SG the agent/control-plane compute attaches to (egress to endpoints only).
+  WorkloadSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Governed agent/control-plane compute; egress to VPC endpoints only.
+      VpcId: !Ref Vpc
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr
+          Description: HTTPS to in-VPC interface endpoints
+      Tags:
+        - { Key: Name, Value: !Sub "aegis-${Environment}-workload-sg" }
+
+  # ── Gateway endpoints (no ENI/SG; route-table attached) ──────────────────
+  S3GatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      VpcEndpointType: Gateway
+      RouteTableIds: [!Ref PrivateRouteTable]
+
+  DynamoDbGatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.dynamodb"
+      VpcEndpointType: Gateway
+      RouteTableIds: [!Ref PrivateRouteTable]
+
+  # ── Interface endpoints (PrivateLink) for the services the platform calls ──
+  BedrockRuntimeEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.bedrock-runtime"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref EndpointSecurityGroup]
+
+  KmsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.kms"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref EndpointSecurityGroup]
+
+  LogsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.logs"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref EndpointSecurityGroup]
+
+  StsEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.sts"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref EndpointSecurityGroup]
+
+  SecretsManagerEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.secretsmanager"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref EndpointSecurityGroup]
+
+  StatesEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref Vpc
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.states"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds: [!Ref PrivateSubnet1, !Ref PrivateSubnet2]
+      SecurityGroupIds: [!Ref EndpointSecurityGroup]
+
+Outputs:
+  VpcId:
+    Value: !Ref Vpc
+    Export: { Name: !Sub "aegis-${Environment}-vpc-id" }
+  PrivateSubnetIds:
+    Value: !Join [",", [!Ref PrivateSubnet1, !Ref PrivateSubnet2]]
+    Export: { Name: !Sub "aegis-${Environment}-private-subnet-ids" }
+  WorkloadSecurityGroupId:
+    Value: !Ref WorkloadSecurityGroup
+    Export: { Name: !Sub "aegis-${Environment}-workload-sg-id" }
+  BedrockRuntimeEndpointId:
+    Value: !Ref BedrockRuntimeEndpoint

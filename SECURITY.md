@@ -54,8 +54,14 @@ not a best-effort behavior:
 - If a requested tool has **no registered handler**, the call is **denied**
   (`tool-not-registered`) rather than returning a fabricated success.
 - If **boundary masking** cannot run, the call is **denied**
-  (`masking_fail_closed`) so sensitive data can never leak unmasked into a
-  prompt, log, or audit record.
+  (`masking_fail_closed`) so sensitive data does not leak unmasked into a
+  prompt, log, or audit record. Masking has two layers: a deterministic Safe
+  Harbor regex pass for **structured** identifiers (SSN, email, phone, card,
+  MRN, student id) that always runs, and a pluggable **NER engine** for
+  **free-text / unstructured PII** such as bare names. The NER engine is
+  **mandatory in real-data mode** (`ALLOW_REAL_DATA` truthy) — if it is not
+  configured the masker fails closed rather than silently masking only the
+  structured identifiers.
 - If the **policy engine cannot evaluate**, the call is **denied**
   (`policy_eval_fail_closed`).
 - If the **append-only audit write fails** on a consequential or sensitive
@@ -78,7 +84,8 @@ and architecture review**. It is **not** a production-authorized system:
 - The offline `platform_core/` modules are an **offline analog** of the
   production AWS control plane (AgentCore Gateway/Identity/Policy, Amazon
   Verified Permissions, Comprehend/Macie, S3 Object Lock, etc.) and use
-  simulated tokens and deterministic regex masking, not the production services.
+  simulated tokens and deterministic regex masking (free-text PII masking
+  requires the pluggable NER engine), not the production services.
 
 Before any production or authority-boundary use, complete the readiness and
 accountability work tracked in

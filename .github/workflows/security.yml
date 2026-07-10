@@ -36,10 +36,12 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install pip-audit
-      # REPORT-ONLY. ENFORCE: pin deps with hashes in platform_core/requirements-lock.txt and drop `|| true`.
-      - name: pip-audit (report-only until deps are pinned)
+      # BLOCKING: the stdlib-only core plus its optional prod deps (jsonschema,
+      # cryptography) are pinned in platform_core/requirements-lock.txt; a CVE fails the job.
+      - name: pip-audit (BLOCKING)
         run: |
-          pip-audit -r platform_core/requirements-lock.txt 2>/dev/null             || pip-audit $(for r in $(git ls-files '*requirements*.txt'); do echo -n " -r $r"; done) || true
+          set -e
+          pip-audit --progress-spinner off -r platform_core/requirements-lock.txt
 
   secret-scan:
     name: detect-secrets (secret scan)

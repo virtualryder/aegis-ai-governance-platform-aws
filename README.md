@@ -75,8 +75,10 @@ the gap analysis and what carries forward versus what is new here.
 Aegis sits between your AI agents and your systems of record. Every agent action — every model
 call, every tool call, every retrieval — flows through a **deny-by-default authorization gateway**
 that enforces *least-privilege as an intersection* (an agent can never exceed the human it acts
-for), withholds consequential actions for a **human gate**, masks PII/PHI/FTI/CJI at every
-boundary, writes a **tamper-evident append-only audit** record, validates model output for
+for), withholds consequential actions for a **human gate**, masks structured PII/PHI/FTI/CJI
+identifiers at every boundary (deterministic Safe Harbor regex baseline; free-text names and
+other unstructured PII require the NER engine, which is mandatory in real-data mode), writes a
+**tamper-evident append-only audit** record, validates model output for
 **hallucinations**, meters and caps **token spend**, and attributes that spend back to the
 owning department. Compliance regimes are applied as **overlay packs** that switch on the right
 controls, regions, and retention for the customer's industry. It is all built on AWS-native,
@@ -123,7 +125,7 @@ Every agent tool call passes through an **authenticated gateway**; there is no u
 - **Deny-by-default policy.** A tool is callable only if it is **registered in the allow-list** and the caller's effective permission = **grant ∩ entitlement** (the agent can never exceed the human it acts for). Unregistered tool or out-of-scope data class → **deny**.
 - **Human approval for consequential actions.** Consequential tools are **withheld in code** and require a **bound, single-use, separation-of-duties** approval (approver ≠ requester; replay rejected).
 - **Scoped outbound authorization.** The gateway issues **short-lived, least-privilege** downstream credentials (IAM / OAuth / token-exchange / on-behalf-of), so "the agent acts only within the human's authority" holds end to end.
-- **Fail-closed masking.** PII / PHI / FTI / CJI is masked before any model or audit write; on masker failure it **redacts rather than leaks**.
+- **Fail-closed masking.** Structured PII / PHI / FTI / CJI identifiers are masked by a deterministic Safe Harbor regex pass before any model or audit write. Free-text names and other unstructured PII require the pluggable **NER engine** (production: Amazon Comprehend), which is **mandatory in real-data mode** (`ALLOW_REAL_DATA`) and **fails closed** if unavailable rather than leaking unmasked names. On any masker failure the boundary **denies rather than leaks**.
 - **Append-only audit + revocation.** Every decision (allow / deny / approval) is written to an **append-only** sink (IAM denies `UpdateItem`/`DeleteItem`) with **WORM** evidence; tools can be revoked / deny-listed at the registry.
 - **Failure modes are fail-closed.** Missing/invalid token → **401**; unregistered tool → **deny**; missing approval → **deny**; masker or audit-write failure → **deny, not proceed**.
 
