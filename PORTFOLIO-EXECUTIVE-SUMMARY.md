@@ -30,7 +30,7 @@ authorization gateway** built on AWS-native, GA services:
 
 An agent never exceeds the authority of the human it acts for; consequential actions require a bound,
 single-use, separation-of-duties approval consumed against a durable ledger; sensitive fields are
-masked before any model call; and every decision is written to an immutable, hash-chained audit with
+masked at the audit and model-output boundaries (input filterable by Bedrock Guardrails, not blanket pre-scrubbed); and every decision is written to an immutable, hash-chained audit with
 IAM-enforced no-delete. This is the **Aegis Governance Pattern (AGP) v1.0** — the versioned contract
 each vertical pack conforms to.
 
