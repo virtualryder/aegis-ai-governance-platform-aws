@@ -57,16 +57,13 @@ resource "aws_kms_key" "data_class" {
         Action    = "kms:*"
         Resource  = "*"
       },
+      # Confused-deputy guard: each service principal is constrained to this
+      # account (aws:SourceAccount) and to requests made via that specific
+      # service in this region (kms:ViaService).
       {
-        Sid    = "AllowServicesUseOfKey"
-        Effect = "Allow"
-        Principal = {
-          Service = [
-            "dynamodb.amazonaws.com",
-            "s3.amazonaws.com",
-            "logs.amazonaws.com",
-          ]
-        }
+        Sid       = "AllowDynamoDbUseOfKey"
+        Effect    = "Allow"
+        Principal = { Service = "dynamodb.amazonaws.com" }
         Action = [
           "kms:Encrypt",
           "kms:Decrypt",
@@ -75,6 +72,50 @@ resource "aws_kms_key" "data_class" {
           "kms:DescribeKey",
         ]
         Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = local.account_id
+            "kms:ViaService"    = "dynamodb.${local.region}.amazonaws.com"
+          }
+        }
+      },
+      {
+        Sid       = "AllowS3UseOfKey"
+        Effect    = "Allow"
+        Principal = { Service = "s3.amazonaws.com" }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey",
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = local.account_id
+            "kms:ViaService"    = "s3.${local.region}.amazonaws.com"
+          }
+        }
+      },
+      {
+        Sid       = "AllowLogsUseOfKey"
+        Effect    = "Allow"
+        Principal = { Service = "logs.amazonaws.com" }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey",
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = local.account_id
+            "kms:ViaService"    = "logs.${local.region}.amazonaws.com"
+          }
+        }
       },
     ]
   })
