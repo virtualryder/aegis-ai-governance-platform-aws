@@ -82,6 +82,9 @@ Resources:
               - Sid: ResumeGate
                 Effect: Allow
                 Action: [states:SendTaskSuccess, states:SendTaskFailure]
+                # states:SendTask* is NOT resource-scopable (opaque task token, not an
+                # ARN, identifies the target), so Resource stays "*". aws:SourceAccount
+                # is not added -- it is absent on this direct call and would deny it.
                 Resource: "*"
               - Sid: Logs
                 Effect: Allow

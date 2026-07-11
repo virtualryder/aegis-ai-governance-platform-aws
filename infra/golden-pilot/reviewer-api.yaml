@@ -97,6 +97,9 @@ Resources:
             Statement:
               - { Effect: Allow, Action: [dynamodb:PutItem, dynamodb:GetItem, dynamodb:UpdateItem], Resource: [!GetAtt PendingTable.Arn, !GetAtt LedgerTable.Arn, !GetAtt AuditTable.Arn] }
               - { Effect: Deny, Action: [dynamodb:UpdateItem, dynamodb:DeleteItem], Resource: !GetAtt AuditTable.Arn }
+              # states:SendTask* is NOT resource-scopable (opaque task token, not an
+              # ARN, identifies the target), so Resource stays "*". aws:SourceAccount
+              # is not added -- it is absent on this direct call and would deny it.
               - { Effect: Allow, Action: [states:SendTaskSuccess, states:SendTaskFailure], Resource: "*" }
               - { Effect: Allow, Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents], Resource: "*" }
 
