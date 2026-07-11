@@ -74,7 +74,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install scanners
-        run: pip install bandit checkov
+        run: pip install bandit==1.9.4 checkov
 
       - name: Run bandit (non-blocking)
         continue-on-error: true
