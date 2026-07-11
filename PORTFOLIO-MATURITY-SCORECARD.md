@@ -13,7 +13,7 @@ source of truth for each repo is its `MATURITY.yaml`; `tools/check_maturity.py` 
 | Repo | Internal AWS demo | Customer workshop | Scoped pilot (synthetic) | Production | Clean-account deploy evidence |
 |---|:--:|:--:|:--:|:--:|---|
 | **Aegis** (platform) | ✅ Ready | ✅ Ready | ◑ Medium | ◻ Not yet | Governance core → MCP endpoint runs, deployed & torn down |
-| **HCLS** (life sciences) | ✅ Strongest | ✅ Ready | ◑ Medium (GxP/CSV care) | ◻ Not yet | 9 golden paths deployed, run end-to-end, torn down. **Caveat:** PHI/PII masking + Bedrock/Guardrails implemented + unit-tested but **not yet runtime-verified in the clean-account evidence path** |
+| **HCLS** (life sciences) | ✅ Strongest | ✅ Ready | ◑ Medium (GxP/CSV care) | ◻ Not yet | 9 golden paths deployed, run end-to-end, torn down. **NER masking now runtime-verified on AWS** (Comprehend Medical, masks before audit write, fail-closed — `infra/golden-path-masking-verification/`); remaining: wire into hero pipeline + real Bedrock/Guardrails hero invocation |
 | **SLG** (state/local gov) | ✅ Ready | ✅ Ready | ◑ Medium-high (synthetic) | ◻ Not yet | 8 golden paths + a hardened secure variant, validated & torn down |
 | **HPP** (payer/provider) | ✅ Ready | ✅ Ready | ◑ Medium (Agent 01) | ◻ Not yet | Agent 01 golden path acceptance-gated; 02–08 share templates but are not individually clean-account-gated |
 | **EDU** (education) | ✅ Ready | ✅ Ready | ◑ Medium (**partial deploy evidence**) | ◻ Not yet | Golden-path controls (real model, deployed append-only audit, runtime PII masking, Cognito JWT) clean-account-evidenced; **full `quickstart.yaml` nested agent stack not yet deploy-validated — do not present EDU as equivalent to HCLS/SLG** |
@@ -25,7 +25,7 @@ source of truth for each repo is its `MATURITY.yaml`; `tools/check_maturity.py` 
 | Verified identity (RS256/JWKS) | ✅ | ✅ | ✅ | Server-side verification on request paths; body claims never trusted |
 | Deny-by-default gateway | ✅ | ✅ | ✅ | Least-privilege intersection (agent ∩ human) |
 | Bound SoD human approval | ✅ | ✅ | ✅ | Single-use, consumed against a durable ledger |
-| Fail-closed PII/PHI masking | ✅ | ✅ | ◑ | Regex Safe-Harbor always-on; NER mandatory for real data (`ALLOW_REAL_DATA`). EDU runtime-masking evidenced on AWS; **HCLS masking unit-tested but not yet runtime-verified on AWS** |
+| Fail-closed PII/PHI masking | ✅ | ✅ | ✅ | Regex Safe-Harbor always-on; NER mandatory for real data (`ALLOW_REAL_DATA`). Runtime-verified on AWS: EDU (Comprehend) and HCLS (Comprehend Medical `DetectPHI`, masks before audit write, fail-closed — `hcls infra/golden-path-masking-verification/`) |
 | Append-only + WORM audit | ✅ | ✅ | ✅ | Conditional PutItem; IAM denies delete; split signing keys; S3 Object Lock |
 | Token budgets | ✅ | ✅ | ◑ | Enforced before spend in Aegis; metering in packs |
 | Model gateway + grounding | ✅ | ✅ | ◑ | Bedrock default; external API gated; Guardrails config |

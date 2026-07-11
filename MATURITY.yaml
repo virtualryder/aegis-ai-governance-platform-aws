@@ -20,10 +20,16 @@ clean_account_deploy:
            requests, torn down). Live external SaaS connectors, monitoring, DR, and production
            certification remain OUTSIDE the repo (engagement/customer-owned)."
   evidence: evidence/CLEAN-ACCOUNT-ACCEPTANCE.md
+  # HONESTY / scope of 'deploy-validated' below: the DEPLOYED authorizer (mcp-gateway.yaml Lambda) is a
+  # focused re-implementation of the deny-by-default intersection + single-use SoD approval-consume that
+  # was exercised live. The full 8-clause AGP engine in platform_core/ is OFFLINE-validated (unit +
+  # negative tests), not yet the deployed authorizer. Packaging platform_core as the deployed Lambda
+  # layer (so the reviewed engine == the deployed engine) is tracked as a P1 unification item.
+  deployed_authorizer: mcp-gateway-subset   # intersection + approval-consume; not the full platform_core engine
 
 is_the_platform: true
 components:
-  - {id: policy_engine, name: Deny-by-default policy (least-privilege intersection), maturity: deploy-validated}
+  - {id: policy_engine, name: Deny-by-default policy (least-privilege intersection), maturity: deploy-validated, note: "deployed authorizer is the mcp-gateway subset; full 8-clause platform_core engine is offline-validated"}
   - {id: gateway, name: MCP authorization gateway, maturity: deploy-validated}
   - {id: approval_ledger, name: Bound single-use SoD approvals, maturity: deploy-validated}
   - {id: masker, name: Fail-closed PII/PHI masking, maturity: implemented}

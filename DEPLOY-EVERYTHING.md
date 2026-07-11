@@ -175,9 +175,10 @@ Each pack's clean-account evidence documents a full deploy → run → teardown 
   **partial** — golden-path controls (real model, deployed append-only audit, runtime PII masking,
   Cognito JWT) are clean-account-evidenced, but the **full `quickstart.yaml` nested agent stack is not
   yet deploy-validated**. Do not pitch EDU as equivalent to HCLS/SLG until that lands.
-- HCLS control-evidence caveat for a CISO: PHI/PII masking and Bedrock+Guardrails are **implemented and
-  unit-tested but not yet runtime-verified in the clean-account evidence path** (masking is exercised
-  offline; Agent 02's real-Bedrock path runs locally). Runtime masking + Guardrails proof on AWS is the
+- HCLS masking is now **runtime-verified on AWS** (Comprehend Medical `DetectPHI` + Comprehend, masks
+  before the audit write, fail-closed — `hcls-ai-agents/infra/golden-path-masking-verification/`). The
+  remaining CISO caveat: that module isn't yet wired into the hero pipeline, and Agent 02's real
+  Bedrock+Guardrails invocation still runs locally — a real Bedrock+Guardrails hero call on AWS is the
   top next increment for the lead hero.
 - Brand: plain-text "Built on AWS"; no AWS logo in customer-facing output; get field approval before
   external use — [`BRAND-AND-TRADEMARK.md`](BRAND-AND-TRADEMARK.md).
