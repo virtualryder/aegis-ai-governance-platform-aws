@@ -1,5 +1,10 @@
 # Deploy the whole portfolio — one guide
 
+> **For a full step-by-step SA walkthrough on a NEW account** (prerequisites, the landing-zone question,
+> Aegis platform → each hero → runtime masking proof → teardown, with every command verified live), use
+> **[`SA-DEPLOYMENT-RUNBOOK.md`](SA-DEPLOYMENT-RUNBOOK.md)** — the authoritative runbook. This page is the
+> quick portfolio map and offline-first checklist.
+
 *The single, copy-paste-able path from "five repos" to "a governed agent running in your AWS account,"
 and how the pieces fit together. Reference accelerator — not an AWS service; deploy into **your** account
 after your own security review. See [`NOT-CLAIMS.md`] per repo and [`BRAND-AND-TRADEMARK.md`](BRAND-AND-TRADEMARK.md).*
