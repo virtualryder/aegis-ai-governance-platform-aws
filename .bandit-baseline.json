@@ -2,7 +2,7 @@
   "errors": [],
   "generated_at": "2026-07-10T04:00:52Z",
   "metrics": {
-    ".\\demo\\__init__.py": {
+    "./demo/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -15,7 +15,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\demo\\clean_account_acceptance.py": {
+    "./demo/clean_account_acceptance.py": {
       "CONFIDENCE.HIGH": 1,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -28,7 +28,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\demo\\test_acceptance.py": {
+    "./demo/test_acceptance.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -41,7 +41,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\demo\\test_evidence_vault.py": {
+    "./demo/test_evidence_vault.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -54,7 +54,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\demo\\test_fail_closed.py": {
+    "./demo/test_fail_closed.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 1,
@@ -67,7 +67,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\demo\\test_negative_security.py": {
+    "./demo/test_negative_security.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 1,
@@ -80,7 +80,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\demo\\test_prod_components.py": {
+    "./demo/test_prod_components.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -93,7 +93,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\infra\\golden-pilot\\verify_jwt.py": {
+    "./infra/golden-pilot/verify_jwt.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -106,7 +106,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\infra\\terraform\\modules\\governance_core\\index.py": {
+    "./infra/terraform/modules/governance_core/index.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -119,7 +119,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\__init__.py": {
+    "./platform_core/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -132,7 +132,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\approval_ledger.py": {
+    "./platform_core/approval_ledger.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -145,7 +145,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\audit_ledger.py": {
+    "./platform_core/audit_ledger.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -158,7 +158,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\chargeback.py": {
+    "./platform_core/chargeback.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -171,7 +171,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\gateway.py": {
+    "./platform_core/gateway.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -184,7 +184,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\manifest_loader.py": {
+    "./platform_core/manifest_loader.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -197,7 +197,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\masker.py": {
+    "./platform_core/masker.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -210,7 +210,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\model_gateway.py": {
+    "./platform_core/model_gateway.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -223,7 +223,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\policy_engine.py": {
+    "./platform_core/policy_engine.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -236,7 +236,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\prod\\__init__.py": {
+    "./platform_core/prod/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -249,7 +249,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\prod\\budget_manager_ddb.py": {
+    "./platform_core/prod/budget_manager_ddb.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -262,7 +262,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\prod\\cedar_compiler.py": {
+    "./platform_core/prod/cedar_compiler.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -275,7 +275,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\prod\\manifest_signing.py": {
+    "./platform_core/prod/manifest_signing.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -288,7 +288,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\prod\\manifest_validator.py": {
+    "./platform_core/prod/manifest_validator.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -301,7 +301,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\tests\\test_agp_conformance.py": {
+    "./platform_core/tests/test_agp_conformance.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -314,7 +314,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\tests\\test_no_status_drift.py": {
+    "./platform_core/tests/test_no_status_drift.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -327,7 +327,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\platform_core\\token_budget.py": {
+    "./platform_core/token_budget.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -340,7 +340,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    ".\\tools\\add_agent.py": {
+    "./tools/add_agent.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -372,7 +372,7 @@
       "code": "356             try:\n357                 os.chmod(p, 0o666)  # WORM file is read-only; relax then remove\n358             except OSError:\n",
       "col_offset": 16,
       "end_col_offset": 34,
-      "filename": ".\\demo\\clean_account_acceptance.py",
+      "filename": "./demo/clean_account_acceptance.py",
       "issue_confidence": "HIGH",
       "issue_cwe": {
         "id": 732,
