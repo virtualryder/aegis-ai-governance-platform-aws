@@ -57,7 +57,11 @@ jobs:
         run: |
           cp .secrets.baseline .secrets.baseline.orig
           detect-secrets scan --baseline .secrets.baseline --exclude-files 'node_modules/.*' --exclude-files '.*\.(png|jpg|jpeg|pdf|pptx|xlsx)$'
-          diff -q .secrets.baseline.orig .secrets.baseline || { echo 'New secrets not in baseline — audit .secrets.baseline'; exit 1; }
+          # detect-secrets re-stamps the volatile "generated_at" timestamp on every
+          # scan, so a raw diff always differs. Compare with that line removed; any
+          # NEW/removed finding still changes the results and fails the gate.
+          diff <(grep -v '"generated_at"' .secrets.baseline.orig) <(grep -v '"generated_at"' .secrets.baseline) \
+            || { echo 'New secrets not in baseline — audit .secrets.baseline'; exit 1; }
 
   semgrep:
     name: Semgrep (SAST rulesets)

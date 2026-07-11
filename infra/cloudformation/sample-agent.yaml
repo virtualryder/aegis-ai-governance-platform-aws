@@ -106,6 +106,12 @@ Resources:
                 Action:
                   - states:SendTaskSuccess
                   - states:SendTaskFailure
+                # states:SendTask* is NOT resource-scopable in IAM: the opaque task
+                # token (not a state-machine ARN) identifies the target, so Resource
+                # must remain "*". An aws:SourceAccount condition is intentionally NOT
+                # added here -- that key is only present in cross-service (confused-
+                # deputy) requests, so on this direct identity-based call it would be
+                # absent and would silently DENY the legitimate gate resume.
                 Resource: "*"
               - Sid: KmsForAuditTable
                 Effect: Allow
