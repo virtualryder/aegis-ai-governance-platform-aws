@@ -55,18 +55,53 @@ per-pack maturity: [`PORTFOLIO-START-HERE.md`](PORTFOLIO-START-HERE.md).
 
 ## 4. Step 0 — try everything locally first (no AWS, no API key)
 
-Every pack runs its full governance offline. From each repo:
+Every pack runs its full governance suite offline, with no credentials. **~1,326 tests pass
+portfolio-wide** — Aegis 43 · EDU 197 · SLG 236 · HPP 270 · HCLS 580 — and each count is gated by
+`tools/check_maturity.py`, so the number cannot drift from that repo's `MATURITY.yaml` (the canonical
+source of truth for every test count in this portfolio).
 
+**HCLS — 580 tests**
 ```bash
-# HCLS  (536 tests)                  # SLG                         # HPP
-make test                            pytest platform_core/tests governance/tests -q    make test
-make auth-demo                       make neg-demo                 make neg-demo
-make neg-demo                        make eval-311                 make eval-denial
-make eval-agent02
+cd hcls-ai-agents
+make test              # 580 tests across 20 suites via scripts/run_all_tests.sh
+make auth-demo
+make neg-demo          # 10/10 governance refusals fire
+make eval-agent02      # scored quality gate (PHI-leak threshold = 0)
+```
+
+**SLG — 236 tests**
+```bash
+cd slg-ai-agents
+PYTHONPATH=platform_core:. pytest -q    # 236 tests
+make neg-demo
+make eval-311
+```
+
+**HPP — 270 tests**
+```bash
+cd healthcare_ai_agents
+make test              # 270 tests, no API key
+make neg-demo
+make eval-denial
+```
+
+**EDU — 197 tests**
+```bash
+cd edu-ai-agents
+make test              # canonical offline total 197 (see MATURITY.yaml)
+make neg-demo
+```
+
+**Aegis platform — 43 tests**
+```bash
+cd aegis-ai-governance-platform-aws
+PYTHONPATH=platform_core:. pytest demo platform_core/tests -q    # 43 tests
+python demo/clean_account_acceptance.py                          # 18-step offline control walk-through
 ```
 
 This proves the governed pattern, the 10 refusals, and the scored quality gate **before** any account
-exists. Portfolio-wide health: `python tools/check_maturity.py` and `python tools/check_agp_conformance.py`.
+exists. Portfolio-wide health check from each repo: `python tools/check_maturity.py` and
+`python tools/check_agp_conformance.py`.
 
 ## 5. Step 1 — deploy one hero golden path into your account
 
@@ -134,5 +169,15 @@ Each pack's clean-account evidence documents a full deploy → run → teardown 
   FedRAMP/StateRAMP authorizations belong to the **AWS services** in GovCloud, not to this accelerator.
 - Connector tiers: everything here is tiers 1–3; **tier-4 production connectors (Veeva, Argus, Epic,
   ServiceNow, SIS/LMS, real 835 feeds) are engagement work** — see each `docs/CONNECTOR-MATURITY.md`.
+- Per-pack deploy evidence is **not uniform** — lead with what each pack has actually proven:
+  **HCLS/SLG** have all golden paths deployed → run → torn down in a clean account; **HPP** has Agent 01
+  acceptance-gated (02–08 share the template but are not individually clean-account-gated); **EDU** is
+  **partial** — golden-path controls (real model, deployed append-only audit, runtime PII masking,
+  Cognito JWT) are clean-account-evidenced, but the **full `quickstart.yaml` nested agent stack is not
+  yet deploy-validated**. Do not pitch EDU as equivalent to HCLS/SLG until that lands.
+- HCLS control-evidence caveat for a CISO: PHI/PII masking and Bedrock+Guardrails are **implemented and
+  unit-tested but not yet runtime-verified in the clean-account evidence path** (masking is exercised
+  offline; Agent 02's real-Bedrock path runs locally). Runtime masking + Guardrails proof on AWS is the
+  top next increment for the lead hero.
 - Brand: plain-text "Built on AWS"; no AWS logo in customer-facing output; get field approval before
   external use — [`BRAND-AND-TRADEMARK.md`](BRAND-AND-TRADEMARK.md).
