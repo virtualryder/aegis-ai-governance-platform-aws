@@ -90,10 +90,10 @@ when done** (§6). Set a budget alarm before you start.
 ## 2. Step 1 — Prove it offline first (no AWS, no keys)
 
 Establish trust before spending a cent. Each repo runs its full governance suite offline
-(**~1,330 tests portfolio-wide**, machine-checked by `tools/check_maturity.py`):
+(**~1,333 tests portfolio-wide**, machine-checked by `tools/check_maturity.py`):
 ```bash
 # example: life sciences
-cd hcls-ai-agents && make test         # 580 tests
+cd hcls-ai-agents && make test         # 583 tests
 make neg-demo                          # 10/10 governance refusals fire
 python tools/check_maturity.py         # asserts the count can't drift from MATURITY.yaml
 ```

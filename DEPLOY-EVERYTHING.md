@@ -60,15 +60,15 @@ per-pack maturity: [`PORTFOLIO-START-HERE.md`](PORTFOLIO-START-HERE.md).
 
 ## 4. Step 0 — try everything locally first (no AWS, no API key)
 
-Every pack runs its full governance suite offline, with no credentials. **~1,330 tests pass
-portfolio-wide** — Aegis 43 · EDU 201 · SLG 236 · HPP 270 · HCLS 580 — and each count is gated by
+Every pack runs its full governance suite offline, with no credentials. **~1,333 tests pass
+portfolio-wide** — Aegis 43 · EDU 201 · SLG 236 · HPP 270 · HCLS 583 — and each count is gated by
 `tools/check_maturity.py`, so the number cannot drift from that repo's `MATURITY.yaml` (the canonical
 source of truth for every test count in this portfolio).
 
-**HCLS — 580 tests**
+**HCLS — 583 tests**
 ```bash
 cd hcls-ai-agents
-make test              # 580 tests across 20 suites via scripts/run_all_tests.sh
+make test              # 583 tests across 20 suites via scripts/run_all_tests.sh
 make auth-demo
 make neg-demo          # 10/10 governance refusals fire
 make eval-agent02      # scored quality gate (PHI-leak threshold = 0)
@@ -181,9 +181,9 @@ Each pack's clean-account evidence documents a full deploy → run → teardown 
   Cognito JWT) are clean-account-evidenced, but the **full `quickstart.yaml` nested agent stack is not
   yet deploy-validated**. Do not pitch EDU as equivalent to HCLS/SLG until that lands.
 - HCLS masking is now **runtime-verified on AWS** (Comprehend Medical `DetectPHI` + Comprehend, masks
-  before the audit write, fail-closed — `hcls-ai-agents/infra/golden-path-masking-verification/`). The
-  remaining CISO caveat: that module isn't yet wired into the hero pipeline, and Agent 02's real
-  Bedrock+Guardrails invocation still runs locally — a real Bedrock+Guardrails hero call on AWS is the
-  top next increment for the lead hero.
+  before the audit write, fail-closed — `hcls-ai-agents/infra/golden-path-masking-verification/`). The module is now
+  **wired into the HCLS hero pipeline** (masks the narrative prompt before the model, fail-closed —
+  2026-07-12, unit-tested). Remaining CISO caveat: Agent 02's real Bedrock+Guardrails invocation still
+  runs locally — a real Bedrock+Guardrails hero call on AWS is the top next increment for the lead hero.
 - Brand: plain-text "Built on AWS"; no AWS logo in customer-facing output; get field approval before
   external use — [`BRAND-AND-TRADEMARK.md`](BRAND-AND-TRADEMARK.md).

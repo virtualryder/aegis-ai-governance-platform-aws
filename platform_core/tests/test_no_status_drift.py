@@ -18,8 +18,8 @@ SKIP_DIRS = {".git", "node_modules", "__pycache__", "venv", ".venv"}
 # canonical counts and the portfolio total. Allow that exact canonical set so those docs pass the
 # gate while a STALE number (e.g. a leftover 1,326 or EDU's old 197) still fails.
 # Canonical offline counts verified 2026-07-12 — UPDATE THIS SET when any repo's count changes:
-#   Aegis 43 · EDU 201 · SLG 236 · HPP 270 · HCLS 580 (576 root-collect) · portfolio total 1,330.
-PORTFOLIO = {201, 236, 270, 576, 580, 1330}
+#   Aegis 43 · EDU 201 · SLG 236 · HPP 270 · HCLS 583 (579 root-collect) · portfolio total 1,333.
+PORTFOLIO = {201, 236, 270, 579, 583, 1333}
 
 
 def _total():
