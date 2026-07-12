@@ -243,22 +243,55 @@ for s in hcls-02 slg-311 hpp-gp01 edu-concierge aegis-masking-verify; do
   aws cloudformation delete-stack --stack-name $s --region us-east-1; done
 # aegis-golden-pilot-avp tears itself down inside run_authz_tests.sh
 ```
-Confirm each is gone (`describe-stacks` → *does not exist*). Teardown gotchas: **empty S3 buckets
-first**; the **HPP VPC** takes ~15–20 min (Lambda ENI release); **COMPLIANCE WORM** buckets won't delete
-(that's by design). A portfolio driver that does deploy→smoke→**guaranteed-teardown** with a safe
-`--dry-run` default lives at `tools/deploy_all_golden_paths.sh`.
+Confirm each is gone (`describe-stacks` → *does not exist*). Teardown gotchas, **all learned from live
+runs and now handled by the `destroy.sh` scripts**:
+- **Stop paused executions FIRST.** A Step Functions execution left paused at the `waitForTaskToken`
+  human gate keeps the state machine — and the whole stack delete — `DELETE_IN_PROGRESS` for a very long
+  time. `destroy.sh` now stops running executions before `sam delete`.
+- **Retained tables collide on re-deploy.** The audit / pending-approvals / approval-consumption tables
+  are `DeletionPolicy: Retain`, so a plain `sam delete` leaves them and the *next* deploy fails
+  `AWS::EarlyValidation::ResourceExistenceCheck` on the fixed table names. `destroy.sh` now removes them
+  (comment that block out to keep audit history in a real environment).
+- **Empty S3 buckets first**; the **HPP VPC** takes ~15–20 min (Lambda ENI release); **COMPLIANCE WORM**
+  buckets won't delete (by design).
+
+A portfolio driver that does deploy→smoke→**guaranteed-teardown** with a safe `--dry-run` default lives
+at `tools/deploy_all_golden_paths.sh`.
+
+---
+
+## 6b. Customer integration points — flag these on day one
+
+These are the places a pilot plugs into the customer's world. Name them in the first workshop; they are
+the difference between a synthetic demo and a real pilot.
+
+| Integration | What the customer supplies | Where it wires in |
+|---|---|---|
+| **Bedrock model access** | Enable model access for the Claude models, and use an **active inference-profile ID** (e.g. `us.anthropic.claude-sonnet-4-5-...`), not a bare `foundation-model` id — a base id that isn't enabled makes the hero fall back to its deterministic draft. | `BedrockModelId` / `BEDROCK_NARRATIVE_MODEL_ID` params; the draft Lambda's IAM already allows `InvokeModel` on anthropic foundation-models + account inference-profiles. |
+| **Identity — IdP federation** | A **SAML/OIDC IdP** (Okta/Entra/AD/Shibboleth) + role-group claims. **EDU's full golden path hard-requires a SAML `IdpMetadataUrl`** — its stack won't stand up without one; the other packs run an authenticated-authorizer path for a pilot and add federation later. | Cognito user pool (`security.yaml` / `IdpMetadataUrl`); the gateway authorizer reads the role claim (`custom:edu_role`, `custom:hcls_role`, …) for the least-privilege intersection. |
+| **Live reference connectors** | For a synthetic pilot these are public, read-only tier-3 reads and need no secret: **HCLS** openFDA/FAERS, **SLG** NYC 311 (Socrata), **EDU** College Scorecard, **HPP** X12 835 scaffold. Tier-4 systems of record (Veeva/Argus, Epic/Availity, real 835, SIS/LMS) are engagement work. | `ConnectorMode=fixture` (default) vs `live`; live tier-4 = a Secrets Manager secret under the env path + a controlled egress path. |
+| **Per-deploy secrets** | A strong HMAC token secret per deploy (SLG generates it in-stack via Secrets Manager; HCLS's `deploy.sh` generates + persists it for the smoke test). | `TokenSecret` param / `TokenSecretArn` output. |
 
 ---
 
 ## 7. Production hardening (customer-owned — name it, don't hide it)
 
 Beyond a synthetic-data pilot, the customer owns: a **Control Tower landing zone** + org SCPs; **IdP
-federation** (SAML/OIDC) into Cognito; a **real Bedrock+Guardrails hero invocation with
-masking-before-prompt** and site-tuned regex ID patterns; a **live tier-4 connector** (Veeva/Argus, X12
-835, Epic/Availity, SIS/LMS); a **penetration test**; **DR + monitoring** ops; a **CI pipeline** that
-deploys → tests → captures **independent, reproducible** CloudTrail/IAM-simulation evidence (replacing
-single-operator attestation); and the applicable **ATO/HITRUST/FedRAMP** authorization. These are the
-P1/P2 roadmap, not pilot blockers.
+federation** (SAML/OIDC) into Cognito; a **live tier-4 connector** (Veeva/Argus, X12 835, Epic/Availity,
+SIS/LMS); a **penetration test**; **DR + monitoring** ops; and the applicable **ATO/HITRUST/FedRAMP**
+authorization. These are the P1/P2 roadmap, not pilot blockers.
+
+**Now done (2026-07-12), no longer customer-owned gaps:** the HCLS hero's draft calls **real Bedrock via
+boto3 Converse + the deployed Guardrail** (validated live: `drafted_by: bedrock`, a real model narrative),
+so masking-before-model runs on a real model path; and a **reproducible CI-evidence pipeline**
+(`.github/workflows/golden-pilot-deploy-evidence.yml`) deploys → tests the live controls → IAM-simulates
+the append-only audit → tears down, replacing single-operator attestation. The remaining model-side item
+is site-tuning the regex ID pass to the customer's exact MRN/account formats (a one-line
+`HCLS_MRN_PATTERNS` config).
+
+**The headline next increment (the P1/P2 ask to fund):** unify the packs so every agent registers with a
+**single shared Aegis control-plane instance** (one versioned, hash-checked `platform_core` package +
+AgentCore Gateway), instead of each pack carrying its own copy of the pattern. That is the scale story.
 
 ---
 
