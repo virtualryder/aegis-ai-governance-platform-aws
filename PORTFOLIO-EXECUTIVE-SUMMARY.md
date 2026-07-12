@@ -68,8 +68,10 @@ models both the managed-AgentCore path and a portable API-Gateway + Cognito path
 AgentCore-overlay one-pager / slide.)
 
 ## What is honestly true today (and what isn't)
-- ✅ **Real, tested governance:** ~1,324 offline tests green across the portfolio, incl. negative-control suites; golden-path SAM deploys are cfn-lint-clean with clean-account acceptance tests that demonstrate the controls firing; honest, machine-checked maturity.
+- ✅ **Real, tested governance:** ~1,326 offline tests green across the portfolio (Aegis 43 · EDU 197 · SLG 236 · HPP 270 · HCLS 580), incl. negative-control suites; golden-path SAM deploys are cfn-lint-clean with clean-account acceptance tests that demonstrate the controls firing; honest, machine-checked maturity (every count is canonical in `MATURITY.yaml`, gated by `tools/check_maturity.py`).
 - ◻ **The AI is deterministic-by-default:** the *governance* is the product; the agents are governed reference workflows with one real model path per hero. This is disclosed, not hidden.
+- ◻ **Deploy evidence is not uniform — lead with the proven heroes:** HCLS and SLG have all golden paths deployed → run → torn down in a clean account; HPP's Agent 01 is acceptance-gated; **EDU is partial** — its golden-path controls are clean-account-evidenced but the full nested agent stack is not yet deploy-validated, so do not present EDU as equivalent to HCLS/SLG.
+- ◑ **HCLS masking now runtime-verified on AWS:** the NER masking control (Amazon Comprehend Medical `DetectPHI` + Comprehend `DetectPiiEntities`) is deployed and **live-evidenced masking synthetic PHI/PII before the audit write, fail-closed** (`hcls-ai-agents/infra/golden-path-masking-verification/`, 2026-07-11). Remaining: wire that module into the hero pipeline and add a real Bedrock+Guardrails hero invocation — the next increment for the lead hero.
 - ◻ **Not production-certified:** no ATO/HITRUST/FedRAMP; tier-4 live systems-of-record connectors, IdP federation, pen test, DR/monitoring are customer-engagement work.
 
 ## The ask / go-to-market motion
