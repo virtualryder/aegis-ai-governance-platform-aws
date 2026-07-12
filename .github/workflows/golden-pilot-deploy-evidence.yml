@@ -1,0 +1,88 @@
+name: golden-pilot-deploy-evidence
+
+# Reproducible deploy-evidence for the B3 MCP-gateway golden path — the pipeline that replaces
+# single-operator attestation. On demand (or weekly) it: assumes a short-lived AWS role via GitHub
+# OIDC (no long-lived keys), stages the reviewed platform_core engine as a Lambda layer, deploys the
+# governed authorizer, drives live ALLOW / masked-ALLOW / deny-by-default / human-gate decisions over
+# HTTPS, runs an IAM policy simulation proving the audit table is append-only, scans the audit for
+# leaked PII, uploads the sanitized evidence artifact, and ALWAYS tears the stack down.
+#
+# Setup once: create the OIDC deploy role in your account (see docs/CI-DEPLOY-EVIDENCE.md) and add its
+# ARN as the repo secret AWS_DEPLOY_ROLE_ARN. Until that secret exists this workflow is a no-op you can
+# run manually; it never runs on push.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "17 6 * * 1"   # weekly, Mondays 06:17 UTC — a fresh reproducible run
+
+permissions:
+  id-token: write     # required for GitHub OIDC -> AWS
+  contents: read
+
+concurrency:
+  group: golden-pilot-deploy-evidence
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-verify-teardown:
+    runs-on: ubuntu-latest
+    # Skips cleanly on forks / before the secret is configured, rather than failing red.
+    if: ${{ github.repository_owner != '' }}
+    defaults:
+      run:
+        working-directory: infra/golden-pilot
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install SAM CLI + boto3
+        run: |
+          pip install aws-sam-cli boto3
+
+      - name: Configure AWS credentials (OIDC, short-lived)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Compute a unique stack name
+        run: echo "STACK=aegis-mcp-gateway-ci-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
+
+      - name: Stage the reviewed platform_core engine into the layer
+        run: bash prepare_layer.sh
+
+      - name: sam build
+        run: sam build -t mcp-gateway.yaml
+
+      - name: sam deploy
+        run: |
+          sam deploy -t .aws-sam/build/template.yaml \
+            --stack-name "$STACK" --region "$AWS_REGION" \
+            --capabilities CAPABILITY_NAMED_IAM --resolve-s3 \
+            --no-confirm-changeset --no-fail-on-empty-changeset
+
+      - name: Collect deploy evidence (fails the job on any control regression)
+        run: |
+          python ci/collect_evidence.py --stack "$STACK" --region "$AWS_REGION" --out evidence-ci
+
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-evidence-${{ github.run_id }}
+          path: infra/golden-pilot/evidence-ci/
+          if-no-files-found: warn
+
+      - name: Tear down (always — zero residual)
+        if: always()
+        run: |
+          sam delete --stack-name "$STACK" --region "$AWS_REGION" --no-prompts || true

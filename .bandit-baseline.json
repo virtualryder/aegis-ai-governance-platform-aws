@@ -1,8 +1,8 @@
 {
   "errors": [],
-  "generated_at": "2026-07-10T04:00:52Z",
+  "generated_at": "2026-07-12T15:24:27Z",
   "metrics": {
-    "./demo/__init__.py": {
+    ".\\demo\\__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -15,7 +15,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./demo/clean_account_acceptance.py": {
+    ".\\demo\\clean_account_acceptance.py": {
       "CONFIDENCE.HIGH": 1,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -28,7 +28,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./demo/test_acceptance.py": {
+    ".\\demo\\test_acceptance.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -41,7 +41,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./demo/test_evidence_vault.py": {
+    ".\\demo\\test_evidence_vault.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -54,7 +54,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./demo/test_fail_closed.py": {
+    ".\\demo\\test_fail_closed.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 1,
@@ -67,7 +67,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./demo/test_negative_security.py": {
+    ".\\demo\\test_negative_security.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 1,
@@ -80,7 +80,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./demo/test_prod_components.py": {
+    ".\\demo\\test_prod_components.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -93,7 +93,59 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./infra/golden-pilot/verify_jwt.py": {
+    ".\\infra\\golden-pilot\\ci\\collect_evidence.py": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 169,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    ".\\infra\\golden-pilot\\gateway-src\\handler.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 203,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    ".\\infra\\golden-pilot\\stage_layer.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 25,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    ".\\infra\\golden-pilot\\verify_authorizer_engine.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 59,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    ".\\infra\\golden-pilot\\verify_jwt.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -106,7 +158,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./infra/terraform/modules/governance_core/index.py": {
+    ".\\infra\\terraform\\modules\\governance_core\\index.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -119,7 +171,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/__init__.py": {
+    ".\\platform_core\\__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -132,7 +184,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/approval_ledger.py": {
+    ".\\platform_core\\approval_ledger.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -145,7 +197,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/audit_ledger.py": {
+    ".\\platform_core\\audit_ledger.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -158,7 +210,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/chargeback.py": {
+    ".\\platform_core\\chargeback.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -171,7 +223,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/gateway.py": {
+    ".\\platform_core\\gateway.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -184,7 +236,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/manifest_loader.py": {
+    ".\\platform_core\\manifest_loader.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -197,7 +249,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/masker.py": {
+    ".\\platform_core\\masker.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -206,11 +258,11 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 131,
+      "loc": 211,
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/model_gateway.py": {
+    ".\\platform_core\\model_gateway.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -223,7 +275,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/policy_engine.py": {
+    ".\\platform_core\\policy_engine.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -236,7 +288,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/prod/__init__.py": {
+    ".\\platform_core\\prod\\__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -249,7 +301,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/prod/budget_manager_ddb.py": {
+    ".\\platform_core\\prod\\budget_manager_ddb.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -262,7 +314,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/prod/cedar_compiler.py": {
+    ".\\platform_core\\prod\\cedar_compiler.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -275,7 +327,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/prod/manifest_signing.py": {
+    ".\\platform_core\\prod\\manifest_signing.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -288,7 +340,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/prod/manifest_validator.py": {
+    ".\\platform_core\\prod\\manifest_validator.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -301,7 +353,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/tests/test_agp_conformance.py": {
+    ".\\platform_core\\tests\\test_agp_conformance.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -314,7 +366,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/tests/test_no_status_drift.py": {
+    ".\\platform_core\\tests\\test_masker_ner.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -323,11 +375,24 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 39,
+      "loc": 79,
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./platform_core/token_budget.py": {
+    ".\\platform_core\\tests\\test_no_status_drift.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 40,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    ".\\platform_core\\token_budget.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -340,7 +405,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "./tools/add_agent.py": {
+    ".\\tools\\add_agent.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -353,16 +418,29 @@
       "nosec": 0,
       "skipped_tests": 0
     },
+    ".\\tools\\check_maturity.py": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 2,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 140,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
     "_totals": {
-      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.HIGH": 4,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 2,
       "CONFIDENCE.UNDEFINED": 0,
       "SEVERITY.HIGH": 1,
-      "SEVERITY.LOW": 2,
-      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.LOW": 4,
+      "SEVERITY.MEDIUM": 1,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 3381,
+      "loc": 4137,
       "nosec": 0,
       "skipped_tests": 0
     }
@@ -387,6 +465,26 @@
       "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b103_set_bad_file_permissions.html",
       "test_id": "B103",
       "test_name": "set_bad_file_permissions"
+    },
+    {
+      "code": "78     try:\n79         with urllib.request.urlopen(req, timeout=30) as resp:\n80             return json.loads(resp.read().decode())\n",
+      "col_offset": 13,
+      "end_col_offset": 52,
+      "filename": "./infra/golden-pilot/ci/collect_evidence.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 22,
+        "link": "https://cwe.mitre.org/data/definitions/22.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected.",
+      "line_number": 79,
+      "line_range": [
+        79
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b310-urllib-urlopen",
+      "test_id": "B310",
+      "test_name": "blacklist"
     }
   ]
 }

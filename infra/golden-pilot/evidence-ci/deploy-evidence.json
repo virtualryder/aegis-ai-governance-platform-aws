@@ -1,0 +1,39 @@
+{
+  "stack": "aegis-mcp-gateway-ci",
+  "region": "us-east-1",
+  "_note": "Sample captured from a real run on 2026-07-12; account IDs redacted by the collector. Regenerated every pipeline run and uploaded as an artifact.",
+  "decisions": {
+    "ALLOW": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {"content": [{"type": "text", "text": "[fixture] kb.search_policy executed. args={\"query\": \"privacy policy\"}"}], "isError": false}
+    },
+    "ALLOW_MASKED": {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "result": {"content": [{"type": "text", "text": "[fixture] ticket.create_draft executed. args={\"summary\": \"Resident SSN [SSN-REDACTED] email [EMAIL-REDACTED] needs help\"}"}], "isError": false}
+    },
+    "DENY_DEFAULT": {
+      "jsonrpc": "2.0",
+      "id": 3,
+      "error": {"code": -32601, "message": "deny: agent 'aegis-mcp-gateway' has no grant for tool 'db.drop'"}
+    },
+    "HUMAN_GATE": {
+      "jsonrpc": "2.0",
+      "id": 4,
+      "error": {"code": -32003, "message": "deny: tool 'ticket.submit' is a consequential action withheld from the agent; a valid human-gate approval is required (bound single-use approval required — see reviewer service, Runs 5/7)"}
+    }
+  },
+  "iam_simulation": {
+    "dynamodb:PutItem": "allowed",
+    "dynamodb:UpdateItem": "explicitDeny",
+    "dynamodb:DeleteItem": "explicitDeny"
+  },
+  "audit_rows": [
+    {"tool": "kb.search_policy", "decision": "allow", "detail": "{\"query\": \"privacy policy\"}"},
+    {"tool": "ticket.create_draft", "decision": "allow", "detail": "{\"summary\": \"Resident SSN [SSN-REDACTED] email [EMAIL-REDACTED] needs help\"}"},
+    {"tool": "db.drop", "decision": "deny", "detail": "agent 'aegis-mcp-gateway' has no grant for tool 'db.drop'"},
+    {"tool": "ticket.submit", "decision": "deny", "detail": "approval_required: tool 'ticket.submit' is a consequential action withheld from the agent; a valid human-gate approval is required"}
+  ],
+  "control_checks": {"passed": true, "problems": []}
+}
