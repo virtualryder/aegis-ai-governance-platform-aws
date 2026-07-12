@@ -21,6 +21,7 @@ run → destroy. This is a **scoped, synthetic-data pilot** runbook, not a produ
 | 4 | **HPP hero** — Revenue-Cycle Denials (Agent 01) | `healthcare_ai_agents` | SAM (private VPC) | ~12 min |
 | 5 | **EDU hero** — Student & Family Concierge (Agent 01) | `edu-ai-agents` | raw CloudFormation | ~3 min |
 | + | **Runtime PII/PHI masking proof** (Comprehend Medical) | `hcls-ai-agents/infra/golden-path-masking-verification` | raw CloudFormation | ~3 min |
+| + | **MCP authorizer = reviewed engine** (B3 — `platform_core` as a Lambda layer) | `aegis-ai-governance-platform-aws/infra/golden-pilot` | SAM | ~3 min |
 
 Pick the subset you need. For a first leadership demo, **Aegis + one hero (HCLS Pharmacovigilance) +
 the masking proof** is the strongest, cheapest story.
@@ -123,6 +124,28 @@ That is deny-by-default with least-privilege intersection, enforced by AWS-manag
 > The broader golden pilot (`GOLDEN-PILOT.md`) adds the MCP gateway, Cognito identity, WORM evidence, and
 > the reviewer service. For a first demo the AVP/Cedar core above is the crisp, cheap proof of the
 > authorization model.
+
+### 3b. (Optional) Deploy the MCP authorizer that runs the *reviewed* engine (B3)
+
+The portable MCP gateway now ships the **reviewed `platform_core` engine as a Lambda layer** — the
+deployed authorizer *is* the code the offline suite tests (deny-by-default `policy_engine` + fail-closed
+`masker`), not an inline subset. Cross-platform SAM (pre-staged layer, no makefile):
+```bash
+cd aegis-ai-governance-platform-aws/infra/golden-pilot
+bash prepare_layer.sh                      # stage platform_core into layer/python (Windows: py -3.12 stage_layer.py)
+sam build -t mcp-gateway.yaml
+sam deploy -t .aws-sam/build/template.yaml --stack-name aegis-mcp-gateway-b3 \
+  --region us-east-1 --capabilities CAPABILITY_NAMED_IAM --resolve-s3 --no-confirm-changeset
+# mint a Cognito ID token for the created pool/client, then POST MCP tools/call to the McpEndpoint output:
+#   kb.search_policy        -> ALLOW
+#   ticket.create_draft     -> ALLOW + masked (SSN/email redacted in response AND append-only audit)
+#   db.drop                 -> DENY  (deny-by-default)
+#   ticket.submit (no appr) -> APPROVAL_REQUIRED (human gate)
+sam delete --stack-name aegis-mcp-gateway-b3 --no-prompts
+```
+**Verified live (2026-07-12)** on a clean account and torn down zero-residual; the deny/gate strings
+returned over HTTPS are `platform_core.policy_engine`'s verbatim messages — proof the deployed authorizer
+is the reviewed engine. Full record: `infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md`.
 
 ---
 

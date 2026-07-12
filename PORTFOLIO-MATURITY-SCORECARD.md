@@ -12,7 +12,7 @@ source of truth for each repo is its `MATURITY.yaml`; `tools/check_maturity.py` 
 
 | Repo | Internal AWS demo | Customer workshop | Scoped pilot (synthetic) | Production | Clean-account deploy evidence |
 |---|:--:|:--:|:--:|:--:|---|
-| **Aegis** (platform) | ✅ Ready | ✅ Ready | ◑ Medium | ◻ Not yet | Governance core → MCP endpoint runs, deployed & torn down |
+| **Aegis** (platform) | ✅ Ready | ✅ Ready | ◑ Medium | ◻ Not yet | Governance core → MCP endpoint runs, deployed & torn down. **B3 (2026-07-12): the MCP authorizer now deploys the reviewed `platform_core` engine as a Lambda layer** (inline subset deleted) — live-verified on a clean account (ALLOW / ALLOW+masked / DENY / APPROVAL_REQUIRED, deny strings verbatim from the engine) and torn down zero-residual (`infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md`) |
 | **HCLS** (life sciences) | ✅ Strongest | ✅ Ready | ◑ Medium (GxP/CSV care) | ◻ Not yet | 9 golden paths deployed, run end-to-end, torn down. **NER masking now runtime-verified on AWS** (Comprehend Medical, masks before audit write, fail-closed — `infra/golden-path-masking-verification/`); now **wired into the hero pipeline** (masks the narrative prompt before the model, fail-closed); remaining: real Bedrock/Guardrails hero invocation on AWS |
 | **SLG** (state/local gov) | ✅ Ready | ✅ Ready | ◑ Medium-high (synthetic) | ◻ Not yet | 8 golden paths + a hardened secure variant, validated & torn down |
 | **HPP** (payer/provider) | ✅ Ready | ✅ Ready | ◑ Medium (Agent 01) | ◻ Not yet | Agent 01 golden path acceptance-gated; 02–08 share templates but are not individually clean-account-gated |
@@ -23,7 +23,7 @@ source of truth for each repo is its `MATURITY.yaml`; `tools/check_maturity.py` 
 | Control | Designed | Implemented + tested (offline) | Deployed on AWS (golden path) | Notes |
 |---|:--:|:--:|:--:|---|
 | Verified identity (RS256/JWKS) | ✅ | ✅ | ✅ | Server-side verification on request paths; body claims never trusted |
-| Deny-by-default gateway | ✅ | ✅ | ✅ | Least-privilege intersection (agent ∩ human) |
+| Deny-by-default gateway | ✅ | ✅ | ✅ | Least-privilege intersection (agent ∩ human). **The deployed MCP authorizer runs the reviewed `platform_core.policy_engine` (full 9-clause predicate) via a Lambda layer — live-verified on AWS 2026-07-12 (B3), deny strings verbatim from the reviewed engine** |
 | Bound SoD human approval | ✅ | ✅ | ✅ | Single-use, consumed against a durable ledger |
 | Fail-closed PII/PHI masking | ✅ | ✅ | ✅ | Regex Safe-Harbor always-on; NER mandatory for real data (`ALLOW_REAL_DATA`). Runtime-verified on AWS: EDU (Comprehend) and HCLS (Comprehend Medical `DetectPHI`, masks before audit write, fail-closed — `hcls infra/golden-path-masking-verification/`) |
 | Append-only + WORM audit | ✅ | ✅ | ✅ | Conditional PutItem; IAM denies delete; split signing keys; S3 Object Lock |

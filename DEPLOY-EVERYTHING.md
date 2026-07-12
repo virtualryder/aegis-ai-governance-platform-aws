@@ -183,7 +183,14 @@ Each pack's clean-account evidence documents a full deploy → run → teardown 
 - HCLS masking is now **runtime-verified on AWS** (Comprehend Medical `DetectPHI` + Comprehend, masks
   before the audit write, fail-closed — `hcls-ai-agents/infra/golden-path-masking-verification/`). The module is now
   **wired into the HCLS hero pipeline** (masks the narrative prompt before the model, fail-closed —
-  2026-07-12, unit-tested). Remaining CISO caveat: Agent 02's real Bedrock+Guardrails invocation still
-  runs locally — a real Bedrock+Guardrails hero call on AWS is the top next increment for the lead hero.
+  2026-07-12, unit-tested; not yet exercised live on AWS). Remaining CISO caveat: Agent 02's real
+  Bedrock+Guardrails invocation still runs locally — a real Bedrock+Guardrails hero call on AWS is the
+  top next increment for the lead hero.
+- The Aegis **MCP authorizer now deploys the reviewed `platform_core` engine** (deny-by-default
+  `policy_engine` + fail-closed `masker`) as a Lambda layer — the inline subset is deleted, so the
+  deployed artifact is the code the offline suite tests. **Live-verified on a clean account and torn
+  down** (stack `aegis-mcp-gateway-b3`, us-east-1, 2026-07-12): ALLOW / ALLOW+masked / DENY / APPROVAL_
+  REQUIRED over HTTPS, deny strings verbatim from the reviewed engine
+  (`infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md`).
 - Brand: plain-text "Built on AWS"; no AWS logo in customer-facing output; get field approval before
   external use — [`BRAND-AND-TRADEMARK.md`](BRAND-AND-TRADEMARK.md).

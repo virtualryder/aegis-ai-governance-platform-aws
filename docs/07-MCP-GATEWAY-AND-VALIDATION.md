@@ -162,9 +162,14 @@ sam build                   # packages gateway-src/ + the layer
 sam deploy --guided         # (optionally pass LedgerTableName=<reviewer ledger> for the human gate)
 ```
 
-The template is cfn-lint-clean and the handler's ALLOW/DENY/APPROVAL_REQUIRED decisions + masking are
-verified locally against the staged layer. **Remaining:** a live clean-account redeploy of this
-layer-backed authorizer (the earlier Run 10 live ALLOW/DENY/DENY used the now-deleted inline subset).
+The template is cfn-lint-clean. **This layer-backed authorizer was live-redeployed and validated on a
+clean account (2026-07-12)** — stack `aegis-mcp-gateway-b3`, account 864217980669, us-east-1, then torn
+down with zero residual. Over HTTPS with a Cognito ID token the reviewed engine returned **ALLOW**
+(`kb.search_policy`), **ALLOW + masked** (`ticket.create_draft` — the reviewed masker redacted SSN/email
+in both the response and the append-only audit row), **DENY** (`db.drop` — deny-by-default), and
+**APPROVAL_REQUIRED** (`ticket.submit` — human gate). The deny/gate strings are
+`platform_core.policy_engine`'s verbatim messages, proving the deployed authorizer *is* the reviewed
+engine. Full record: [`../infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md`](../infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md).
 
 What remains beyond that: deploying **AgentCore Gateway** as the managed production control plane and
 building **at least one live connector** end-to-end are customer-engagement work; connectors here are
