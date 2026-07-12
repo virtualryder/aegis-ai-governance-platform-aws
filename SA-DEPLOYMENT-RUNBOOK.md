@@ -282,12 +282,18 @@ SIS/LMS); a **penetration test**; **DR + monitoring** ops; and the applicable **
 authorization. These are the P1/P2 roadmap, not pilot blockers.
 
 **Now done (2026-07-12), no longer customer-owned gaps:** the HCLS hero's draft calls **real Bedrock via
-boto3 Converse + the deployed Guardrail** (validated live: `drafted_by: bedrock`, a real model narrative),
-so masking-before-model runs on a real model path; and a **reproducible CI-evidence pipeline**
-(`.github/workflows/golden-pilot-deploy-evidence.yml`) deploys → tests the live controls → IAM-simulates
-the append-only audit → tears down, replacing single-operator attestation. The remaining model-side item
-is site-tuning the regex ID pass to the customer's exact MRN/account formats (a one-line
-`HCLS_MRN_PATTERNS` config).
+boto3 Converse behind the deployed Guardrail** (validated live: `drafted_by: bedrock`, ~4.4 s incl.
+Comprehend), with **masking-before-model wired in** — the draft masks PHI/PII (Comprehend NER for names +
+regex Safe-Harbor) *before* the prompt, fail-closed in real-data mode; and a **reproducible CI-evidence
+pipeline** (`.github/workflows/golden-pilot-deploy-evidence.yml`) deploys → tests the live controls →
+IAM-simulates the append-only audit → tears down, replacing single-operator attestation.
+
+Two precisely-characterized model-side polish items remain (neither blocks the governed workflow, which
+completes with the human gate + bound approval + audit): (1) **Guardrail tuning** — the PHI/prompt-attack-
+tuned Bedrock Guardrail currently blocks the large structured-JSON demo prompt (returns a refusal), so on
+synthetic data the narrative is a Guardrail block; relax the prompt-attack filter or reshape the draft
+prompt to clean natural language to get a drafted narrative. (2) **Regex ID tuning** — set the site's
+exact MRN/account formats via the one-line `HCLS_MRN_PATTERNS` config.
 
 **The headline next increment (the P1/P2 ask to fund):** unify the packs so every agent registers with a
 **single shared Aegis control-plane instance** (one versioned, hash-checked `platform_core` package +
