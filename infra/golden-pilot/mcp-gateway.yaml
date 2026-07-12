@@ -1,11 +1,17 @@
 AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
 Description: >
   Aegis Run 10 - a real MCP-protocol gateway (portable pattern).
   API Gateway HTTP API with a Cognito JWT authorizer in front of a Lambda that
-  speaks MCP JSON-RPC 2.0 (initialize, tools/list, tools/call) with a
-  deny-by-default tool allow-list, a human-approval gate on consequential
-  tools, fail-closed output masking, and an append-only DynamoDB audit sink
-  (IAM explicitly denies UpdateItem/DeleteItem, mirroring Run 1).
+  speaks MCP JSON-RPC 2.0 (initialize, tools/list, tools/call). The authorizer
+  now runs the REVIEWED platform_core engine, shipped as a Lambda layer: the
+  deny-by-default authorization DECISION comes from platform_core.policy_engine
+  (the full 9-clause ALLOW-iff predicate) and boundary masking from
+  platform_core.masker (fail-closed). The DynamoDB append-only audit sink (IAM
+  explicitly denies UpdateItem/DeleteItem) and the DynamoDB reviewer-ledger
+  single-use approval consume are the AWS-native I/O around that engine. The
+  previous inline governance SUBSET (a hand-rolled allow-list dict + a one-line
+  regex) has been deleted, so the deployed artifact IS the reviewed engine.
   AgentCore Gateway remains the managed-service path (docs/07); this template
   proves the same controls on the portable API Gateway pattern in any region.
 
@@ -110,93 +116,35 @@ Resources:
                   Resource: !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LedgerTableName}
                 - !Ref AWS::NoValue
 
+  # The REVIEWED engine, shipped as a layer. layer/python/platform_core is
+  # pre-staged from the single source of truth (../../platform_core) by
+  # prepare_layer.sh, so the deployed engine cannot drift from the offline-tested
+  # one. Run `./prepare_layer.sh` before `sam build`.
+  PlatformCoreLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub aegis-platform-core-${Environment}
+      Description: Reviewed Aegis platform_core governance engine (policy_engine, masker, ...).
+      ContentUri: layer/
+      CompatibleRuntimes: [python3.12]
+      RetentionPolicy: Delete
+
   McpFunction:
-    Type: AWS::Lambda::Function
+    Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub aegis-mcp-gateway-${Environment}
       Runtime: python3.12
-      Handler: index.handler
+      Handler: handler.handler
+      CodeUri: gateway-src/
       Timeout: 15
       MemorySize: 256
       Role: !GetAtt McpFunctionRole.Arn
+      Layers:
+        - !Ref PlatformCoreLayer
       Environment:
         Variables:
           TABLE: !Ref AuditTable
           LEDGER: !If [HasLedger, !Ref LedgerTableName, ""]
-      Code:
-        ZipFile: |
-          import json, os, time, uuid, re, base64, boto3
-          ddb = boto3.client("dynamodb")
-          TABLE = os.environ["TABLE"]
-          LEDGER = os.environ.get("LEDGER", "")
-          REGISTRY = {
-            "kb.search_policy": {"description": "Search the approved policy knowledge base (read-only).", "consequential": False,
-              "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
-            "ticket.create_draft": {"description": "Draft a service ticket. Drafting only - no submit authority.", "consequential": False,
-              "inputSchema": {"type": "object", "properties": {"summary": {"type": "string"}}, "required": ["summary"]}},
-            "ticket.submit": {"description": "CONSEQUENTIAL: submit a ticket. Requires a bound single-use approval.", "consequential": True,
-              "inputSchema": {"type": "object", "properties": {"ticket_id": {"type": "string"}, "approval_id": {"type": "string"}}, "required": ["ticket_id"]}},
-          }
-          MASK = re.compile(r"\b\d{3}-\d{2}-\d{4}\b|[\w.+-]+@[\w-]+\.[\w.]+")
-          def audit(sub, tool, decision, detail):
-              ddb.put_item(TableName=TABLE, Item={
-                  "pk": {"S": "audit"},
-                  "sk": {"S": "%.6f#%s" % (time.time(), uuid.uuid4().hex[:8])},
-                  "sub": {"S": sub}, "tool": {"S": tool}, "decision": {"S": decision},
-                  "detail": {"S": MASK.sub("[MASKED]", detail)[:400]}})
-          def err(i, c, m): return {"jsonrpc": "2.0", "id": i, "error": {"code": c, "message": m}}
-          def ok(i, r): return {"jsonrpc": "2.0", "id": i, "result": r}
-          def resp(code, body): return {"statusCode": code, "headers": {"Content-Type": "application/json"}, "body": json.dumps(body)}
-          def handler(event, context):
-              claims = event.get("requestContext", {}).get("authorizer", {}).get("jwt", {}).get("claims", {})
-              sub = claims.get("sub", "anonymous")
-              body = event.get("body") or "{}"
-              if event.get("isBase64Encoded"): body = base64.b64decode(body).decode()
-              try: req = json.loads(body)
-              except Exception: return resp(400, err(None, -32700, "parse error"))
-              rid, method = req.get("id"), req.get("method", "")
-              if method == "initialize":
-                  return resp(200, ok(rid, {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}},
-                      "serverInfo": {"name": "aegis-mcp-gateway", "version": "0.1.0"}}))
-              if method == "notifications/initialized": return resp(202, {})
-              if method == "tools/list":
-                  audit(sub, "*", "allow", "tools/list")
-                  return resp(200, ok(rid, {"tools": [{"name": k, "description": v["description"], "inputSchema": v["inputSchema"]} for k, v in REGISTRY.items()]}))
-              if method == "tools/call":
-                  p = req.get("params", {}); name = p.get("name", ""); args = p.get("arguments", {})
-                  if name not in REGISTRY:
-                      audit(sub, name, "deny", "tool not registered (deny-by-default)")
-                      return resp(200, err(rid, -32601, "deny: tool '%s' is not in the allow-list (deny-by-default)" % name))
-                  if REGISTRY[name]["consequential"]:
-                      aid = args.get("approval_id")
-                      if not aid:
-                          audit(sub, name, "deny", "consequential tool without bound approval")
-                          return resp(200, err(rid, -32003, "deny: consequential tool requires a bound single-use approval (approval_id); see reviewer service (Runs 5/7)"))
-                      # Fail-closed: without a wired approval ledger we cannot validate the
-                      # approval, so we DENY rather than trust a caller-supplied string.
-                      if not LEDGER:
-                          audit(sub, name, "deny", "approval ledger not configured (fail-closed)")
-                          return resp(200, err(rid, -32003, "deny: approval ledger not configured; cannot validate approval (fail-closed). Set LedgerTableName."))
-                      # Atomic single-use consume: the approval must exist, be unconsumed,
-                      # be unexpired, AND be bound to the calling identity (requester == sub).
-                      # Any other case (unknown/expired/replayed/unbound string) fails the
-                      # condition and is denied. This is what makes an arbitrary approval_id
-                      # string useless.
-                      now = int(time.time())
-                      try:
-                          ddb.update_item(TableName=LEDGER, Key={"approval_id": {"S": str(aid)}},
-                              UpdateExpression="SET consumed_at = :now",
-                              ConditionExpression="attribute_exists(approval_id) AND attribute_not_exists(consumed_at) AND expires_at > :now AND requester = :sub",
-                              ExpressionAttributeValues={":now": {"N": str(now)}, ":sub": {"S": sub}})
-                      except ddb.exceptions.ConditionalCheckFailedException:
-                          audit(sub, name, "deny", "approval invalid/expired/replayed/unbound")
-                          return resp(200, err(rid, -32003, "deny: approval is invalid, expired, already used, or not bound to this identity"))
-                      except Exception:
-                          audit(sub, name, "deny", "approval validation error (fail-closed)")
-                          return resp(200, err(rid, -32003, "deny: approval validation error (fail-closed)"))
-                  audit(sub, name, "allow", json.dumps(args))
-                  return resp(200, ok(rid, {"content": [{"type": "text", "text": "[fixture] %s executed. args=%s" % (name, MASK.sub("[MASKED]", json.dumps(args)))}], "isError": False}))
-              return resp(200, err(rid, -32601, "method '%s' not supported" % method))
 
   HttpApi:
     Type: AWS::ApiGatewayV2::Api

@@ -20,19 +20,28 @@ clean_account_deploy:
            requests, torn down). Live external SaaS connectors, monitoring, DR, and production
            certification remain OUTSIDE the repo (engagement/customer-owned)."
   evidence: evidence/CLEAN-ACCOUNT-ACCEPTANCE.md
-  # HONESTY / scope of 'deploy-validated' below: the DEPLOYED authorizer (mcp-gateway.yaml Lambda) is a
-  # focused re-implementation of the deny-by-default intersection + single-use SoD approval-consume that
-  # was exercised live. The full 8-clause AGP engine in platform_core/ is OFFLINE-validated (unit +
-  # negative tests), not yet the deployed authorizer. Packaging platform_core as the deployed Lambda
-  # layer (so the reviewed engine == the deployed engine) is tracked as a P1 unification item.
-  deployed_authorizer: mcp-gateway-subset   # intersection + approval-consume; not the full platform_core engine
+  # HONESTY / scope of 'deploy-validated' below (updated 2026-07-12, B3): the inline governance SUBSET
+  # has been REMOVED from mcp-gateway.yaml. The authorizer Lambda now imports the REVIEWED platform_core
+  # engine from a Lambda layer — its authorization DECISION comes from platform_core.policy_engine (the
+  # full 9-clause ALLOW-iff predicate) and its boundary masking from platform_core.masker (fail-closed),
+  # both staged from the single source of truth ../platform_core by prepare_layer.sh (so the deployed
+  # engine cannot drift from the offline-tested one). The template is cfn-lint-clean and the handler's
+  # ALLOW/DENY/APPROVAL_REQUIRED decisions + masking are verified locally against the staged layer.
+  # DONE (2026-07-12): the layer-backed authorizer was live-redeployed on a clean account
+  # (864217980669, us-east-1, stack aegis-mcp-gateway-b3) and torn down with zero residual. Over HTTPS
+  # with a Cognito ID token the REVIEWED engine returned ALLOW (kb.search_policy), ALLOW+masked
+  # (ticket.create_draft — reviewed masker redacted SSN/email in the response AND the append-only audit
+  # row), DENY (db.drop — deny-by-default), and APPROVAL_REQUIRED (ticket.submit — human gate). The
+  # deny/gate strings are platform_core.policy_engine's verbatim messages, proving deployed == reviewed
+  # engine. Evidence: infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md.
+  deployed_authorizer: mcp-gateway-platform_core-layer   # reviewed engine via layer; live-redeployed + torn down 2026-07-12
 
 is_the_platform: true
 components:
-  - {id: policy_engine, name: Deny-by-default policy (least-privilege intersection), maturity: deploy-validated, note: "deployed authorizer is the mcp-gateway subset; full 8-clause platform_core engine is offline-validated"}
+  - {id: policy_engine, name: Deny-by-default policy (least-privilege intersection), maturity: deploy-validated, note: "B3 (2026-07-12): inline subset deleted; mcp-gateway authorizer imports the reviewed platform_core.policy_engine (full 9-clause predicate) + masker from a Lambda layer, cfn-lint-clean. LIVE-REDEPLOYED on a clean account (aegis-mcp-gateway-b3, us-east-1) and torn down zero-residual: reviewed engine returned ALLOW/ALLOW+masked/DENY(deny-by-default)/APPROVAL_REQUIRED over HTTPS, deny strings verbatim from platform_core — deployed == reviewed engine. See infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md"}
   - {id: gateway, name: MCP authorization gateway, maturity: deploy-validated}
   - {id: approval_ledger, name: Bound single-use SoD approvals, maturity: deploy-validated}
-  - {id: masker, name: Fail-closed PII/PHI masking, maturity: implemented}
+  - {id: masker, name: Fail-closed PII/PHI masking, maturity: deploy-validated, note: "B3 (2026-07-12): the reviewed platform_core.masker now runs in the deployed authorizer via the Lambda layer — live-verified redacting SSN/email before the append-only audit write on the aegis-mcp-gateway-b3 clean-account run"}
   - {id: audit_ledger, name: Append-only + WORM audit, maturity: deploy-validated}
   - {id: token_budget, name: Token budgets / cost control, maturity: implemented}
   - {id: model_gateway, name: Model gateway (Bedrock), maturity: implemented}
