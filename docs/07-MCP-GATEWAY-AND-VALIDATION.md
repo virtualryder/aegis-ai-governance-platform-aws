@@ -146,8 +146,28 @@ append-only audit with IAM-level Update/Delete deny). All allow and deny paths w
 over HTTPS; see
 `DEPLOYED-AND-VALIDATED.md` Run 10.
 
-What remains: in this reference repo the richer gateway logic runs as the readable offline policy
-engine and connectors are fixtures; deploying **AgentCore Gateway** as the managed production
-control plane and building **at least one live connector** end-to-end are customer-engagement work. Publisher-trust roots and OAuth/IdP
-integration for backend authorization are customer-configured. These items are tracked in
+**Update (B3, 2026-07-12): the deployed authorizer now IS the reviewed engine.** The inline
+governance subset (a hand-rolled tool allow-list dict + a one-line SSN/email regex) has been
+**deleted** from `mcp-gateway.yaml`. The authorizer Lambda now imports the **reviewed `platform_core`
+engine from a Lambda layer**: its authorization decision comes from `platform_core.policy_engine` (the
+full 9-clause ALLOW-iff predicate — the same code the offline suite tests) and its boundary masking
+from `platform_core.masker` (fail-closed). The layer's `python/platform_core` is pre-staged from the
+single source of truth (`../../platform_core`) by `prepare_layer.sh`, so the deployed engine cannot
+drift from the offline-tested one. Deploy is the proven cross-platform SAM path:
+
+```bash
+cd infra/golden-pilot
+./prepare_layer.sh          # stage the reviewed engine into layer/python/ (no make, no Docker)
+sam build                   # packages gateway-src/ + the layer
+sam deploy --guided         # (optionally pass LedgerTableName=<reviewer ledger> for the human gate)
+```
+
+The template is cfn-lint-clean and the handler's ALLOW/DENY/APPROVAL_REQUIRED decisions + masking are
+verified locally against the staged layer. **Remaining:** a live clean-account redeploy of this
+layer-backed authorizer (the earlier Run 10 live ALLOW/DENY/DENY used the now-deleted inline subset).
+
+What remains beyond that: deploying **AgentCore Gateway** as the managed production control plane and
+building **at least one live connector** end-to-end are customer-engagement work; connectors here are
+fixtures. Publisher-trust roots and OAuth/IdP integration for backend authorization are
+customer-configured. These items are tracked in
 [`10-PRODUCTION-READINESS-RACI.md`](10-PRODUCTION-READINESS-RACI.md).
