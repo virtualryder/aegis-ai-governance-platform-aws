@@ -4,7 +4,7 @@
 validation). Not every agent is equally validated — lead only with what is proven. The machine-readable
 source of truth for each repo is its `MATURITY.yaml`; `tools/check_maturity.py` fails CI on drift.*
 
-**Verified on `main` (2026-07-11): ~1,326 offline tests green** — Aegis 43 · EDU 197 · SLG 236 · HPP 270 · HCLS 580.
+**Verified on `main` (2026-07-12): ~1,333 offline tests green** — Aegis 43 · EDU 201 · SLG 236 · HPP 270 · HCLS 583.
 
 *Each per-repo count is the canonical figure in that repo's `MATURITY.yaml`, machine-checked by `tools/check_maturity.py`. Where a plain root `pytest` reports a different number (e.g. HCLS collects 576 because the openFDA live test skips and suites run in isolated processes), the repo notes explain why; `MATURITY.yaml` governs.*
 
@@ -13,7 +13,7 @@ source of truth for each repo is its `MATURITY.yaml`; `tools/check_maturity.py` 
 | Repo | Internal AWS demo | Customer workshop | Scoped pilot (synthetic) | Production | Clean-account deploy evidence |
 |---|:--:|:--:|:--:|:--:|---|
 | **Aegis** (platform) | ✅ Ready | ✅ Ready | ◑ Medium | ◻ Not yet | Governance core → MCP endpoint runs, deployed & torn down |
-| **HCLS** (life sciences) | ✅ Strongest | ✅ Ready | ◑ Medium (GxP/CSV care) | ◻ Not yet | 9 golden paths deployed, run end-to-end, torn down. **NER masking now runtime-verified on AWS** (Comprehend Medical, masks before audit write, fail-closed — `infra/golden-path-masking-verification/`); remaining: wire into hero pipeline + real Bedrock/Guardrails hero invocation |
+| **HCLS** (life sciences) | ✅ Strongest | ✅ Ready | ◑ Medium (GxP/CSV care) | ◻ Not yet | 9 golden paths deployed, run end-to-end, torn down. **NER masking now runtime-verified on AWS** (Comprehend Medical, masks before audit write, fail-closed — `infra/golden-path-masking-verification/`); now **wired into the hero pipeline** (masks the narrative prompt before the model, fail-closed); remaining: real Bedrock/Guardrails hero invocation on AWS |
 | **SLG** (state/local gov) | ✅ Ready | ✅ Ready | ◑ Medium-high (synthetic) | ◻ Not yet | 8 golden paths + a hardened secure variant, validated & torn down |
 | **HPP** (payer/provider) | ✅ Ready | ✅ Ready | ◑ Medium (Agent 01) | ◻ Not yet | Agent 01 golden path acceptance-gated; 02–08 share templates but are not individually clean-account-gated |
 | **EDU** (education) | ✅ Ready | ✅ Ready | ◑ Medium (**partial deploy evidence**) | ◻ Not yet | Golden-path controls (real model, deployed append-only audit, runtime PII masking, Cognito JWT) clean-account-evidenced; **full `quickstart.yaml` nested agent stack not yet deploy-validated — do not present EDU as equivalent to HCLS/SLG** |
