@@ -21,16 +21,17 @@ cd aegis-ai-governance-platform-aws && PYTHONPATH=platform_core:. pytest demo pl
 python demo/clean_account_acceptance.py          # 18-step control walk-through, offline
 
 # a vertical (life sciences)
-cd hcls-ai-agents && make test                    # 580 tests via scripts/run_all_tests.sh
+cd hcls-ai-agents && make test                    # 583 tests via scripts/run_all_tests.sh
 make neg-demo                                      # 10/10 governance refusals fire
 python tools/check_maturity.py                    # asserts the maturity count is honest
 ```
-Expected: **~1,326 offline tests green portfolio-wide** (Aegis 43 · EDU 197 · SLG 236 · HPP 270 ·
-HCLS 580 — each canonical in that repo's `MATURITY.yaml`), negative-control demos firing on
-unauthenticated / wrong-role / replay / tamper / mask-fail / budget, and the drift-checker exiting 0.
-*(A plain root `pytest` may report a lower number per repo — e.g. HCLS collects 576 because the openFDA
-live test skips and suites run in isolated processes; `run_all_tests.sh` is the authoritative runner and
-`MATURITY.yaml` is canonical.)*
+Expected: **~1,333 offline tests green portfolio-wide** (Aegis 43 · EDU 201 · SLG 236 · HPP 270 ·
+HCLS 583 — each canonical in that repo's `MATURITY.yaml`, verified 2026-07-12), negative-control demos
+firing on unauthenticated / wrong-role / replay / tamper / mask-fail / budget, and the drift-checker
+exiting 0.
+*(A plain root `pytest` may report a different number per repo — suites run in isolated processes
+(reused package names) and some live tests skip offline; each repo's `run_all_tests.sh` / `check_maturity.py`
+is the authoritative runner and `MATURITY.yaml` is canonical.)*
 
 ## 3. Verify it deploys as prescribed (clean AWS account)
 The supported path is the per-agent **SAM golden paths** (`infra/golden-path-*/`):
