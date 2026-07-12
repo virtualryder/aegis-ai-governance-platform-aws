@@ -83,4 +83,8 @@ Approve for **internal enablement + customer architecture workshops now**, and *
 synthetic-data pilots** on the heroes. For a broader go-to-market motion, fund three increments on one
 lead hero: (a) a real Bedrock+Guardrails path on AWS (masking-before-model is now wired + unit-tested;
 the remaining piece is exercising it live on AWS), (b) one live tier-4
-connector, (c) independent captured deploy evidence.
+connector, (c) independent captured deploy evidence — **now built and verified live**: a GitHub Actions
+pipeline (`golden-pilot-deploy-evidence.yml`) deploys the B3 golden path → drives live governed
+decisions → IAM-simulates the append-only audit → scans for PII leaks → tears down, failing on any
+control regression; the collector ran green against a real deploy on 2026-07-12 (see
+`docs/CI-DEPLOY-EVIDENCE.md`). Enabling scheduled hands-off runs is a one-time OIDC-role apply + secret.

@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  One-time setup for the golden-pilot-deploy-evidence GitHub Actions pipeline: a GitHub OIDC identity
+  provider (created only if absent) + an IAM role the workflow assumes via short-lived OIDC tokens (no
+  long-lived access keys in CI). The trust policy is scoped to a single repo and (optionally) a single
+  branch. Deploy this once, then add the RoleArn output as the repo secret AWS_DEPLOY_ROLE_ARN.
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: GitHub org/owner (e.g. virtualryder)
+  GitHubRepo:
+    Type: String
+    Description: Repository name (e.g. aegis-ai-governance-platform-aws)
+  GitHubRef:
+    Type: String
+    Default: "*"
+    Description: >-
+      Git ref to allow (e.g. refs/heads/main). Default "*" allows any ref in the repo — tighten this to
+      a branch for production.
+  CreateOIDCProvider:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Set to "false" if token.actions.githubusercontent.com already exists in the account.
+
+Conditions:
+  MakeOIDC: !Equals [!Ref CreateOIDCProvider, "true"]
+
+Resources:
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: MakeOIDC
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+      # GitHub's OIDC thumbprint is validated by IAM against the JWKS; this value is the documented one.
+      ThumbprintList: ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: aegis-golden-pilot-ci-deploy
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - MakeOIDC
+                - !Ref GitHubOIDCProvider
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${GitHubRepo}:ref:${GitHubRef}
+      Policies:
+        - PolicyName: golden-pilot-deploy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # CloudFormation + the SAM managed artifact bucket.
+              - Effect: Allow
+                Action: [cloudformation:*]
+                Resource: "*"
+              - Effect: Allow
+                Action: [s3:CreateBucket, s3:PutObject, s3:GetObject, s3:ListBucket, s3:PutBucketPolicy, s3:PutEncryptionConfiguration, s3:PutBucketVersioning, s3:GetBucketLocation, s3:DeleteObject]
+                Resource: [!Sub "arn:${AWS::Partition}:s3:::aws-sam-cli-managed-default*"]
+              # The resources the stack creates (kept to the services the golden path uses).
+              - Effect: Allow
+                Action: [lambda:*, apigateway:*, dynamodb:*, cognito-idp:*]
+                Resource: "*"
+              # Create/pass the stack's own append-only Lambda role. iam:* is inherently broad because a
+              # deploy role that creates IAM roles is privileged; scope GitHubRef to a branch and review.
+              - Effect: Allow
+                Action: [iam:CreateRole, iam:DeleteRole, iam:GetRole, iam:PassRole, iam:PutRolePolicy, iam:DeleteRolePolicy, iam:GetRolePolicy, iam:AttachRolePolicy, iam:DetachRolePolicy, iam:ListRolePolicies, iam:ListAttachedRolePolicies, iam:TagRole, iam:UntagRole]
+                Resource: "*"
+              # Evidence capture: read-only simulation + identity.
+              - Effect: Allow
+                Action: [iam:SimulatePrincipalPolicy, sts:GetCallerIdentity, cloudtrail:LookupEvents]
+                Resource: "*"
+
+Outputs:
+  RoleArn:
+    Description: Add this as the repo secret AWS_DEPLOY_ROLE_ARN.
+    Value: !GetAtt DeployRole.Arn
