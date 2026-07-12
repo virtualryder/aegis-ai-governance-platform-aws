@@ -175,7 +175,7 @@ def main() -> int:
         "audit_rows": sanitize(rows),
         "control_checks": {"passed": not problems, "problems": problems},
     }
-    with open(os.path.join(args.out, "deploy-evidence.json"), "w") as f:
+    with open(os.path.join(args.out, "deploy-evidence.json"), "w", encoding="utf-8") as f:
         json.dump(evidence, f, indent=2)
 
     summary = [
@@ -190,7 +190,7 @@ def main() -> int:
         "",
         "```json", json.dumps(sim, indent=2), "```",
     ]
-    with open(os.path.join(args.out, "SUMMARY.md"), "w") as f:
+    with open(os.path.join(args.out, "SUMMARY.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(summary) + "\n")
 
     if problems:
