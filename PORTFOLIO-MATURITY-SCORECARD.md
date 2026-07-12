@@ -4,7 +4,7 @@
 validation). Not every agent is equally validated — lead only with what is proven. The machine-readable
 source of truth for each repo is its `MATURITY.yaml`; `tools/check_maturity.py` fails CI on drift.*
 
-**Verified on `main` (2026-07-11): ~1,326 offline tests green** — Aegis 43 · EDU 197 · SLG 236 · HPP 270 · HCLS 580.
+**Verified on `main` (2026-07-12): ~1,330 offline tests green** — Aegis 43 · EDU 201 · SLG 236 · HPP 270 · HCLS 580.
 
 *Each per-repo count is the canonical figure in that repo's `MATURITY.yaml`, machine-checked by `tools/check_maturity.py`. Where a plain root `pytest` reports a different number (e.g. HCLS collects 576 because the openFDA live test skips and suites run in isolated processes), the repo notes explain why; `MATURITY.yaml` governs.*
 

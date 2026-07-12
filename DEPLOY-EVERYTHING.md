@@ -60,8 +60,8 @@ per-pack maturity: [`PORTFOLIO-START-HERE.md`](PORTFOLIO-START-HERE.md).
 
 ## 4. Step 0 — try everything locally first (no AWS, no API key)
 
-Every pack runs its full governance suite offline, with no credentials. **~1,326 tests pass
-portfolio-wide** — Aegis 43 · EDU 197 · SLG 236 · HPP 270 · HCLS 580 — and each count is gated by
+Every pack runs its full governance suite offline, with no credentials. **~1,330 tests pass
+portfolio-wide** — Aegis 43 · EDU 201 · SLG 236 · HPP 270 · HCLS 580 — and each count is gated by
 `tools/check_maturity.py`, so the number cannot drift from that repo's `MATURITY.yaml` (the canonical
 source of truth for every test count in this portfolio).
 
@@ -90,10 +90,10 @@ make neg-demo
 make eval-denial
 ```
 
-**EDU — 197 tests**
+**EDU — 201 tests**
 ```bash
 cd edu-ai-agents
-make test              # canonical offline total 197 (see MATURITY.yaml)
+make test              # canonical offline total 201 (see MATURITY.yaml)
 make neg-demo
 ```
 
