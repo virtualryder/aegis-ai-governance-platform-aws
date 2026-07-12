@@ -63,7 +63,7 @@ Live-AWS cells reflect the ten documented deploy/validate/teardown runs ([`DEPLO
 | MCP / tool authorization gateway | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (Run 10: live MCP JSON-RPC endpoint, allow+deny paths over HTTPS; AgentCore Gateway: Customer) |
 | Policy enforcement (deny-by-default) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo |
 | Human approval (SoD, single-use) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo |
-| PII/PHI masking | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (regex masking live-proven in Run 10; runtime Comprehend/Macie wiring: Customer) |
+| PII/PHI masking | ✅ | ✅ | ✅ | ✅ | ◻ | Repo (regex masking live in the gateway; **runtime NER masking now live-verified** — Comprehend Medical `DetectPHI` + Comprehend masked 7 PHI + 7 PII before the audit write, fail-closed, 2026-07-12; Macie wiring: Customer) |
 | Audit (append-only + WORM) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo |
 | Bedrock + Guardrails | ✅ | ✅ | ✅ | ✅ | ◻ | Repo |
 | IaC deploy (golden path) | ✅ | ✅ | ✅ | ✅ | ◻ | Repo |
@@ -121,6 +121,32 @@ GA services — no black box, no lock-in.
 | **Director / Chief Architect** | "Is this one maintainable pattern or eight integrations?" | A single reference architecture reused across every agent; IaC; standard agent manifest; no per-agent re-architecture. |
 | **CFO / Budget owner** | "How do I control and allocate AI spend across departments?" | Token budgets with hard caps + per-department **showback/chargeback** via Bedrock application inference profiles and cost-allocation tags. |
 | **CEO / Agency head** | "What's the business case and the risk story?" | Documented outcomes per workflow + a candid shared-responsibility model that survives a review board. |
+
+## The four vertical packs — agents that deploy onto Aegis
+
+Aegis is the **governance platform**. The four vertical repos are **agent packs that deploy onto it** —
+each conforms to the Aegis Governance Pattern (AGP v1.0) and deploys the *same* governed golden-path
+chassis (identity → deny-by-default gateway → human gate → fail-closed masking → append-only/WORM audit),
+with only the domain logic, connectors, and compliance overlay swapped. You govern once; you add agents.
+
+| Pack (repo) | Industry | Lead hero (proven live) | Live reference connector |
+|---|---|---|---|
+| **`hcls-ai-agents`** | Life sciences (pharma/biotech/CRO) | **Pharmacovigilance ICSR intake** — governed workflow + real Bedrock + human gate, SUCCEEDED live | openFDA / FAERS |
+| **`slg-ai-agents`** | State & local government | **Resident Services / 311** — governed request created through the gateway, SUCCEEDED live | NYC 311 (Socrata) |
+| **`healthcare_ai_agents`** (**HPP**) | Healthcare payer / provider | **Revenue-Cycle Denials** — same governed chassis, private-VPC variant | X12 835 scaffold |
+| **`edu-ai-agents`** | K-12 & higher education | **Student & Family Concierge** — real model + PII masking + audit (full stack adds SAML IdP federation, a customer integration point) | College Scorecard |
+
+**The deploy order is Aegis-first, then agents:** stand up the governance platform (or, per pack, deploy
+the pack's self-contained governed golden path, which carries the same controls), then onboard each hero
+via its signed `agent.manifest.yaml`. The single, copy-paste SA walkthrough is
+[`SA-DEPLOYMENT-RUNBOOK.md`](SA-DEPLOYMENT-RUNBOOK.md); the portfolio map is
+[`PORTFOLIO-START-HERE.md`](PORTFOLIO-START-HERE.md).
+
+> **On "deploys onto":** today each pack ships the governance controls *with* its golden path (one
+> versioned pattern, re-implemented per pack — proven live per hero). Unifying them so every agent
+> registers with a **single shared Aegis control-plane instance** is the headline next increment (a
+> shared, hash-checked `platform_core` package + AgentCore Gateway) — the most compelling scale story
+> and the P1/P2 ask to leadership.
 
 ## The platform in five layers
 
@@ -205,10 +231,24 @@ classes, guardrails, budgets, and audit. This is the path to selling agents as a
 industries without re-doing governance each time. See
 [`docs/08-GTM-AND-POSITIONING.md`](docs/08-GTM-AND-POSITIONING.md).
 
-## Proven on AWS (ten live runs)
+## Proven on AWS (platform + heroes, live)
 
 The hard controls have each been deployed to AWS, exercised with real requests, and torn down — full
 log in [`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md).
+
+**Latest validation (2026-07-12) — the platform *and* the vertical heroes, end-to-end and torn down zero-residual:**
+
+| What was deployed live | Result |
+|---|---|
+| **Aegis MCP authorizer = the reviewed engine (B3)** | `platform_core` shipped as a Lambda layer; over HTTPS the reviewed engine returned **ALLOW / ALLOW+masked / DENY (deny-by-default) / APPROVAL_REQUIRED**, deny strings verbatim from the engine, PII masked before the append-only audit — proof the deployed authorizer *is* the code under test (`infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md`) |
+| **HCLS Pharmacovigilance hero** (life sciences) | governed workflow ran fake ICSR data → **real Bedrock draft** (Claude via Converse + Guardrail) → human gate → **bound single-use SoD approval** → SUCCEEDED; append-only audit written |
+| **SLG 311 hero** (state/local gov) | governed 311 request created **through** the gateway only after a bound SoD approval (`gateway_decision: ALLOW`); grounded retrieval with citations; append-only audit |
+| **Runtime PHI/PII masking** (Comprehend Medical + Comprehend) | **7 PHI + 7 PII** entities detected and masked **before the audit write, fail-closed, no leak** |
+| **Reproducible CI evidence pipeline** | a GitHub Actions job deploys → drives the four governed decisions → IAM-simulates the append-only audit (`PutItem` allowed, `Update/DeleteItem` explicitDeny) → tears down; ran green against a real deploy (`docs/CI-DEPLOY-EVIDENCE.md`) |
+
+*Each vertical hero deploys the **same governed golden-path chassis** — the packs are add-ons that inherit the pattern, not separate integrations.*
+
+### The earlier platform-core runs (each deployed, exercised, torn down)
 
 | Run | Proven live, then torn down |
 |---|---|
