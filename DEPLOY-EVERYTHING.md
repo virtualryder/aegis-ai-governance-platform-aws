@@ -183,9 +183,13 @@ Each pack's clean-account evidence documents a full deploy → run → teardown 
 - HCLS masking is now **runtime-verified on AWS** (Comprehend Medical `DetectPHI` + Comprehend, masks
   before the audit write, fail-closed — `hcls-ai-agents/infra/golden-path-masking-verification/`). The module is now
   **wired into the HCLS hero pipeline** (masks the narrative prompt before the model, fail-closed —
-  2026-07-12, unit-tested; not yet exercised live on AWS). Remaining CISO caveat: Agent 02's real
-  Bedrock+Guardrails invocation still runs locally — a real Bedrock+Guardrails hero call on AWS is the
-  top next increment for the lead hero.
+  2026-07-12, unit-tested) **and now exercised live on AWS end-to-end** (2026-07-12): the Agent 02
+  golden path deployed to a clean account, the wired masker ran fail-closed before a **real Bedrock**
+  draft through the CFN-managed Guardrail, and the governed workflow produced a ~3.6k-char
+  **de-identified** ICSR narrative (`drafted_by=bedrock`) through the SoD human gate, then torn down —
+  reproduce with `hcls-ai-agents/infra/golden-path-02-pharmacovigilance/verify_narrative.sh`. (A
+  false-blocking Guardrail DENY-topic was removed; unauthorized-submission control is enforced
+  deterministically by the SoD gate.)
 - The Aegis **MCP authorizer now deploys the reviewed `platform_core` engine** (deny-by-default
   `policy_engine` + fail-closed `masker`) as a Lambda layer — the inline subset is deleted, so the
   deployed artifact is the code the offline suite tests. **Live-verified on a clean account and torn

@@ -6,14 +6,14 @@ source of truth for each repo is its `MATURITY.yaml`; `tools/check_maturity.py` 
 
 **Verified on `main` (2026-07-12): ~1,333 offline tests green** — Aegis 43 · EDU 201 · SLG 236 · HPP 270 · HCLS 583.
 
-*Each per-repo count is the canonical figure in that repo's `MATURITY.yaml`, machine-checked by `tools/check_maturity.py`. Where a plain root `pytest` reports a different number (e.g. HCLS collects 576 because the openFDA live test skips and suites run in isolated processes), the repo notes explain why; `MATURITY.yaml` governs.*
+*Each per-repo count is the canonical figure in that repo's `MATURITY.yaml`, machine-checked by `tools/check_maturity.py`. Where a plain root `pytest` reports a different number (suites run in isolated processes under reused package names, and some live tests skip offline), the repo notes explain why; `MATURITY.yaml` governs.*
 
 ## Portfolio readiness
 
 | Repo | Internal AWS demo | Customer workshop | Scoped pilot (synthetic) | Production | Clean-account deploy evidence |
 |---|:--:|:--:|:--:|:--:|---|
 | **Aegis** (platform) | ✅ Ready | ✅ Ready | ◑ Medium | ◻ Not yet | Governance core → MCP endpoint runs, deployed & torn down. **B3 (2026-07-12): the MCP authorizer now deploys the reviewed `platform_core` engine as a Lambda layer** (inline subset deleted) — live-verified on a clean account (ALLOW / ALLOW+masked / DENY / APPROVAL_REQUIRED, deny strings verbatim from the engine) and torn down zero-residual (`infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md`) |
-| **HCLS** (life sciences) | ✅ Strongest | ✅ Ready | ◑ Medium (GxP/CSV care) | ◻ Not yet | 9 golden paths deployed, run end-to-end, torn down. **NER masking now runtime-verified on AWS** (Comprehend Medical, masks before audit write, fail-closed — `infra/golden-path-masking-verification/`); now **wired into the hero pipeline** (masks the narrative prompt before the model, fail-closed); remaining: real Bedrock/Guardrails hero invocation on AWS |
+| **HCLS** (life sciences) | ✅ Strongest | ✅ Ready | ◑ Medium (GxP/CSV care) | ◻ Not yet | 9 golden paths deployed, run end-to-end, torn down. **NER masking now runtime-verified on AWS** (Comprehend Medical, masks before audit write, fail-closed — `infra/golden-path-masking-verification/`); now **wired into the hero pipeline and exercised live on AWS end-to-end** (2026-07-12: a real Bedrock draft through the CFN-managed Guardrail produced a ~3.6k-char de-identified ICSR narrative through the SoD gate, then torn down — `hcls-ai-agents/infra/golden-path-02-pharmacovigilance/verify_narrative.sh`) |
 | **SLG** (state/local gov) | ✅ Ready | ✅ Ready | ◑ Medium-high (synthetic) | ◻ Not yet | 8 golden paths + a hardened secure variant, validated & torn down |
 | **HPP** (payer/provider) | ✅ Ready | ✅ Ready | ◑ Medium (Agent 01) | ◻ Not yet | Agent 01 golden path acceptance-gated; 02–08 share templates but are not individually clean-account-gated |
 | **EDU** (education) | ✅ Ready | ✅ Ready | ◑ Medium (**partial deploy evidence**) | ◻ Not yet | Golden-path controls (real model, deployed append-only audit, runtime PII masking, Cognito JWT) clean-account-evidenced; **full `quickstart.yaml` nested agent stack not yet deploy-validated — do not present EDU as equivalent to HCLS/SLG** |

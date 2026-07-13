@@ -21,16 +21,17 @@ cd aegis-ai-governance-platform-aws && PYTHONPATH=platform_core:. pytest demo pl
 python demo/clean_account_acceptance.py          # 18-step control walk-through, offline
 
 # a vertical (life sciences)
-cd hcls-ai-agents && make test                    # 580 tests via scripts/run_all_tests.sh
+cd hcls-ai-agents && make test                    # 583 tests via scripts/run_all_tests.sh
 make neg-demo                                      # 10/10 governance refusals fire
 python tools/check_maturity.py                    # asserts the maturity count is honest
 ```
-Expected: **~1,326 offline tests green portfolio-wide** (Aegis 43 · EDU 197 · SLG 236 · HPP 270 ·
-HCLS 580 — each canonical in that repo's `MATURITY.yaml`), negative-control demos firing on
-unauthenticated / wrong-role / replay / tamper / mask-fail / budget, and the drift-checker exiting 0.
-*(A plain root `pytest` may report a lower number per repo — e.g. HCLS collects 576 because the openFDA
-live test skips and suites run in isolated processes; `run_all_tests.sh` is the authoritative runner and
-`MATURITY.yaml` is canonical.)*
+Expected: **~1,333 offline tests green portfolio-wide** (Aegis 43 · EDU 201 · SLG 236 · HPP 270 ·
+HCLS 583 — each canonical in that repo's `MATURITY.yaml`, verified 2026-07-12), negative-control demos
+firing on unauthenticated / wrong-role / replay / tamper / mask-fail / budget, and the drift-checker
+exiting 0.
+*(A plain root `pytest` may report a different number per repo — suites run in isolated processes
+(reused package names) and some live tests skip offline; each repo's `run_all_tests.sh` / `check_maturity.py`
+is the authoritative runner and `MATURITY.yaml` is canonical.)*
 
 ## 3. Verify it deploys as prescribed (clean AWS account)
 The supported path is the per-agent **SAM golden paths** (`infra/golden-path-*/`):
@@ -73,7 +74,7 @@ thing to run in a workshop and watch the human gate hold.
 | "The agents are mostly deterministic — where's the AI?" | Correct and disclosed. The governance is the product; each hero has one real Bedrock path. Adding a model-in-the-loop demo on the lead hero is the top next increment. |
 | "One hero + scaffolds, not 40 agents." | Deliberate. Low-blast-radius sequencing; the scorecard says so. |
 | "Connectors are tier-3 public reads." | Correct. Tier-4 live systems of record are engagement work, flagged everywhere. |
-| "Is HCLS masking actually proven on AWS?" | **Precise, two levels.** (1) The runtime masking control is **live-verified in a standalone AWS verification stack** (2026-07-11): Comprehend Medical `DetectPHI` + Comprehend `DetectPiiEntities` mask synthetic PHI/PII **before the audit write, fail-closed** — see `hcls-ai-agents/infra/golden-path-masking-verification/EVIDENCE.md`. (2) The module is now **wired into the Agent 02 hero pipeline** (masks the narrative prompt *before* the model, fail-closed in real-data mode, unit-tested — 2026-07-12), but that **hero path is not yet exercised live on AWS**. Remaining: a real Bedrock+Guardrails hero invocation on AWS that exercises the wired masking live. |
+| "Is HCLS masking actually proven on AWS?" | **Precise, two levels.** (1) The runtime masking control is **live-verified in a standalone AWS verification stack** (2026-07-11): Comprehend Medical `DetectPHI` + Comprehend `DetectPiiEntities` mask synthetic PHI/PII **before the audit write, fail-closed** — see `hcls-ai-agents/infra/golden-path-masking-verification/EVIDENCE.md`. (2) The module is now **wired into the Agent 02 hero pipeline** (masks the narrative prompt *before* the model, fail-closed in real-data mode, unit-tested — 2026-07-12), and that **hero path is now exercised live on AWS end-to-end** (2026-07-12): the Agent 02 golden path deployed to a clean account, the wired masker ran fail-closed before a **real Bedrock** draft through the CFN-managed Guardrail, and the governed workflow produced a ~3.6k-char **de-identified** ICSR narrative (`drafted_by=bedrock`, PII redacted) through the SoD human gate, then torn down. Reproduce with `hcls-ai-agents/infra/golden-path-02-pharmacovigilance/verify_narrative.sh`. |
 | "Is the *deployed* authorizer the same engine you reviewed, or a subset?" | **The reviewed engine, live-proven (B3, 2026-07-12).** The inline governance subset (allow-list dict + one-line regex) is **deleted** from `infra/golden-pilot/mcp-gateway.yaml`; the authorizer Lambda imports the reviewed `platform_core.policy_engine` (full 9-clause predicate) + `platform_core.masker` (fail-closed) from a **Lambda layer** pre-staged from the single source of truth, so the deployed engine cannot drift from the offline-tested one. **Deployed live and torn down on a clean account** (stack `aegis-mcp-gateway-b3`, us-east-1): over HTTPS the reviewed engine returned ALLOW / ALLOW+masked (SSN+email redacted before the audit write) / DENY (deny-by-default) / APPROVAL_REQUIRED (human gate), with deny strings verbatim from `platform_core` — proof deployed == reviewed engine. Evidence: `infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md`. |
 | "Is EDU as deploy-ready as HCLS/SLG?" | No. EDU golden-path controls are clean-account-evidenced, but the full `quickstart.yaml` nested agent stack is not yet deploy-validated. Lead with HCLS/SLG; treat EDU deploy evidence as partial. |
 | "Why not just AgentCore?" | Aegis is the regulated-industry overlay (intersection authz, bound SoD approvals, WORM evidence, compliance packs) AgentCore's horizontal primitives don't provide. |
@@ -81,8 +82,10 @@ thing to run in a workshop and watch the human gate hold.
 ## 7. Recommendation for AWS
 Approve for **internal enablement + customer architecture workshops now**, and **scoped
 synthetic-data pilots** on the heroes. For a broader go-to-market motion, fund three increments on one
-lead hero: (a) a real Bedrock+Guardrails path on AWS (masking-before-model is now wired + unit-tested;
-the remaining piece is exercising it live on AWS), (b) one live tier-4
+lead hero: (a) a real Bedrock+Guardrails path on AWS — **now done and live-verified (2026-07-12)**:
+masking-before-model is wired, unit-tested, and exercised live end-to-end on the Agent 02 hero (a real
+Bedrock draft through the CFN-managed Guardrail produced a de-identified narrative through the SoD gate,
+then torn down); the remaining lead-hero increments are (b) one live tier-4
 connector, (c) independent captured deploy evidence — **now built and verified live**: a GitHub Actions
 pipeline (`golden-pilot-deploy-evidence.yml`) deploys the B3 golden path → drives live governed
 decisions → IAM-simulates the append-only audit → scans for PII leaks → tears down, failing on any
