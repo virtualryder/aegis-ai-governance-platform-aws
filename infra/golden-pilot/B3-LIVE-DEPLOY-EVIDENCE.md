@@ -1,10 +1,10 @@
-# B3 — Live layer-backed authorizer deploy (evidence)
+# B3 â€” Live layer-backed authorizer deploy (evidence)
 
-**Date:** 2026-07-12 · **Account:** 864217980669 · **Region:** us-east-1 ·
-**Stack:** `aegis-mcp-gateway-b3` (deployed → live-tested → torn down, zero residual).
+**Date:** 2026-07-12 Â· **Account:** 111122223333 Â· **Region:** us-east-1 Â·
+**Stack:** `aegis-mcp-gateway-b3` (deployed â†’ live-tested â†’ torn down, zero residual).
 
 This records the live clean-account run that closes the last B3 gap: the deployed MCP
-authorizer is now the **reviewed `platform_core` engine**, delivered as a Lambda layer —
+authorizer is now the **reviewed `platform_core` engine**, delivered as a Lambda layer â€”
 not the previous inline governance subset (deleted).
 
 ## What was deployed
@@ -24,20 +24,20 @@ Endpoint: `https://hksawbo02f.execute-api.us-east-1.amazonaws.com/mcp`
 
 ## Live results (authenticated over HTTPS with a Cognito ID token)
 
-Every decision below is the **reviewed engine's own output** — the deny/gate strings are
+Every decision below is the **reviewed engine's own output** â€” the deny/gate strings are
 `platform_core.policy_engine`'s verbatim messages (the deleted inline subset used different
 wording), which is the proof the deployed artifact *is* the reviewed engine.
 
 | # | MCP `tools/call` | Decision | Evidence it came from the reviewed engine |
 |---|---|---|---|
-| 1 | `kb.search_policy` | **ALLOW** | 9-clause predicate satisfied (granted ∩ entitled, purpose, data-class, budget) |
-| 2 | `ticket.create_draft` (summary with SSN + email) | **ALLOW + masked** | reviewed `masker` redacted → `Resident SSN [SSN-REDACTED] email [EMAIL-REDACTED] …` in both the response and the audit row |
-| 3 | `db.drop` | **DENY** | `deny: agent 'aegis-mcp-gateway' has no grant for tool 'db.drop'` — deny-by-default |
+| 1 | `kb.search_policy` | **ALLOW** | 9-clause predicate satisfied (granted âˆ© entitled, purpose, data-class, budget) |
+| 2 | `ticket.create_draft` (summary with SSN + email) | **ALLOW + masked** | reviewed `masker` redacted â†’ `Resident SSN [SSN-REDACTED] email [EMAIL-REDACTED] â€¦` in both the response and the audit row |
+| 3 | `db.drop` | **DENY** | `deny: agent 'aegis-mcp-gateway' has no grant for tool 'db.drop'` â€” deny-by-default |
 | 4 | `ticket.submit` (no approval) | **APPROVAL_REQUIRED** | `deny: tool 'ticket.submit' is a consequential action withheld from the agent; a valid human-gate approval is required` |
 
 ## Append-only audit (DynamoDB scan of `aegis-mcp-audit-dev`)
 
-Five records written; the sensitive one is stored **masked** — the reviewed fail-closed masker
+Five records written; the sensitive one is stored **masked** â€” the reviewed fail-closed masker
 ran before the write:
 
 ```
@@ -49,12 +49,12 @@ db.drop              deny      agent 'aegis-mcp-gateway' has no grant for tool '
 ticket.submit        deny      approval_required: tool 'ticket.submit' is a consequential action withheld from the agent; a valid human-gate approval is required
 ```
 
-(The card number carries the `card` data class, which this tool does not declare — `public,pii` —
+(The card number carries the `card` data class, which this tool does not declare â€” `public,pii` â€”
 so it is correctly out of scope for masking on this path; SSN/email are `pii` and were masked.)
 
 ## Teardown
 
-`sam delete --stack-name aegis-mcp-gateway-b3 --no-prompts` →
+`sam delete --stack-name aegis-mcp-gateway-b3 --no-prompts` â†’
 `describe-stacks` returns *"Stack ... does not exist"*. Zero residual resources (Cognito pool +
 user, audit table, Lambda, layer, HTTP API all removed with the stack).
 
