@@ -43,6 +43,15 @@ jobs:
       - name: Run negative-security suite
         run: python demo/test_negative_security.py
 
+      # Previously NOT run by CI at all: platform_core/tests (AGP conformance, NER masker,
+      # status-drift gate) and demo/test_acceptance.py + demo/test_evidence_vault.py. They passed,
+      # but nothing proved it on an ongoing basis while the repo advertised continuous validation.
+      - name: Pytest suites (platform_core + acceptance + evidence vault)
+        run: PYTHONPATH=platform_core:. python -m pytest platform_core/tests demo/test_acceptance.py demo/test_evidence_vault.py -q -rs
+
+      - name: Assert CI runs every test file (no silently-unexecuted suites)
+        run: PYTHONPATH=platform_core:. python -m pytest platform_core/tests/test_ci_coverage.py -q -rs
+
   iac:
     name: iac (cfn-lint)
     runs-on: ubuntu-latest

@@ -60,8 +60,8 @@ per-pack maturity: [`PORTFOLIO-START-HERE.md`](PORTFOLIO-START-HERE.md).
 
 ## 4. Step 0 — try everything locally first (no AWS, no API key)
 
-Every pack runs its full governance suite offline, with no credentials. **~1,333 tests pass
-portfolio-wide** — Aegis 43 · EDU 201 · SLG 236 · HPP 270 · HCLS 583 — and each count is gated by
+Every pack runs its full governance suite offline, with no credentials. **~1,408 tests pass
+portfolio-wide** — Aegis 44 · EDU 201 · SLG 310 · HPP 270 · HCLS 583 — and each count is gated by
 `tools/check_maturity.py`, so the number cannot drift from that repo's `MATURITY.yaml` (the canonical
 source of truth for every test count in this portfolio).
 
@@ -74,10 +74,10 @@ make neg-demo          # 10/10 governance refusals fire
 make eval-agent02      # scored quality gate (PHI-leak threshold = 0)
 ```
 
-**SLG — 236 tests**
+**SLG — 310 tests**
 ```bash
 cd slg-ai-agents
-PYTHONPATH=platform_core:. pytest -q    # 236 tests
+bash scripts/run_tests.sh                # 310 tests (all suites, incl. the 8 agents)
 make neg-demo
 make eval-311
 ```
@@ -97,10 +97,10 @@ make test              # canonical offline total 201 (see MATURITY.yaml)
 make neg-demo
 ```
 
-**Aegis platform — 43 tests**
+**Aegis platform — 44 tests**
 ```bash
 cd aegis-ai-governance-platform-aws
-PYTHONPATH=platform_core:. pytest demo platform_core/tests -q    # 43 tests
+PYTHONPATH=platform_core:. pytest demo platform_core/tests -q    # 44 tests
 python demo/clean_account_acceptance.py                          # 18-step offline control walk-through
 ```
 

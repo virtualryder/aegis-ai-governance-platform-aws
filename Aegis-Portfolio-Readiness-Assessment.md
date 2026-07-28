@@ -57,8 +57,9 @@ Safe-Harbor pass for structured IDs alongside NER.
 - EDU quickstart CFN: **6 real cfn-lint errors that were silently suppressed by an `.cfnlintrc`
   ignore-list** fixed at the source and the ignores removed (E1003 ×4, E3004 circular KMS↔role, E3005
   conditional listener).
-- Test-count drift reconciled to canonical `MATURITY.yaml` portfolio-wide (Aegis 43 · EDU 201 · SLG 236 ·
-  HPP 270 · HCLS 583 = **~1,333**); HPP recounted 268 → 270 and EDU 197 → 201 (its suite grew); HCLS 580 → 583 (B1 masking tests added).
+- Test-count drift reconciled to canonical `MATURITY.yaml` portfolio-wide — *superseded 2026-07-28,
+  see the current figures below* (then: Aegis 43 · EDU 201 · SLG 236 ·
+  HPP 270 · HCLS 583 = **~1,408**); HPP recounted 268 → 270 and EDU 197 → 201 (its suite grew); HCLS 580 → 583 (B1 masking tests added).
 - "Masked before any model call" softened to the accurate boundary claim across all five repos'
   `DO-NOT-CLAIM.md` / `NOT-CLAIMS.md` and the portfolio summary.
 - Aegis "deployed subset ≠ reviewed engine" reconciled in `MATURITY.yaml` (the deployed authorizer is the

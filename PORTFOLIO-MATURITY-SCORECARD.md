@@ -4,7 +4,9 @@
 validation). Not every agent is equally validated — lead only with what is proven. The machine-readable
 source of truth for each repo is its `MATURITY.yaml`; `tools/check_maturity.py` fails CI on drift.*
 
-**Verified on `main` (2026-07-12): ~1,333 offline tests green** — Aegis 43 · EDU 201 · SLG 236 · HPP 270 · HCLS 583.
+**Verified on `main` (2026-07-28): ~1,408 offline tests green** — Aegis 44 · EDU 201 · SLG 310 · HPP 270 · HCLS 583.
+(SLG rose 236 -> 310 not because tests were added, but because CI was fixed to actually RUN the 8 agent
+suites, gov_platform and aws-native-reference; Aegis 43 -> 44 is the new CI-coverage gate.)
 
 *Each per-repo count is the canonical figure in that repo's `MATURITY.yaml`, machine-checked by `tools/check_maturity.py`. Where a plain root `pytest` reports a different number (suites run in isolated processes under reused package names, and some live tests skip offline), the repo notes explain why; `MATURITY.yaml` governs.*
 

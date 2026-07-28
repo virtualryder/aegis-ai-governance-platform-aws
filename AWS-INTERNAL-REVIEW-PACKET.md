@@ -25,7 +25,7 @@ cd hcls-ai-agents && make test                    # 583 tests via scripts/run_al
 make neg-demo                                      # 10/10 governance refusals fire
 python tools/check_maturity.py                    # asserts the maturity count is honest
 ```
-Expected: **~1,333 offline tests green portfolio-wide** (Aegis 43 · EDU 201 · SLG 236 · HPP 270 ·
+Expected: **~1,408 offline tests green portfolio-wide** (Aegis 44 · EDU 201 · SLG 310 · HPP 270 ·
 HCLS 583 — each canonical in that repo's `MATURITY.yaml`, verified 2026-07-12), negative-control demos
 firing on unauthenticated / wrong-role / replay / tamper / mask-fail / budget, and the drift-checker
 exiting 0.
