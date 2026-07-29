@@ -1,4 +1,4 @@
-# Portfolio Executive Summary — Aegis Governed-Agent Platform
+# Portfolio Executive Summary — Aegis, an Enterprise Governed-Agent Reference Architecture for AWS
 
 *Read this first. It is the 10-minute front door to all five repositories — what the package is, what
 it solves, how it works, how it stays secure and compliant, how it scales, and what is honestly true
@@ -63,7 +63,9 @@ scaffolds** — deliberately, so trust is proven on one low-blast-radius workflo
 AgentCore now provides the managed **Gateway, Identity, Policy (Cedar), and Evaluations** primitives.
 **Aegis is the regulated-industry governance *overlay and vertical packs* on top** — deny-by-default
 intersection semantics, bound single-use SoD human approvals, WORM/immutable audit evidence, and the
-compliance packs (GxP/Part 11, HIPAA, FERPA, CJIS) that horizontal primitives don't provide. Aegis
+regulatory **control-mapping packs** (GxP/Part 11, HIPAA, FERPA, CJIS) that horizontal primitives don't
+provide. Those packs map controls and produce assessor-inspectable evidence; they do not confer
+compliance, which remains a property of the adopter's validated system and programs. Aegis
 models both the managed-AgentCore path and a portable API-Gateway + Cognito path. (See the
 AgentCore-overlay one-pager / slide.)
 

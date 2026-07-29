@@ -15,6 +15,19 @@
 > All packs inherit the core controls in [`02-REFERENCE-ARCHITECTURE.md`](02-REFERENCE-ARCHITECTURE.md)
 > and map to **NIST 800-53** and the **NIST AI RMF Generative AI Profile (NIST AI 600-1)**.
 
+> ### What a pack is — and what it is not
+>
+> A pack is a **control mapping plus the implementing configuration**. Naming a regime in a pack means
+> *"here are the technical controls that support your obligations under this regime, and the artifact an
+> assessor can inspect for each one."* It does **not** mean the regime is satisfied, covered, or
+> certified by deploying the pack.
+>
+> **Compliance is a property of your validated system inside your quality and security programs — not a
+> property of software you install.** It is reached through your own risk assessment, qualification and
+> validation activities, SOPs, training, change control, and (where applicable) authorization. Aegis
+> supplies controls and evidence that **support** those activities; it does not perform them and cannot
+> confer their outcome. Where a control is `[Cfg]`, the work is explicitly yours.
+
 ## How a pack works
 
 A pack is applied at deploy time and at runtime:
@@ -77,13 +90,18 @@ MARS-E (for state Medicaid).
 |---|---|---|
 | **HIPAA / HITECH** | PHI data class; **Comprehend Medical** detection + masking; minimum-necessary retrieval; deterministic eligibility/clinical-rule engines kept **outside** the LLM; audit controls. Requires an **AWS BAA** + customer controls — "HIPAA-eligible" (Bedrock & AgentCore are, per the HIPAA Eligible Services Reference) ≠ "HIPAA-compliant." | [Impl masking]/[Cfg BAA] |
 | **42 CFR Part 2** | SUD-record data class with stricter consent + redisclosure controls in the consent ledger; segregated audit. | [Impl]/[Cfg] |
-| **GxP / 21 CFR Part 11 & Annex 11** | Electronic-records integrity (append-only + WORM); **electronic-signature**-grade human gate (bound, attributable, non-repudiable); Computer Software Assurance (risk-based) validation hooks; immutable audit for regulated activities. | [Impl]/[Cfg validation] |
+| **GxP / 21 CFR Part 11 & Annex 11** | Provides controls that **support the sponsor's validation activities** — it does not validate anything itself. Electronic-records integrity (append-only + WORM); a human gate with the binding, attributability and non-repudiation an **electronic-signature** control requires; immutable audit for regulated activities; artifacts that feed a risk-based **CSA/CSV** effort (requirements traceability, deterministic test evidence, change history). **The IQ/OQ/PQ, the validation plan and report, the SOPs, training and change control are performed by the regulated organization inside its own quality system.** | [Impl controls]/[Cfg validation — customer-owned] |
 | **HITRUST** | Maps platform controls to HITRUST CSF; rides AWS's HITRUST-certified service inheritance. | [Cfg] |
 
 **Why an HCLS buyer cares.** The board-level fear is an LLM fabricating a clinical or eligibility
 fact. This pack keeps decisioning deterministic and outside the model, masks PHI before any prompt,
 applies **contextual grounding + automated reasoning** checks to every generated statement, and gives
 the human gate the attributability that 21 CFR Part 11 e-signatures require.
+
+**Say it this way to a QA or CSV lead.** *"Aegis provides controls that support your GxP validation
+activities."* Not *"Aegis is GxP compliant"* — no software is, and claiming it is the fastest way to
+lose a quality audience. The useful conversation is which of their validation deliverables this
+architecture supplies evidence for, and which remain entirely theirs.
 
 ---
 

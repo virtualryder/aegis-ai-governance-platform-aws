@@ -1,4 +1,4 @@
-# SOURCES — Evidence Base for the Aegis Governed Agent Platform
+# SOURCES — Evidence Base for the Aegis Governed-Agent Reference Architecture
 
 > Every architectural and compliance claim in this repository is grounded in a primary
 > or authoritative source listed below. Each source is tagged by evidence tier:

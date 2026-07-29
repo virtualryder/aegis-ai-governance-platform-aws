@@ -3,7 +3,7 @@
 *Read this first. It is deliberately blunt so that a director of architecture, a CISO, a
 regulator, or AWS leadership can trust every other claim in this repository.*
 
-**Scope for this repo:** Aegis Governed Agent Platform (whole-of-government control plane).
+**Scope for this repo:** Aegis Governed-Agent Reference Architecture (whole-of-government control plane).
 
 ---
 

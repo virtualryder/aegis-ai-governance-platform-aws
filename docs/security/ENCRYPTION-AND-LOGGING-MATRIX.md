@@ -1,4 +1,4 @@
-# Encryption & Logging Matrix — Aegis Governed Agent Platform
+# Encryption & Logging Matrix — Aegis Governed-Agent Reference Architecture
 
 > **Status & maturity (read first).** Encryption-at-rest, WORM, and append-only audit are
 > **deployed and live-validated** (see [`../../DEPLOYED-AND-VALIDATED.md`](../../DEPLOYED-AND-VALIDATED.md)

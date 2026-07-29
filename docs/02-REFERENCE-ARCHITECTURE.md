@@ -197,7 +197,13 @@ operational visibility for day-2. NIST 800-53 CA-7, SI-4, AU-6.
 
 ## 9. Control → regime mapping (summary)
 
-| Control (platform) | GovRAMP/FedRAMP | CJIS v6.0 | IRS 1075 (FTI) | HIPAA/HITECH | 42 CFR Pt 2 | GxP/Part 11 | FERPA | COPPA | PCI | NIST AI RMF |
+> **How to read this table.** A ✔ means *this control contributes to, and produces evidence for, that
+> regime's obligations* — it does **not** mean the regime is satisfied. No row, and no combination of
+> rows, makes an adopter compliant. Compliance and (for GxP) validated status are properties of the
+> adopter's system inside their own quality and security programs, reached through risk assessment,
+> validation, SOPs, training, change control and authorization. This table is an input to that work.
+
+| Control (architecture) | GovRAMP/FedRAMP | CJIS v6.0 | IRS 1075 (FTI) | HIPAA/HITECH | 42 CFR Pt 2 | GxP/Part 11 | FERPA | COPPA | PCI | NIST AI RMF |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Edge WAF/Shield | ✔ | ✔ | ✔ | ✔ |  |  |  |  | ✔ | — |
 | Cryptographic identity + MFA | ✔ | ✔ (MFA) | ✔ | ✔ | ✔ |  | ✔ | ✔ |  | Human-AI Config |

@@ -43,7 +43,7 @@ A single deck with a shared executive core and swappable appendices. Build targe
 [`05-...build the deck...`] → produced as `Aegis-Master-Deck.pptx`.
 
 **Executive core (everyone):**
-1. Title — Aegis: the governed agent platform on AWS.
+1. Title — Aegis: the enterprise governed-agent reference architecture for AWS.
 2. The pilot trap (the problem, with the "90% piloting / 25% funded" framing).
 3. The insight — the agent isn't the product; governance is.
 4. What Aegis is — the five layers, one diagram.

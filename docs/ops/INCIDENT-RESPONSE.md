@@ -1,4 +1,4 @@
-# Incident Response Runbook — Aegis Governed Agent Platform
+# Incident Response Runbook — Aegis Governed-Agent Reference Architecture
 
 > **Status & maturity (read first).** Incident response is a **day-2 operational commitment** the
 > customer/Delivery Partner owns (RACI item 13,

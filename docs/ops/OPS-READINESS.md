@@ -1,4 +1,4 @@
-# Operational Readiness — Aegis Governed Agent Platform
+# Operational Readiness — Aegis Governed-Agent Reference Architecture
 
 > **Status & maturity (read first).** Day-2 operations is honestly assessed as *mostly absent*
 > today in [`../GAP-CLOSURE-BACKLOG.md`](../GAP-CLOSURE-BACKLOG.md) and is a blocker for a

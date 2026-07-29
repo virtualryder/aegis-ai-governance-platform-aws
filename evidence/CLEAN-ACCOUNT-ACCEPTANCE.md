@@ -1,4 +1,4 @@
-# Clean-Account Acceptance Report — Aegis Governed Agent Platform
+# Clean-Account Acceptance Report — Aegis Governed-Agent Reference Architecture
 
 Sanitized deployment evidence for the ten live runs claimed in
 [`../DEPLOYED-AND-VALIDATED.md`](../DEPLOYED-AND-VALIDATED.md). Validation account ID and IAM

@@ -1,8 +1,12 @@
-# Governed Agent Platform — portfolio start-here
+# Enterprise Governed-Agent Reference Architecture — portfolio start-here
 
-**One sentence.** Aegis is the **governed agent platform pattern**; SLG, HPP, HCLS, and EDU are
-**vertical agent packs** that prove how the pattern applies to regulated public-sector, healthcare
-payer/provider, life-sciences, and education workflows on AWS.
+**One sentence.** Aegis is an **enterprise governed-agent reference architecture for AWS**; SLG, HPP,
+HCLS, and EDU are **vertical agent packs** that prove how the architecture applies to regulated
+public-sector, healthcare payer/provider, life-sciences, and education workflows on AWS.
+
+> **Reference architecture, not a product.** It is a deployable reference implementation you fork and
+> own — no support contract, no SLA, no managed release train. That framing is deliberate: it sets the
+> expectation an AWS SA or a customer architect should actually have when they pick it up.
 
 > 🚀 **Want to deploy it?** [`DEPLOY-EVERYTHING.md`](DEPLOY-EVERYTHING.md) is the single, copy-paste-able
 > end-to-end guide: how the packs fit together, the recommended sequence, local-first testing, and the
@@ -19,7 +23,7 @@ payer/provider, life-sciences, and education workflows on AWS.
 
 | # | Repo | Role | Lead with (hero pilot) |
 |---|---|---|---|
-| — | **aegis-ai-governance-platform-aws** | The horizontal governed-agent **platform** (the pattern all packs conform to) | Governed IT service desk / ticketing |
+| — | **aegis-ai-governance-platform-aws** | The horizontal governed-agent **reference architecture** (the pattern all packs conform to) | Governed IT service desk / ticketing |
 | 1 | **hcls-ai-agents** | Life-sciences vertical pack (pharma / biotech / medtech / CRO) — **strongest vertical asset** | Pharmacovigilance (Agent 02) or Regulatory Writing |
 | 2 | **slg-ai-agents** | State & local government pack — **cleanest workshop/pilot story** | 311 resident services or IT service desk |
 | 3 | **healthcare_ai_agents** (HPP) | Healthcare payer/provider pack | Patient Access, Member Services, or Revenue-Cycle Denials |
@@ -56,14 +60,14 @@ sharply by pack — **lead only with what is actually validated**:
 | **SLG** | **All 8 golden paths** (+ a hardened secure variant) deployed/validated/torn down | Deploy-validated |
 | **HPP** | **Only Agent 01** (Revenue-Cycle Denials) is clean-account-gated; 02–08 share templates, **not** individually gated | **Lead only with Agent 01** |
 | **EDU** | **No clean-account CFN stack stood up yet** (resource-level provisioning validated; documented gap) | Workshops/envisioning — **not** deploy-validated |
-| **Aegis** | Platform controls validated (10 live runs); live external SaaS connectors, monitoring, DR, prod cert **outside the repo** | Strong pattern; needs operating proof |
+| **Aegis** | Control-plane controls validated (10 live runs); live external SaaS connectors, monitoring, DR, prod cert **outside the repo** | Strong pattern; needs operating proof |
 
 ## Hero sequencing (lead in this order)
 
 Do **not** open with "we have 40+ agents." Prove one governed workflow, then expand. The customer-facing
 sequence, strongest evidence first:
 
-1. **Aegis** — the governed-agent platform pattern (identity → authorization → tool access → human approval → audit → data protection → grounding → cost).
+1. **Aegis** — the governed-agent reference architecture (identity → authorization → tool access → human approval → audit → data protection → grounding → cost).
 2. **HCLS Agent 02 — Pharmacovigilance ICSR intake** — the best HCLS proof point (live openFDA reference connector + scored eval + the auth walkthrough).
 3. **SLG Agent 01 — Resident Services / 311** — the best public-sector proof point (live NYC 311 reference connector).
 4. **HPP Agent 01 — Revenue-Cycle Denials** — the best payer/provider proof point (the only clean-account-gated HPP agent).
@@ -109,8 +113,8 @@ supported default and the one live-validated (Aegis Run 10).
 
 **Internal (AWS):** "Customers are stuck in AI pilot sprawl. The blocker isn't the model — it's
 governance: identity, tool authorization, human approval, audit, data protection, grounding, cost
-control. This accelerator shows how to build a governed agent platform on AWS, then onboard agents one
-at a time through the same security/compliance pattern — a repeatable regulated-industry motion that
+control. This accelerator is a reference architecture for a governed agent control plane on AWS, onto
+which agents are onboarded one at a time through the same security/compliance pattern — a repeatable regulated-industry motion that
 drives Bedrock, AgentCore, Guardrails, Knowledge Bases, Step Functions, KMS, CloudTrail, Security Hub,
 WAF, and PrivateLink consumption." Lead with Aegis + HCLS (aligns to the HCLS SA role).
 

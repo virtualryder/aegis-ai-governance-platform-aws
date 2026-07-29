@@ -1,4 +1,4 @@
-# Compliance Evidence Index — Aegis Governed Agent Platform
+# Compliance Evidence Index — Aegis Governed-Agent Reference Architecture
 
 > **Assessor-facing.** This index maps each platform control to its NIST 800-53 Rev.5 family and to
 > **concrete evidence**: a live-validated run in [`../../DEPLOYED-AND-VALIDATED.md`](../../DEPLOYED-AND-VALIDATED.md),

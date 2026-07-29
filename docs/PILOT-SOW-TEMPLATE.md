@@ -1,7 +1,7 @@
 # Aegis Governed-Agent Pilot — Statement of Work (TEMPLATE)
 
 *Customer-facing. Fill the [bracketed] fields with the customer AE + solutions architect. This scopes
-a fixed, low-risk pilot of the Aegis governed-agent platform in the customer's AWS account.*
+a fixed, low-risk pilot of the Aegis governed-agent reference architecture in the customer's AWS account.*
 
 ---
 

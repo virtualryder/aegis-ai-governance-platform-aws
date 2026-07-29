@@ -1,4 +1,4 @@
-# Threat Model — Aegis Governed Agent Platform
+# Threat Model — Aegis Governed-Agent Reference Architecture
 
 > **Status & maturity (read first).** This is a STRIDE-based threat model for the Aegis
 > reference architecture. Mitigations are labeled with the maturity language from

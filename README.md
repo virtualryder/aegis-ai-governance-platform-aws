@@ -1,14 +1,19 @@
-# Aegis — Governed Agent Platform
+# Aegis — Enterprise Governed-Agent Reference Architecture for AWS
+
+> **What this is, precisely.** A **reference architecture** — a deployable reference implementation of a
+> deny-by-default control plane for agents on AWS, with the vertical packs that show how it applies.
+> It is **not a product**: there is no support contract, no SLA, no managed release train. Adopters fork
+> it, review it, and own what they run. Wherever this repository says "platform," read it as *the control
+> plane this architecture describes*, not a supported offering.
 
 > ### 🛡️ Part of the Aegis Governed-Agent Portfolio — one solution, five repositories
-> This repository is **1 of 5 that form a single, review-as-one solution**: the **Aegis** governance
-> platform (the control plane) plus four vertical agent packs. All five conform to one versioned
-> governance contract — **AGP v1.0** — and one deploy pattern, so a CIO / CISO reviews and approves them
-> **together** for pilot.
+> This repository is **1 of 5 that form a single, review-as-one solution**: the **Aegis** control plane
+> plus four vertical agent packs. All five conform to one versioned governance contract — **AGP v1.0** —
+> and one deploy pattern, so a CIO / CISO reviews and approves them **together** for pilot.
 >
 > | # | Repository | Role |
 > |--:|---|---|
-> | 1 | **`aegis-ai-governance-platform-aws`** | Governance **platform & pattern** (deny-by-default control plane) |
+> | 1 | **`aegis-ai-governance-platform-aws`** | Governed-agent **reference architecture** (deny-by-default control plane) |
 > | 2 | **`hcls-ai-agents`** | **Life sciences** — pharma / biotech / CRO |
 > | 3 | **`slg-ai-agents`** | **State & local government** |
 > | 4 | **`healthcare_ai_agents`** (**HPP**) | **Healthcare payer / provider** |
@@ -195,14 +200,23 @@ In deployment this is **Amazon Bedrock AgentCore Gateway** (managed) or the **po
 See [`docs/02-REFERENCE-ARCHITECTURE.md`](docs/02-REFERENCE-ARCHITECTURE.md) for the full
 edge-to-data architecture, per-component talking points, and the control→regime mapping.
 
-## Compliance overlay packs
+## Regulatory control-mapping packs
 
 The governance core is industry-agnostic. An **overlay pack** is a declarative bundle that turns
-on the controls, AWS regions, retention, and evidence a given regime requires:
+on the controls, AWS regions, retention, and evidence that **support** a given regime's obligations.
+
+> **Read the regime names below as a control map, not a coverage claim.** Listing a regime means
+> *"here are the implementing controls and the artifact an assessor can inspect for each."* It does not
+> mean the regime is satisfied by deploying the pack. Compliance is a property of *your* validated
+> system inside *your* quality and security programs — reached through your risk assessment,
+> validation, SOPs, training, change control and authorization. This architecture supplies controls and
+> evidence that support that work; it cannot perform it or confer its outcome.
 
 - **`packs/slg`** — GovRAMP/FedRAMP, CJIS v6.0, IRS Pub 1075 (FTI), NIST AI RMF.
 - **`packs/education`** — FERPA, amended COPPA (2025), state student-privacy laws.
-- **`packs/healthcare-lifesciences`** — HIPAA/HITECH, 42 CFR Part 2, GxP / 21 CFR Part 11, HITRUST.
+- **`packs/healthcare-lifesciences`** — HIPAA/HITECH, 42 CFR Part 2, HITRUST, and controls that
+  **support GxP / 21 CFR Part 11 validation activities** (electronic-records integrity, e-signature-grade
+  human gate, CSA/CSV evidence) — the validation itself stays inside the sponsor's quality system.
 - **`packs/enterprise`** — SOC 2, PCI DSS, ISO 27001, sector-agnostic data governance.
 
 Each pack maps to NIST 800-53 and the NIST AI RMF Generative AI Profile, and marks every control

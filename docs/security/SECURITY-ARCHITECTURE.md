@@ -1,4 +1,4 @@
-# Security Architecture — Aegis Governed Agent Platform
+# Security Architecture — Aegis Governed-Agent Reference Architecture
 
 > **Status & maturity (read first).** This document describes the trust-boundary model and the
 > request-time control flow of the Aegis control plane. Components named here are real and, where

@@ -1,4 +1,4 @@
-# Supply-Chain Security — Aegis Governed Agent Platform
+# Supply-Chain Security — Aegis Governed-Agent Reference Architecture
 
 > **Status & maturity (read first).** Signed-manifest verification and CI scanning are
 > **deployed / in-repo**; SBOM generation, artifact signing of releases, and a base-image policy

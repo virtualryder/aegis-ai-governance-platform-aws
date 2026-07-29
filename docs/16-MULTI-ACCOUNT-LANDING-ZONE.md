@@ -1,6 +1,6 @@
 # Multi-account landing zone — deploying Aegis at scale
 
-**What this is.** A reference design for deploying the Aegis governed-agent platform across **multiple
+**What this is.** A reference design for deploying the Aegis governed-agent reference architecture across **multiple
 AWS accounts** using AWS Organizations / Control Tower, so a customer can separate data classes,
 environments, and blast radius the way regulated enterprises and governments require. It complements
 [`11-MULTI-TENANCY.md`](11-MULTI-TENANCY.md) (SILO/POOL/BRIDGE tenant isolation *within* a deployment)
@@ -11,7 +11,7 @@ landing zone; a real landing zone is customer/engagement work.
 
 A single account can't cleanly give a CISO or auditor what they need: hard data-class isolation, a
 blast-radius boundary, separate audit custody, and environment separation. AWS's own guidance is to
-use an account as the unit of isolation. For a governed-agent platform the natural cuts are **by
+use an account as the unit of isolation. For a governed-agent architecture the natural cuts are **by
 environment, by data class, and by governance function.**
 
 ## Reference organizational-unit (OU) structure
