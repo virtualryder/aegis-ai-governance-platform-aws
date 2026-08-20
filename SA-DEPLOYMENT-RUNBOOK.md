@@ -88,6 +88,33 @@ when done** (§6). Set a budget alarm before you start.
 
 ---
 
+## 1.7 What changed in this runbook (2026-08 refresh)
+
+Four additions since the last revision — each has its own doc; this runbook only
+sequences them:
+
+1. **CDK is the authoring path for the governance core.** `infra/cdk/` synthesizes
+   the same CloudFormation the canon governs (`infra/CANONICAL-IAC.md`); validate
+   offline with `python3 -m pytest infra/cdk/tests -q`, deploy with `cdk deploy`.
+   The Terraform module is frozen parity for TF-standardized adopters.
+2. **The Kill Switch is part of every deploy.** The core now provisions
+   `/{app}/kill-switch` (SSM, default disengaged) plus read/engage IAM policies.
+   **End every platform deploy with the drill:** engage → verify a canary call is
+   denied → disengage with a *second* identity → verify all three events in the
+   audit. Procedure: `docs/ops/KILL-SWITCH.md`.
+3. **The delivery gate runs before any customer handoff.** `delivery_check()`
+   (platform_core/prod/manifest_validator.py) blocks placeholder credentials,
+   demo-grade retention (GOVERNANCE / <30 days), and unsigned manifests.
+   Checklist + retention-by-record-class table: `CUSTOMER-DELIVERY-CHECKLIST.md`.
+4. **AgentCore-native equivalents are the direction of travel.** Bedrock AgentCore
+   now provides a managed Gateway and a managed **policy engine (Cedar)** —
+   `create-gateway`, `create-gateway-target`, `create-policy-engine`,
+   `create-policy` — alongside AgentCore Identity, Runtime, and Memory
+   (HIPAA-eligible per AWS compliance docs). Where the pilot permits, prefer the
+   managed primitive and keep `platform_core` as the offline analog and
+   conformance oracle; the agents' manifests and Cedar policies are unchanged
+   either way. Track service GA/region status at deploy time.
+
 ## 2. Step 1 — Prove it offline first (no AWS, no keys)
 
 Establish trust before spending a cent. Each repo runs its full governance suite offline. **The

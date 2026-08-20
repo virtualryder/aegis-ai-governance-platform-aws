@@ -6,11 +6,21 @@ control-plane resource ships as a CloudFormation template under
 end-to-end golden-pilot slices). CI (`.github/workflows/ci.yml`, `iac` job)
 lints **both** directories with `cfn-lint` on every push and pull request.
 
-Terraform parity is deliberately **out of scope for now and tracked as P2**
+**Authoring path (decided 2026-08-20): CDK.** The governance core is now
+authored in Python CDK (`infra/cdk/`), which *synthesizes to* CloudFormation —
+the canonical language is unchanged, and the portfolio converges on one
+authoring approach (the four vertical agents already ship Python-CDK apps).
+The CDK app is synth-validated by in-process template assertions
+(`infra/cdk/tests/`); the hand-written `governance-core.yaml` remains the
+live-validated baseline until a clean-account deploy of the CDK synth output
+is recorded in `DEPLOYED-AND-VALIDATED.md`.
+
+Terraform parity remains deliberately **out of scope for forward work (P2)**
 (see task #27). We do not maintain two source-of-truth IaC dialects: adopters
 who standardize on Terraform can wrap these templates
-(`aws_cloudformation_stack`) or port them, but CloudFormation remains the
-authoritative, live-validated definition.
+(`aws_cloudformation_stack`) or use the frozen parity module in
+`infra/terraform/`, but CloudFormation remains the authoritative,
+live-validated definition.
 
 ## Live-validation status
 

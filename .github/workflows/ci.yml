@@ -52,6 +52,11 @@ jobs:
       - name: Run kill-switch containment suite
         run: PYTHONPATH=platform_core:. python -m pytest demo/test_kill_switch.py -q -rs
 
+      - name: CDK governance-core synth assertions
+        run: |
+          pip install -q -r infra/cdk/requirements.txt pytest
+          python -m pytest infra/cdk/tests -q -rs
+
       - name: Assert CI runs every test file (no silently-unexecuted suites)
         run: PYTHONPATH=platform_core:. python -m pytest platform_core/tests/test_ci_coverage.py -q -rs
 
