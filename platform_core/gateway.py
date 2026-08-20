@@ -78,12 +78,14 @@ class AuthorizationGateway:
         approvals: ApprovalLedger,
         usage: UsageLedger,
         policy: PolicyEngine | None = None,
+        kill_switch=None,            # KillSwitch | None — platform containment
     ):
         self.audit = audit
         self.budgets = budgets
         self.approvals = approvals
         self.usage = usage
         self.policy = policy or PolicyEngine()
+        self.kill_switch = kill_switch
         self._tools = {}   # tool_id -> callable(arguments) -> output
         self._agents = {}  # agent_id -> manifest
 
@@ -98,6 +100,23 @@ class AuthorizationGateway:
     # ----- the brokered call -------------------------------------------- #
     def call(self, tc: ToolCall) -> GatewayResult:
         request_id = "req_" + secrets.token_hex(6)
+
+        # --- KILL SWITCH: containment precedes evaluation ---------------- #
+        # An engaged switch denies EVERYTHING — before masking, policy,
+        # budgets, or approvals. Nothing outranks containment. See
+        # platform_core/kill_switch.py and docs/ops/KILL-SWITCH.md.
+        if self.kill_switch is not None and getattr(self.kill_switch, "engaged", False):
+            reason = getattr(self.kill_switch, "reason", "") or "engaged"
+            rec = self.audit.append(
+                request_id=request_id, user=tc.user, agent_id=tc.agent_id,
+                tool_id=tc.tool_id, purpose=tc.purpose, data_class=tc.data_classes,
+                policy_decision="DENY",
+                decision_reason=f"kill_switch_engaged: {reason}",
+            )
+            return GatewayResult(
+                Effect.DENY, f"kill_switch_engaged: {reason}", audit_record=rec
+            )
+
         manifest = self._agents.get(tc.agent_id)
         if manifest is None:
             rec = self.audit.append(

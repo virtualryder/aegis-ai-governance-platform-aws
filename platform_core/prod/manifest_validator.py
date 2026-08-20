@@ -110,3 +110,84 @@ def validate_manifest(
     if errors:
         return False, [_format_error(e) for e in errors]
     return True, []
+
+
+# --------------------------------------------------------------------------- #
+# Customer-delivery gate — fail-closed checks that dev conveniences never ship.
+# Works on BOTH manifest dialects: the onboarding contract
+# (apiVersion/kind/metadata/...) and the governed-hero deploy manifest
+# (agent/identity/engine/gateway/...). See CUSTOMER-DELIVERY-CHECKLIST.md.
+# --------------------------------------------------------------------------- #
+_PLACEHOLDER_MARKERS = ("changeme", "change-me", "change_me")
+_MIN_DELIVERY_RETENTION_DAYS = 30
+
+
+def _walk_strings(node, path=""):
+    """Yield (path, value) for every string in a nested manifest structure."""
+    if isinstance(node, dict):
+        for k, v in node.items():
+            yield from _walk_strings(v, f"{path}/{k}" if path else str(k))
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            yield from _walk_strings(v, f"{path}[{i}]")
+    elif isinstance(node, str):
+        yield path, node
+
+
+def delivery_check(path_or_dict: Union[str, dict]) -> tuple[bool, list]:
+    """Customer-delivery gate. Returns (ok, [errors]); fail closed on faults.
+
+    Blocks delivery when the manifest still carries development conveniences:
+      * placeholder credentials (any string containing a ChangeMe marker);
+      * demo-grade audit retention (GOVERNANCE mode or retention below
+        _MIN_DELIVERY_RETENTION_DAYS days) — production retention is set per
+        the record class (see CUSTOMER-DELIVERY-CHECKLIST.md);
+      * an unsigned manifest (signing.signature missing/empty/null) when a
+        signing block is declared.
+    """
+    try:
+        manifest = _load_manifest(path_or_dict)
+    except Exception as exc:  # noqa: BLE001 - fail closed
+        return False, [f"manifest_load_error: {exc}"]
+
+    errors: list = []
+
+    # 1 — placeholder credentials anywhere in the manifest.
+    for path, value in _walk_strings(manifest):
+        low = value.lower()
+        if any(m in low for m in _PLACEHOLDER_MARKERS):
+            errors.append(
+                f"placeholder_credential: {path} still contains a ChangeMe "
+                "marker — rotate all credentials before delivery"
+            )
+
+    # 2 — demo-grade audit retention.
+    audit = manifest.get("audit") or {}
+    if isinstance(audit, dict) and audit:
+        mode = str(audit.get("object_lock_mode", "")).upper()
+        try:
+            days = int(audit.get("retention_days", 0))
+        except (TypeError, ValueError):
+            days = 0
+        if mode and mode != "COMPLIANCE":
+            errors.append(
+                f"audit_retention: object_lock_mode={mode or '<unset>'} — "
+                "delivery requires COMPLIANCE mode per the record class"
+            )
+        if days < _MIN_DELIVERY_RETENTION_DAYS:
+            errors.append(
+                f"audit_retention: retention_days={days} is demo-grade — set "
+                "per the record-class table in CUSTOMER-DELIVERY-CHECKLIST.md"
+            )
+
+    # 3 — unsigned manifest.
+    signing = manifest.get("signing") or {}
+    if isinstance(signing, dict) and signing:
+        sig = signing.get("signature")
+        if not sig or (isinstance(sig, str) and not sig.strip()):
+            errors.append(
+                "unsigned_manifest: signing.signature is empty — sign with "
+                "platform_core/prod/manifest_signing.py before delivery"
+            )
+
+    return (len(errors) == 0), errors

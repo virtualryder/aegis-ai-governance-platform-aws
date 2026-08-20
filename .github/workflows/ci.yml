@@ -49,6 +49,9 @@ jobs:
       - name: Pytest suites (platform_core + acceptance + evidence vault)
         run: PYTHONPATH=platform_core:. python -m pytest platform_core/tests demo/test_acceptance.py demo/test_evidence_vault.py -q -rs
 
+      - name: Run kill-switch containment suite
+        run: PYTHONPATH=platform_core:. python -m pytest demo/test_kill_switch.py -q -rs
+
       - name: Assert CI runs every test file (no silently-unexecuted suites)
         run: PYTHONPATH=platform_core:. python -m pytest platform_core/tests/test_ci_coverage.py -q -rs
 

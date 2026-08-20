@@ -7,6 +7,13 @@
 > incident) a pilot adopts and staffs. Detection and containment mechanisms cited as live are proven
 > in [`../../DEPLOYED-AND-VALIDATED.md`](../../DEPLOYED-AND-VALIDATED.md).
 
+## 0. Containment first — the Kill Switch
+
+For any SEV-1 or SEV-2, **engage the Kill Switch before investigating**: one command denies every
+agent tool call platform-wide, zeroes token budgets, and writes the state change to the append-only
+audit. Release requires a second identity (separation of duties). Full control description, drill
+procedure, and production SSM mapping: [`KILL-SWITCH.md`](KILL-SWITCH.md).
+
 ## 1. Severity levels
 
 | Sev | Definition | Example | Response |
