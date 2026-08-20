@@ -11,3 +11,6 @@ _pgcheck/
 node_modules/
 .aws-sam/
 _qa*/
+
+# Office temp/lock files
+~$*
