@@ -38,8 +38,9 @@ cdk deploy aegis-governance-core \
 ```
 
 > **Honesty note (per MATURITY.yaml discipline):** this CDK app is
-> **synth-validated** (template assertions in CI-runnable tests). The
-> hand-written `governance-core.yaml` retains the **live-validated** status
-> (DEPLOYED-AND-VALIDATED.md Run 1) until a clean-account deploy of this app's
-> synth output is recorded. Do not claim live validation for the CDK path
-> before that run exists.
+> **live-validated**: its synth output was deployed to a clean account as plain
+> CloudFormation and every control verified at runtime — canary allow, SSN
+> guardrail deny, live Kill Switch engage → deny → SoD release, append-only
+> replay refusal, and a WORM delete refusal — recorded as **Run 11** in
+> `DEPLOYED-AND-VALIDATED.md` (2026-08-23). It remains synth-validated on every
+> CI run by the template assertions in `tests/`.

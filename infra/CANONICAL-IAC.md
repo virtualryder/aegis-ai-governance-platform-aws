@@ -10,10 +10,11 @@ lints **both** directories with `cfn-lint` on every push and pull request.
 authored in Python CDK (`infra/cdk/`), which *synthesizes to* CloudFormation —
 the canonical language is unchanged, and the portfolio converges on one
 authoring approach (the four vertical agents already ship Python-CDK apps).
-The CDK app is synth-validated by in-process template assertions
-(`infra/cdk/tests/`); the hand-written `governance-core.yaml` remains the
-live-validated baseline until a clean-account deploy of the CDK synth output
-is recorded in `DEPLOYED-AND-VALIDATED.md`.
+The CDK app is validated two ways: in-process template assertions
+(`infra/cdk/tests/`) on every CI run, and a **live clean-account deploy of its
+synth output** with runtime control drills (2026-08-23, recorded as **Run 11**
+in `DEPLOYED-AND-VALIDATED.md`) — so the CDK path and the hand-written
+`governance-core.yaml` (Run 1) are both live-validated.
 
 Terraform parity remains deliberately **out of scope for forward work (P2)**
 (see task #27). We do not maintain two source-of-truth IaC dialects: adopters
@@ -25,7 +26,7 @@ live-validated definition.
 ## Live-validation status
 
 Every template below has been deployed to a real AWS account and torn down
-cleanly. Evidence is recorded in `DEPLOYED-AND-VALIDATED.md` (Runs 1–7,
+cleanly. Evidence is recorded in `DEPLOYED-AND-VALIDATED.md` (Runs 1–11,
 account `<VALIDATION-ACCOUNT-ID>` — real account ID redacted; evidence available
 on request — region `us-east-1`). This document only cross-references
 those runs; it does not restate the evidence.

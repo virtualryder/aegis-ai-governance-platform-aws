@@ -265,3 +265,63 @@ The managed **AgentCore Gateway** deployment and live (non-fixture) connectors r
 customer-engagement work, per `docs/07-MCP-GATEWAY-AND-VALIDATION.md` §8.
 **Teardown:** stack deleted after the run; zero `aegis-mcp-*` resources remain (verified via
 CloudFormation, DynamoDB, Cognito, API Gateway list calls).
+
+## Run 11 (2026-08-23) — CDK app live-validated: clean-account deploy of the synth output + Kill Switch enforced live
+
+This is the run `infra/CANONICAL-IAC.md` and `infra/cdk/README.md` required before the CDK
+path could claim live validation. The Python CDK app (`infra/cdk/`) was synthesized in-process
+(`app.synth()`, 8 template assertions green), the emitted template was deployed **as plain
+CloudFormation** (no CDK bootstrap — the `BootstrapVersion` parameter/rule stripped from the
+synth output; the app has no file/image assets because the gateway handler is inline), and every
+control was verified against the live account.
+
+**Run:** 2026-08-23 · Account `111122223333` · Region `us-east-1` · Stack `aegis-governance-core`
+(`dcb7b050-9f28-11f1-a9b2-1278cc123459`) · Pack `enterprise` · DataClass `pii` · 15 resources ·
+`CREATE_COMPLETE` in ~80 seconds, followed by one `UPDATE_COMPLETE` (see Kill Switch note).
+
+**Configuration proofs (live API reads):**
+1. Audit table `aegis-audit-pii-dev`: keys `request_id`/`seq`, SSE-KMS on the platform CMK,
+   PAY_PER_REQUEST, **PITR ENABLED** (35-day window).
+2. Approvals table `aegis-approvals-pii-dev`: **TTL ENABLED** on `expires_at`.
+3. WORM bucket `aegis-worm-pii-dev-<ACCOUNT_ID>`: `ObjectLockEnabled: Enabled`, all four
+   public-access blocks true, default SSE-KMS with bucket key on the platform CMK.
+4. Guardrail `aegis-guardrail-pii-dev` (`h02ji3st2lkd`): **READY**; PII EMAIL/PHONE → ANONYMIZE,
+   US_SOCIAL_SECURITY_NUMBER → BLOCK; contextual grounding GROUNDING 0.80 / RELEVANCE 0.75;
+   denied topic `UngroundedConsequentialAction`.
+5. Gateway role: `AuditDenyMutations` **explicit Deny** on `dynamodb:UpdateItem`/`DeleteItem`
+   against the audit table (read back from the live policy).
+6. KMS CMK `4d0d3469-…`: rotation **enabled** (365-day period). Cognito pool
+   `us-east-1_<REDACTED>` with the `aegis-operator` group. Kill-switch SSM parameter
+   `/aegis/kill-switch` present, default disengaged.
+
+**Runtime drills (all executed live, all audited — evidence object in the WORM bucket at
+`evidence/go-live-drills/2026-08-23-governance-core-drills.json`, Object Lock GOVERNANCE
+retention to 2026-09-22):**
+| # | Drill | Result |
+|---|---|---|
+| 1 | Canary (benign prompt) | `allow`, guardrail `NONE`, audit row written |
+| 2 | Prompt carrying an SSN | **HTTP 403 deny**, `GUARDRAIL_INTERVENED`, audited |
+| 3 | Kill Switch engaged (`secops-oncall`) | canary → **403 deny**, `guardrail_action=KILL_SWITCH`, audited |
+| 4 | Released by a **different identity** (`platform-lead`, SoD per runbook) | canary → `allow` again |
+| 5 | Replay of an existing `request_id` | **refused** — `ConditionalCheckFailedException` from the append-only conditional put |
+| 6 | Delete of the locked WORM evidence version | **AccessDenied** — "object protected by object lock" |
+
+**Kill Switch is now enforced at the deployed gateway.** The live deploy surfaced that the
+gateway stub wired `KILL_SWITCH_PARAM` into the environment but never read it — control 9 would
+not actually deny. `infra/terraform/modules/governance_core/index.py` (the inline source the CDK
+app ships) now checks the switch FIRST (short-TTL cache, 15s), denies with an audited
+`KILL_SWITCH` row when engaged, and **fails closed** if the configured parameter is unreadable.
+Deployments without `KILL_SWITCH_PARAM` set (the hand-written YAML, the frozen TF module as-is)
+behave exactly as before; drills 3–4 above prove the live path. Exactly the class of gap only a
+live deploy finds — same lesson as Run 1.
+
+**Standing-still cost of what this run left running** (sources: aws.amazon.com/kms/pricing,
+aws.amazon.com/cognito/pricing, service pricing pages): the only fixed line is the KMS CMK at
+**$1.00/month** (prorated hourly). Both DynamoDB tables are on-demand and near-empty, the WORM
+bucket holds kilobytes, Cognito has 0 MAU (free tier 10,000 MAU), the Lambda and Guardrail bill
+only per use, and the standard-tier SSM parameter, IAM, and CloudFormation are free. Measured
+platform-at-rest: **~$1/month** — under the $1–3/month figure the GTM materials quote.
+
+**Status change:** the CDK app is now **live-validated**; `governance-core.yaml` remains
+live-validated per Run 1. This stack was **left running** (not torn down) as the working
+governance core for first-agent onboarding.
