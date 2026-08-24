@@ -166,6 +166,20 @@ class GovernanceCoreStack(Stack):
                 "relevance, and a denied topic. Applied on input and output by "
                 "the control-plane gateway."
             ),
+            content_policy_config=bedrock.CfnGuardrail.ContentPolicyConfigProperty(
+                # Harmful-content categories at HIGH on both directions, plus the
+                # prompt-attack filter (input side only, per service contract).
+                # Added 2026-08-23 so the deployed baseline visibly carries the
+                # full filter set, not just PII/grounding/topic.
+                filters_config=[
+                    bedrock.CfnGuardrail.ContentFilterConfigProperty(
+                        type=cat, input_strength="HIGH", output_strength="HIGH")
+                    for cat in ("HATE", "INSULTS", "SEXUAL", "VIOLENCE", "MISCONDUCT")
+                ] + [
+                    bedrock.CfnGuardrail.ContentFilterConfigProperty(
+                        type="PROMPT_ATTACK", input_strength="HIGH", output_strength="NONE"),
+                ],
+            ),
             sensitive_information_policy_config=bedrock.CfnGuardrail.SensitiveInformationPolicyConfigProperty(
                 pii_entities_config=[
                     bedrock.CfnGuardrail.PiiEntityConfigProperty(type="EMAIL", action="ANONYMIZE"),
@@ -196,6 +210,14 @@ class GovernanceCoreStack(Stack):
                     ],
                 )],
             ),
+        )
+        # Published, immutable version of the guardrail. The gateway pins THIS,
+        # not the mutable working draft — console edits to the draft cannot
+        # silently change what production enforces.
+        self.guardrail_version = bedrock.CfnGuardrailVersion(
+            self, "AegisGuardrailV1",
+            guardrail_identifier=self.guardrail.attr_guardrail_id,
+            description="Aegis baseline v1: PII + grounding/relevance + denied topic + harm categories + prompt-attack.",
         )
 
         # ----- Cognito: pool + operator role group ---------------------------
@@ -296,7 +318,7 @@ class GovernanceCoreStack(Stack):
                 "AUDIT_TABLE": self.audit_table.table_name,
                 "APPROVAL_LEDGER": self.approvals_table.table_name,
                 "GUARDRAIL_ID": self.guardrail.attr_guardrail_id,
-                "GUARDRAIL_VERSION": self.guardrail.attr_version,
+                "GUARDRAIL_VERSION": self.guardrail_version.attr_version,
                 "DATA_CLASS": data_class,
                 "KILL_SWITCH_PARAM": self.kill_switch_param.parameter_name,
             },

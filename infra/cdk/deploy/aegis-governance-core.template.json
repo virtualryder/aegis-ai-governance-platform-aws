@@ -367,6 +367,40 @@
    "Properties": {
     "BlockedInputMessaging": "This request was blocked by Aegis governance policy.",
     "BlockedOutputsMessaging": "This response was blocked by Aegis governance policy.",
+    "ContentPolicyConfig": {
+     "FiltersConfig": [
+      {
+       "InputStrength": "HIGH",
+       "OutputStrength": "HIGH",
+       "Type": "HATE"
+      },
+      {
+       "InputStrength": "HIGH",
+       "OutputStrength": "HIGH",
+       "Type": "INSULTS"
+      },
+      {
+       "InputStrength": "HIGH",
+       "OutputStrength": "HIGH",
+       "Type": "SEXUAL"
+      },
+      {
+       "InputStrength": "HIGH",
+       "OutputStrength": "HIGH",
+       "Type": "VIOLENCE"
+      },
+      {
+       "InputStrength": "HIGH",
+       "OutputStrength": "HIGH",
+       "Type": "MISCONDUCT"
+      },
+      {
+       "InputStrength": "HIGH",
+       "OutputStrength": "NONE",
+       "Type": "PROMPT_ATTACK"
+      }
+     ]
+    },
     "ContextualGroundingPolicyConfig": {
      "FiltersConfig": [
       {
@@ -430,6 +464,18 @@
        "Name": "UngroundedConsequentialAction",
        "Type": "DENY"
       }
+     ]
+    }
+   }
+  },
+  "AegisGuardrailV1": {
+   "Type": "AWS::Bedrock::GuardrailVersion",
+   "Properties": {
+    "Description": "Aegis baseline v1: PII + grounding/relevance + denied topic + harm categories + prompt-attack.",
+    "GuardrailIdentifier": {
+     "Fn::GetAtt": [
+      "AegisGuardrail",
+      "GuardrailId"
      ]
     }
    }
@@ -848,7 +894,7 @@
       },
       "GUARDRAIL_VERSION": {
        "Fn::GetAtt": [
-        "AegisGuardrail",
+        "AegisGuardrailV1",
         "Version"
        ]
       },
