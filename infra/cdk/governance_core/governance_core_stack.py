@@ -106,7 +106,21 @@ class GovernanceCoreStack(Stack):
             ),
             _svc_stmt("dynamodb.amazonaws.com"),
             _svc_stmt("s3.amazonaws.com"),
-            _svc_stmt("logs.amazonaws.com"),
+            # CloudWatch Logs calls KMS DIRECTLY as logs.<region>.amazonaws.com (no ViaService is
+            # set), scoped by the log-group encryption context — the generic ViaService statement
+            # never matches it, which blocked associate-kms-key on the Bedrock invocation log group
+            # (found live 2026-08-29, G5a). This is the canonical CloudWatch Logs key statement.
+            iam.PolicyStatement(
+                sid="AllowCloudWatchLogsUseOfKey",
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ServicePrincipal(f"logs.{Aws.REGION}.amazonaws.com")],
+                actions=["kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*",
+                         "kms:GenerateDataKey*", "kms:DescribeKey"],
+                resources=["*"],
+                conditions={"ArnLike": {
+                    "kms:EncryptionContext:aws:logs:arn":
+                        f"arn:{Aws.PARTITION}:logs:{Aws.REGION}:{Aws.ACCOUNT_ID}:*"}},
+            ),
         ])
         self.cmk = kms.Key(
             self, "DataClassKey",
