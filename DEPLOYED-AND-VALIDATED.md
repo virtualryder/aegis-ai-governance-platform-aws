@@ -325,3 +325,48 @@ platform-at-rest: **~$1/month** — under the $1–3/month figure the GTM materi
 **Status change:** the CDK app is now **live-validated**; `governance-core.yaml` remains
 live-validated per Run 1. This stack was **left running** (not torn down) as the working
 governance core for first-agent onboarding.
+
+---
+
+## Run 12 — 2026-08-29 · Full-observability wave + benefits agent hardening (live)
+
+Account `864217980669` · `us-east-1` · stack `aegis-governance-core` (UPDATE_COMPLETE, 19 resources).
+Layered observability deployed and verified end-to-end against the live benefits agent (`ben-demo`);
+platform, benefits, PV and financial-aid templates brought to a single baseline.
+
+**Platform (`aegis-governance-core`):**
+- **Evidence trail** — one CloudTrail with advanced selectors: management-write events + DynamoDB
+  data events for **all** tables + object-level events on the platform WORM bucket. Live check
+  showed item-level `PutItem`/`TransactWriteItems`/`GetItem` attributed to each agent role.
+- **X-Ray** on the control-plane gateway.
+- **CloudWatch Logs KMS statement** added to the CMK key policy so log groups can associate the
+  platform CMK — the generic ViaService statement never matches Logs (it calls KMS directly as
+  `logs.<region>.amazonaws.com` under the log-group encryption context). Found live when
+  `associate-kms-key` on the Bedrock invocation log group was denied. Fixed, redeployed, associated.
+
+**Account baseline (platform runbook, one-time):** Bedrock **model-invocation logging** to a
+CMK-encrypted 1-year log group (`/aegis/bedrock/model-invocations`) — full request/response bodies;
+because masking runs before the model, logged prompts are de-identified.
+
+**Agents (benefits first; PV + financial-aid ported):** X-Ray on every governed tool + a data-only
+WORM-vault CloudTrail + Step Functions execution logging (`ALL`, payload-free) + unconditional 1-year
+Lambda retention + the `AUDIT_BUCKET` alias the evidence writer needs.
+
+**Governance hardening (governed-core 1.5.0):**
+- **Guardrail-pinned drafting** — the drafter's direct Bedrock call now carries the platform
+  guardrail. Proven live: a prompt-injection application was **intervened**
+  (`AWS/Bedrock/Guardrails InvocationsIntervened=1`, guardrail version `1`), failed closed with no
+  `notice_ref`, and routed to `ManualReview` — it never reached an approver.
+- **Approval-path verification** — `finalize` verifies the approval was consumed by the
+  identity-verifying `approve-signoff` (Cognito access-token, SoD, single-use). Proven live: a raw
+  `send-task-success` bypass wrote **no `FINAL#` COMMITTED marker** and went to `ManualReview`; a
+  token-verified approval committed; self-approval and a spoofed approver-string were both refused.
+
+**One action, four independent captures (case `BEN-SYN-0002`):** a single X-Ray trace spanning the
+state machine + 8 tool Lambdas; the SFN execution log (no case content); the Bedrock
+invocation-log entry (`[REDACTED:NAME]`/`[REDACTED:SSN]`); and the ledger + WORM object with a
+CloudTrail data event. Evidence: `benefits_eligibility_agent/evidence/OBSERVABILITY-VALIDATION-2026-08-29.md`.
+
+**Cost delta:** roughly **+$4–5/month** at rest (platform trail S3 + DynamoDB data events at pilot
+volume, data-only agent trails, X-Ray inside the free tier, invocation logging on small de-identified
+payloads). The ~$1/month platform-at-rest story is unchanged.
