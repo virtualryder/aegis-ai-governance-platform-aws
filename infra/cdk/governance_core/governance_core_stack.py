@@ -30,6 +30,7 @@ from aws_cdk import (
     Stack,
     Tags,
     aws_bedrock as bedrock,
+    aws_cloudtrail as cloudtrail,
     aws_cognito as cognito,
     aws_dynamodb as dynamodb,
     aws_iam as iam,
@@ -314,6 +315,7 @@ class GovernanceCoreStack(Stack):
             role=self.gateway_role,
             timeout=Duration.seconds(30),
             memory_size=128,
+            tracing=lambda_.Tracing.ACTIVE,   # X-Ray on the control-plane gateway (obs review 2026-08-29)
             environment={
                 "AUDIT_TABLE": self.audit_table.table_name,
                 "APPROVAL_LEDGER": self.approvals_table.table_name,
@@ -324,6 +326,37 @@ class GovernanceCoreStack(Stack):
             },
             log_group=self.gateway_logs,
         )
+
+        # ----- Evidence trail: who touched the evidence (obs review 2026-08-29) ----
+        # One platform-owned CloudTrail: management WRITE events + DynamoDB data
+        # events for ALL tables (the platform's ledgers AND every agent's — audit,
+        # approvals, case stores) + object-level events on the platform WORM bucket.
+        # The ledger proves what the gateway wrote; this trail independently proves
+        # nobody else touched the stores. Agent stacks add data-only trails for
+        # their own WORM vaults. Advanced selectors require replacing the L2
+        # construct's basic selectors (a trail cannot carry both kinds).
+        self.evidence_trail = cloudtrail.Trail(
+            self, "EvidenceTrail", trail_name=f"{app_name}-evidence-trail-{suffix}",
+            management_events=cloudtrail.ReadWriteType.WRITE_ONLY,
+            include_global_service_events=True, is_multi_region_trail=False)
+        _cfn_trail = self.evidence_trail.node.default_child
+        _cfn_trail.add_property_deletion_override("EventSelectors")
+        _cfn_trail.add_property_override("AdvancedEventSelectors", [
+            {"Name": "management-writes",
+             "FieldSelectors": [
+                 {"Field": "eventCategory", "Equals": ["Management"]},
+                 {"Field": "readOnly", "Equals": ["false"]}]},
+            {"Name": "dynamodb-data-events-all-tables",
+             "FieldSelectors": [
+                 {"Field": "eventCategory", "Equals": ["Data"]},
+                 {"Field": "resources.type", "Equals": ["AWS::DynamoDB::Table"]}]},
+            {"Name": "platform-worm-objects",
+             "FieldSelectors": [
+                 {"Field": "eventCategory", "Equals": ["Data"]},
+                 {"Field": "resources.type", "Equals": ["AWS::S3::Object"]},
+                 {"Field": "resources.ARN", "StartsWith": [f"{self.worm_bucket.bucket_arn}/"]}]},
+        ])
+        CfnOutput(self, "EvidenceTrailArn", value=self.evidence_trail.trail_arn)
 
         # ----- Outputs (parity with TF outputs.tf) ---------------------------
         CfnOutput(self, "AuditTableName", value=self.audit_table.table_name)
