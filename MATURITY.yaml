@@ -57,7 +57,7 @@ agentcore:                                     # Amazon Bedrock AgentCore adopti
   live_evidence:                               # in the agent repos (not this repo)
     - "benefits_eligibility_agent: evidence/EP1-VALIDATION.md (ben-val1 2026-07-27; ben-val2 2026-07-28) - Cedar ENFORCE attached as IaC, all gates pass, torn down"
     - "benefits_eligibility_agent: evidence/DEMO-DEPLOY-2026-08-24.md (ben-demo) - engine ben_demo_ben_authz ENFORCE, synthetic cases to human gate"
-  fresh_run: "2026-09-02 live ENFORCE re-verified on current code (864217980669/us-east-1): gateway ben-demo-ben-gw-2cdvjxaxth READY (MCP,CUSTOM_JWT); Cedar engine ben_demo_ben_authz ACTIVE mode=ENFORCE; 8 tool targets READY. Evidence: benefits_eligibility_agent/evidence/AGENTCORE-LIVE-2026-09-02.md"
+  fresh_run: "2026-09-02 live ENFORCE re-verified on current code (864217980669/us-east-1): gateway ben-demo-ben-gw-2cdvjxaxth READY (MCP,CUSTOM_JWT); Cedar engine ben_demo_ben_authz ACTIVE mode=ENFORCE; 8 tool targets READY; env torn down 2026-09-02 (zero residual). Evidence: benefits_eligibility_agent/evidence/AGENTCORE-LIVE-2026-09-02.md"
   spec: docs/AGENTCORE-INTEGRATION.md
   note: "Policy is AWS-preview; reviewed platform_core engine stays fail-closed fallback + parity oracle until Policy GA. Multi-tenant SaaS = roadmap; near-term = per-customer single-tenant accelerator."
 
