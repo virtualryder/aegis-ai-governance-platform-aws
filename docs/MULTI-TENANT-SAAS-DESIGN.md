@@ -63,3 +63,37 @@ Deploy the shared control plane + two tenants (A, B). Prove, live and torn down:
 - The existing **silo** path stays valid (per-customer accelerator). Hybrid is an additive **multi-tenant
   deploy mode**; `tenant` pinned = 1-tenant silo is the degenerate case of the same code.
 - AgentCore Policy is AWS-preview → the reviewed engine stays fail-closed fallback + parity oracle throughout.
+
+## Routing correction — how the tenant reaches the tool (2026-09-02, from the probe)
+
+**Finding (AWS docs):** AgentCore Gateway does **not** pass the caller's JWT claims to a Lambda function
+target. The target Lambda receives only the tool input args (the `inputSchema` values) plus gateway
+metadata in `context.client_context.custom` (`bedrockAgentCoreGatewayId`, `...ToolName`,
+`...AwsRequestId`, …) — **no `sub`, no `cognito:groups`, no `custom:tenant`.** So a tool Lambda cannot
+derive the tenant from the claim directly; the claim never arrives.
+
+**Corrected mechanism — request Lambda interceptor.** AgentCore Gateway supports a **request Lambda
+interceptor** that runs *after* inbound auth and *before* the target, and is passed "the original
+request payload and headers, including the validated JWT and its embedded claims." It can extract
+`custom:tenant` from the validated JWT and **inject** it into the request the target receives (a
+reserved header / payload field). This is the trusted boundary that keeps "tenant is DERIVED, never
+REQUESTED": the interceptor (not the model, not the request body) sets the tenant, from the
+gateway-validated identity.
+
+**What changes vs. what stays:**
+- STAYS: `tenancy.route_store` + the per-tenant `DataStack` naming + the request-scoped context — all still correct.
+- CHANGES: the SOURCE feeding `set_request_claims` is the **interceptor-injected** tenant, read from the
+  reserved field the interceptor set — not JWT claims read from the Lambda event (which don't exist).
+  The tool Lambda entrypoint reads the injected tenant and calls `set_request_claims({"custom:tenant": <injected>})`;
+  a model-supplied `tenant`/tenant-header is scrubbed (same discipline as the token_boundary credential scrub).
+
+**Revised phase-107 remainder (supersedes items 1–2 of the earlier list):**
+1. **Gateway request interceptor Lambda** — derive `custom:tenant` from the validated JWT, inject it as a
+   reserved field; wire it on the gateway (the `gateway_provider` custom resource gains interceptor config).
+2. **Tool Lambda entrypoint** — read the injected tenant, `set_request_claims`, scrub any model-supplied tenant.
+3. `app.py` per-tenant `DataStack` provisioning + compute IAM to `<prefix>-*` stores (unchanged).
+4. `governed_core` audit/WORM writer consumes `route_store` (cross-repo, unchanged).
+
+Interceptor GA/preview status is unconfirmed in the docs read; verify availability in-region before the
+two-tenant live gate. If interceptors are not available, the fallback is per-tenant gateways (each
+tenant's gateway pins `TENANT_ID`) — stronger isolation, less "single shared control plane."
