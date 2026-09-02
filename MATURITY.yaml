@@ -58,8 +58,9 @@ agentcore:                                     # Amazon Bedrock AgentCore adopti
     - "benefits_eligibility_agent: evidence/EP1-VALIDATION.md (ben-val1 2026-07-27; ben-val2 2026-07-28) - Cedar ENFORCE attached as IaC, all gates pass, torn down"
     - "benefits_eligibility_agent: evidence/DEMO-DEPLOY-2026-08-24.md (ben-demo) - engine ben_demo_ben_authz ENFORCE, synthetic cases to human gate"
   fresh_run: "2026-09-02 live ENFORCE re-verified on current code (864217980669/us-east-1): gateway ben-demo-ben-gw-2cdvjxaxth READY (MCP,CUSTOM_JWT); Cedar engine ben_demo_ben_authz ACTIVE mode=ENFORCE; 8 tool targets READY; env torn down 2026-09-02 (zero residual). Evidence: benefits_eligibility_agent/evidence/AGENTCORE-LIVE-2026-09-02.md"
+  multitenant_live: "2026-09-02 HYBRID two-tenant e2e PASS (864217980669/us-east-1, env mt): one shared AgentCore control plane (gateway ben-mt-ben-gw-20vmzpygzi ENFORCE + REQUEST interceptor ben-mt-tenant-interceptor, passRequestHeaders) + 2 physically separate per-tenant data stacks. cw-a/cw-b (tenant_pha-a/b groups) allowed and routed ONLY to their own store (pha-a 1/pha-b 0/base 0 then 1/1/0); un-tenanted cw-none: 0 tools listed (require_tenant Cedar) + call 403 verbatim 'identity carries no tenant'. Evidence: benefits_eligibility_agent/evidence/AGENTCORE-MULTITENANT-E2E-2026-09-02.md; design docs/MULTI-TENANT-SAAS-DESIGN.md. Torn down. Remaining: governed-core audit/WORM writer per-tenant routing (cross-repo)."
   spec: docs/AGENTCORE-INTEGRATION.md
-  note: "Policy is AWS-preview; reviewed platform_core engine stays fail-closed fallback + parity oracle until Policy GA. Multi-tenant SaaS = roadmap; near-term = per-customer single-tenant accelerator."
+  note: "Policy is AWS-preview; reviewed platform_core engine stays fail-closed fallback + parity oracle until Policy GA. Hybrid multi-tenant (shared control plane, per-tenant data) is LIVE-VALIDATED in the benefits pack (2 tenants); per-customer single-tenant silo remains the default path."
 
 out_of_repo:                                   # what Aegis needs before "operating proof" is complete
   - live external SaaS systems-of-record connectors
