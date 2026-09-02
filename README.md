@@ -53,8 +53,9 @@
 > budgets**, a **governed connector** (idempotency + saga rollback), and a **live MCP JSON-RPC
 > gateway endpoint** (JWT authN, deny-by-default allow-list, approval gate, masked audit) were each
 > **deployed, exercised with real requests, and torn down**. **Hybrid multi-tenant** (one shared AgentCore
-> control plane, physically separate per-tenant data, cross-tenant deny proven) is **live-validated with two
-> tenants** in the benefits pack (2026-09-02). Still customer/engagement-owned: ATO/GovRAMP authorization, an
+> control plane, physically separate per-tenant data — including each tenant's own hash-chained ledger and
+> WORM vault via governed-core 1.6.0 — cross-tenant deny proven) is **live-validated with two tenants** in the
+> benefits pack (2026-09-02). Still customer/engagement-owned: ATO/GovRAMP authorization, an
 > independent pen test, a live external-SaaS connector, multi-account (Organizations) deployment, and
 > operator dashboards. Authoritative per-control maturity + plan:
 > [`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md).

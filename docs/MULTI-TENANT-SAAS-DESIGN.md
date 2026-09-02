@@ -43,6 +43,15 @@ context value → `TENANT_ID` env). Hybrid keeps the control-plane stacks shared
   a tenant's IAM role can read/write **only** its partition/prefix (deny others).
 - Per-tenant **hash-chain head**; a tenant's ledger verifies independently.
 - **Gate:** a tenant role is IAM-denied on another tenant's ledger/prefix (negative test); chain verifies per tenant.
+- **DONE 2026-09-02 (governed-core 1.6.0, cross-repo).** `tenancy` + `tenant_interceptor` were promoted into
+  the core (pinned by hash); the canonical evidence writer routes `AUDIT_TABLE` → `<prefix>-<tenant>-audit-ledger`
+  and the WORM copy → `WORM_BUCKET_TEMPLATE.format(tenant)` (`<prefix>-<tenant>-worm-<account>`); the
+  exactly-once `FINAL#` marker and the pending-approvals register route the same way. Fail-closed: no verified
+  signed tenant binding ⇒ `stored:false`, never a write into the shared base ledger. The Step Functions hop
+  (no interceptor) carries the HMAC-signed pair in the execution input, threaded into all 11 Lambda payloads;
+  each Lambda re-verifies it; an execution without the pair fails at the first state. Ingestion boundary:
+  `ingest` derives the tenant from a VERIFIED Cognito access token of a tenant member and mints the pair.
+  **Live-proven** (env `mt2`, 12/12): benefits `evidence/AGENTCORE-MULTITENANT-AUDIT-2026-09-02.md`.
 
 ## Phase 110 — Full transparency / observability (every API + the model's reasoning)
 - **AgentCore Observability** (OTEL/GenAI spans): the agent's reasoning + **every** tool call as spans.
