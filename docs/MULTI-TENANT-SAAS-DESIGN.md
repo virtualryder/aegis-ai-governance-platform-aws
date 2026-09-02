@@ -97,3 +97,31 @@ gateway-validated identity.
 Interceptor GA/preview status is unconfirmed in the docs read; verify availability in-region before the
 two-tenant live gate. If interceptors are not available, the fallback is per-tenant gateways (each
 tenant's gateway pins `TENANT_ID`) — stronger isolation, less "single shared control plane."
+
+## Interceptor availability + config (verified 2026-09-02, account 864217980669)
+
+`bedrock-agentcore-control` `CreateGateway` **accepts `interceptorConfigurations`** (boto3 1.43.46) —
+the request-interceptor mechanism is available in-region, so the shared-control-plane hybrid is
+buildable (no per-tenant-gateway fallback needed). Shape:
+
+```
+interceptorConfigurations: [{
+  interceptor: { lambda: { arn: <interceptor-lambda-arn> } },
+  interceptionPoints: [ "<point>" ],          # the request (pre-target) point
+  inputConfiguration: {
+    passRequestHeaders: true,                  # REQUIRED so the interceptor sees the validated JWT
+    payloadFilter: { exclude: [ ... ] }
+  }
+}]
+```
+
+**Build spec for the tenant interceptor:**
+- A small `tenant-interceptor` Lambda: reads the validated JWT from the passed request headers, decodes
+  `custom:tenant`, and injects it into the outbound request as a reserved field/header the target reads
+  (never trusts a model-supplied tenant). Fail-closed: no tenant claim -> reject.
+- `gateway_provider` (the CFN custom resource) adds `interceptorConfigurations` to its `create_gateway`
+  call with `passRequestHeaders: true`, pointing at that Lambda ARN.
+- Tool Lambda entrypoints read the injected tenant and call `tenancy.set_request_claims({"custom:tenant": <injected>})`.
+
+This is the corrected item 1 of the phase-107 remainder; items 2-4 (app.py per-tenant provisioning,
+compute IAM, governed-core audit routing) are unchanged.
