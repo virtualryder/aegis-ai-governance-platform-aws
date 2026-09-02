@@ -216,3 +216,45 @@ controls:
       hipaa_hitech: Information system activity review.
       gxp_part11: Ongoing monitoring of the validated state.
       pci_dss: Regularly monitor and test networks.
+
+# ---------------------------------------------------------------------------
+# AgentCore alignment (added 2026-09-02)
+# The controls above are now enforced on the Amazon Bedrock AgentCore managed
+# control plane in the vertical packs. This block maps each AGP control to its
+# AgentCore component and the Aegis layer AgentCore does NOT provide, so the
+# regime mappings hold under the AgentCore-native architecture. AgentCore Policy
+# is AWS-preview; the reviewed platform_core engine stays fail-closed fallback +
+# parity oracle. Engineering description, not a certification (see NOT-CLAIMS.md).
+agentcore_alignment:
+  - agp_control: identity
+    agentcore: "AgentCore Identity + Gateway CUSTOM_JWT (Cognito/IdP)"
+    aegis_adds: "verified-claim-only identity; client-supplied roles never trusted"
+    regimes: [cjis_v6, irs_1075, hipaa_hitech, cfr_part2, ferpa]
+  - agp_control: deny_by_default_gateway
+    agentcore: "AgentCore Gateway + Cedar Policy engine mode=ENFORCE (default-deny, forbid-wins, tool-list filtering)"
+    aegis_adds: "least-privilege intersection patterns; reviewed-engine parity oracle"
+    regimes: [cjis_v6, irs_1075, hipaa_hitech, cfr_part2, gxp_part11, ferpa, pci_dss]
+  - agp_control: human_gate_sod
+    agentcore: "NOT PROVIDED - Cedar cannot express single-use SoD or human-in-the-loop gating"
+    aegis_adds: "bound single-use separation-of-duties approval (approve-signoff + finalize gate); no_self_commit / no_self_fraud_referral Cedar forbids route commit to the human gate"
+    regimes: [cjis_v6, irs_1075, hipaa_hitech, cfr_part2, gxp_part11, ferpa]
+  - agp_control: masking
+    agentcore: "Bedrock Guardrails filter input (not a fail-closed architecture)"
+    aegis_adds: "fail-closed mask-BEFORE-audit-and-model (Comprehend Medical NER); deny on masker failure; mask_before_* Cedar forbids"
+    regimes: [cjis_v6, irs_1075, hipaa_hitech, cfr_part2, ferpa, coppa]
+  - agp_control: audit_worm
+    agentcore: "AgentCore Observability = OTEL telemetry (NOT tamper-evident evidence)"
+    aegis_adds: "append-only hash-chained ledger + S3 Object Lock WORM; IAM-denied UpdateItem/DeleteItem"
+    regimes: [cjis_v6, irs_1075, hipaa_hitech, cfr_part2, gxp_part11, ferpa]
+  - agp_control: token_budget
+    agentcore: "~ AgentCore Payments (configurable spending limits)"
+    aegis_adds: "atomic per-agent hard cap enforced before spend"
+    regimes: [govramp_fedramp]
+  - agp_control: model_gateway_grounding
+    agentcore: "Bedrock + Guardrails; AgentCore Runtime (session-isolated)"
+    aegis_adds: "guardrail-pinned drafting; grounding / output-schema checks"
+    regimes: [gxp_part11, ferpa]
+  - agp_control: observability_transparency
+    agentcore: "AgentCore Observability (OTEL/GenAI spans: agent reasoning + every tool call) + Bedrock model-invocation logging (all data the model touches, masked pre-model)"
+    aegis_adds: "correlation of OTEL spans + invocation logs + WORM evidence by session/trace id - four independent captures per governed action"
+    regimes: [cjis_v6, irs_1075, hipaa_hitech, gxp_part11]
