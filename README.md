@@ -57,6 +57,8 @@
 > operator dashboards. Authoritative per-control maturity + plan:
 > [`docs/GAP-CLOSURE-BACKLOG.md`](docs/GAP-CLOSURE-BACKLOG.md).
 
+> 🤖 **Runs on Amazon Bedrock AgentCore.** The vertical agent packs enforce the AGP controls on **real AgentCore Gateway (MCP, CUSTOM_JWT) + an AgentCore Cedar Policy engine in ENFORCE** (deny-by-default, forbid-wins), stood up as IaC — live-validated and torn down (benefits `EP1`/`ben-val2`/`ben-demo`). Aegis adds what AgentCore does **not**: bound single-use SoD approval, fail-closed masking-before-audit, WORM tamper-evident audit, and regulator control mappings. AgentCore Policy is AWS-preview, so the reviewed `platform_core` engine stays as the fail-closed fallback + parity oracle. Details: [`docs/AGENTCORE-INTEGRATION.md`](docs/AGENTCORE-INTEGRATION.md).
+
 ## Capability maturity matrix
 
 ✅ = evidence in this repo (code + tests, or a documented live AWS run) · ◻ = not done here / engagement work.

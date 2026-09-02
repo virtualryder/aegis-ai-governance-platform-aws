@@ -46,6 +46,20 @@ components:
   - {id: token_budget, name: Token budgets / cost control, maturity: implemented}
   - {id: model_gateway, name: Model gateway (Bedrock), maturity: implemented}
   - {id: prod_cedar, name: Cedar/Verified-Permissions compiler (prod), maturity: implemented}
+  - {id: agentcore_enforcement, name: AgentCore Gateway + Cedar Policy (managed control plane), maturity: deploy-validated, note: "Portfolio fact (2026-09-02): the vertical agent packs run on REAL Amazon Bedrock AgentCore Gateway (MCP, CUSTOM_JWT) with an AgentCore Cedar Policy engine in ENFORCE (deny-by-default, forbid-wins), stood up as IaC by a CloudFormation custom resource (benefits repo cdk/gateway_provider/handler.py). Live-validated + torn down: benefits EP1 ben-val1 2026-07-27, re-val ben-val2 2026-07-28, ben-demo 2026-08-24. Aegis (this platform) DEFINES the AGP pattern these enforce and adds what AgentCore does NOT: bound single-use SoD approval, fail-closed masking-before-audit, WORM tamper-evident audit, and CJIS/IRS-1075/42-CFR-Part-2/GxP/FERPA control mappings. AgentCore Policy is AWS-PREVIEW; the reviewed platform_core engine remains the fail-closed fallback + parity oracle. A platform-repo AgentCore reference deploy is roadmap. See docs/AGENTCORE-INTEGRATION.md."}
+
+agentcore:                                     # Amazon Bedrock AgentCore adoption (portfolio-level fact)
+  status: adopted-in-packs
+  aws_ga: [runtime, gateway, identity, memory, observability]   # GA Oct 2025
+  aws_preview: [policy, evaluations]           # preview Dec 2025 (Policy = Cedar default-deny tool authz)
+  enforcement: "AgentCore Gateway + Cedar Policy engine in ENFORCE (deny-by-default) in the vertical packs"
+  aegis_adds: [bound-single-use-SoD-approval, fail-closed-masking-before-audit, WORM-tamper-evident-audit, control-mappings, evidence-discipline]
+  live_evidence:                               # in the agent repos (not this repo)
+    - "benefits_eligibility_agent: evidence/EP1-VALIDATION.md (ben-val1 2026-07-27; ben-val2 2026-07-28) - Cedar ENFORCE attached as IaC, all gates pass, torn down"
+    - "benefits_eligibility_agent: evidence/DEMO-DEPLOY-2026-08-24.md (ben-demo) - engine ben_demo_ben_authz ENFORCE, synthetic cases to human gate"
+  fresh_run: pending                           # fresh timestamped ENFORCE re-prove on current code (this initiative)
+  spec: docs/AGENTCORE-INTEGRATION.md
+  note: "Policy is AWS-preview; reviewed platform_core engine stays fail-closed fallback + parity oracle until Policy GA. Multi-tenant SaaS = roadmap; near-term = per-customer single-tenant accelerator."
 
 out_of_repo:                                   # what Aegis needs before "operating proof" is complete
   - live external SaaS systems-of-record connectors
