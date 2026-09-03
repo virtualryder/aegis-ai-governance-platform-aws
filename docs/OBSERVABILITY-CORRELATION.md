@@ -1,6 +1,6 @@
 # Phase 110 — Full transparency: every API call, the model's reasoning, and the WORM evidence, joined by session / trace id, tagged per tenant
 
-Status: **design 2026-09-02 → implemented in governed-core 1.7.0 + benefits (see the evidence link at the end)**.
+Status: **implemented (governed-core 1.7.1 + benefits) and LIVE-PROVEN 2026-09-02** — env `mt3`, two tenants, 13/13 checks each, through the real AgentCore Runtime: benefits `evidence/AGENTCORE-OBSERVABILITY-2026-09-02.md`.
 Grounded in the AWS documentation cited inline; nothing here relies on undocumented behaviour.
 
 ## The question this answers
@@ -44,8 +44,9 @@ How each hop obtains it (all derived at a trusted boundary, none typed by the mo
    Bedrock client — so the model-invocation log row carries `tenant`/`session_id`/`case_id` and can be
    filtered per tenant without reading bodies. Join to the span: `requestId` ↔ the span's `aws.request_id`
    (botocore instrumentation) and the timestamps within the same `session.id`.
-2. **Runtime → gateway → tool.** ADOT puts `traceparent` on the runtime's outbound HTTP; the gateway
-   passes request headers to the **REQUEST interceptor** (`passRequestHeaders`), which — next to the
+2. **Runtime → gateway → tool.** The Strands MCP client propagates the OTEL context (`traceparent`,
+   `X-Amzn-Trace-Id`, `baggage`) in the MCP request's `params._meta` (observed live — HTTP headers alone carry
+   nothing); the gateway forwards it to the **REQUEST interceptor**, which — next to the
    signed tenant pair — injects **`__aegis_trace`** (`trace_id`, `span_id`, `session_id` from the `baggage`
    header, `mcp_session_id`) into the tool arguments. This is *observability* context, not authorization:
    the tenant stays the only signed, trusted field. The gateway's own log row carries the same request
