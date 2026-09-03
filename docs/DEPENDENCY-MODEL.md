@@ -28,7 +28,7 @@ is the single place that says so, and every README below points here.*
  ┌──────────────▼──────────────────────┐    ┌──────────────▼──────────────────────────────────┐
  │  Reference stacks (WOGplatform)     │    │  Agent packs (their own repos)                   │
  │  infra/golden-pilot  mcp-gateway    │    │  benefits_eligibility_agent   core 1.9.0  LIVE   │
- │   (API GW + Cognito JWT + reviewed  │    │  pharmacovigilance_agent      core 1.5.0         │
+ │   (API GW + Cognito JWT + reviewed  │    │  pharmacovigilance_agent      core 1.9.0  LIVE   │
  │   engine, fixture tool execution)   │    │  edu_financial_aid_agent      core 1.5.0         │
  │  infra/cdk  aegis-governance-core   │    │  Housing_eligibility_agent    core 1.4.0         │
  │   (STUB gateway: audit+guardrail+   │    │  each: manifest, tools, Cedar policies, CDK      │
@@ -80,11 +80,22 @@ and the two reference stacks are the *specification and its proof*, not a second
 | 1.7.0 / 1.7.1 | one correlation set through every hop; interceptor reads MCP `_meta` trace context | benefits `v0.3.0-pilot-rc1` (2026-09-03) — `AGENTCORE-OBSERVABILITY`, `AGENTCORE-111-GATE` | Run 12: full-observability wave |
 | 1.8.0 | kill switch on the AgentCore path (containment precedes evaluation) | benefits main (2026-09-03) — `AGENTCORE-KILL-SWITCH` 29/29 | `docs/ops/KILL-SWITCH.md` |
 | **1.9.0** | per-tenant token + USD budget meter | **benefits main (2026-09-03)** — `AGENTCORE-BUDGET` 24/24 | `docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md`; platform_core 0.2.0 (outbox ordering, zero-default entitlements, bound approvals at consumption — Run 13) |
+| 1.9.0 | (same core) — first non-lead pack to re-pin and re-gate all four SaaS/containment/budget controls | **benefits `v0.4.0-pilot-rc1` (2026-09-03)** — kill switch + budget on the tag; **pharmacovigilance `v0.3.0-pilot-rc1` (2026-09-03)** — from-zero two-tenant gate: isolation 12/12, transparency 13/13 per tenant, canary 0, kill switch 29/29, budget 24/24, regression sweep 0 (`pharmacovigilance_agent/evidence/AGENTCORE-*-2026-09-03.*`) | GAP-1 of the 2026-09-03 platform review |
 
 Rules of the matrix: a pack's tag names exactly one governed-core version (`requirements-core.txt`);
-a pack on an older core is **not wrong**, it is **behind** — the PV and EDU packs (1.5.0) lack multi-tenant
-routing, correlation, kill switch and budget until they re-pin and re-run their gates. Benefits is the
-lead pack; the others follow it.
+a pack on an older core is **not wrong**, it is **behind** — the EDU pack (1.5.0) and Housing (1.4.0) lack
+multi-tenant routing, correlation, kill switch and budget until they re-pin and re-run their gates; PV
+caught up to 1.9.0 on 2026-09-03 (GAP-1). Benefits is the lead pack; the others follow it.
+
+**Known cross-pack wart (to reconcile at the next governed-core bump).** The shared runtime
+(`lib/runtime/_launch.sh` / `_obs_setup.sh`) derives the deployment PREFIX from the SSM path. PV's
+1.9.0 tree carries the *generic* derivation (strips any pack suffix — `-eligibility` / `-pharmacovigilance`
+/ `-aid`), gated live in the PV 2026-09-03 run; benefits' released `v0.4.0-pilot-rc1` tree still carries
+the `-eligibility`-specific derivation it was gated with. Both are internally lock-consistent at their own
+`core.lock`, and functionally identical for benefits, but the shared runtime is therefore **not byte-identical
+across packs at 1.9.0**. The generic runtime is the correct canonical form; it lands in governed-core with the
+next version bump (GAP-4), at which point benefits/PV/EDU/Housing re-pin to it and the mirrored `lib/runtime`
+is reconciled under one version number.
 
 ## 4. Change protocol (so the two never silently diverge)
 
