@@ -4,20 +4,31 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegis-platform-core"
-version = "0.1.0"
+version = "0.2.0"
 description = "Aegis governance control plane — the canonical reference implementation of the Aegis Governance Pattern (AGP): deny-by-default MCP authorization gateway, fail-closed masking, bound single-use SoD approvals, append-only + WORM audit, token budgets, model gateway. Stdlib-only, laptop-runnable."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [{ name = "David Ryder" }]
 keywords = ["aegis-governance-pattern", "agp-1.0", "ai-governance", "mcp-gateway"]
+# The control plane proper (gateway, policy engine, masker, ledgers, budgets, kill switch) is
+# stdlib-only. The `prod` subpackage (KMS-signed manifests, JSON-Schema validation, DynamoDB
+# budgets) needs the `prod` extra - it is NOT pulled in by a bare install (COPILOT-6: the old
+# metadata claimed zero dependencies while prod/ imported cryptography + jsonschema).
 dependencies = []
 
 [project.optional-dependencies]
+prod = ["cryptography>=42", "jsonschema>=4.18", "boto3>=1.34"]
 dev = ["pytest>=8.0"]
 
-[tool.setuptools.packages.find]
-include = ["platform_core*"]
+# COPILOT-6 (2026-09-03): this pyproject lives INSIDE platform_core/, so `packages.find` with
+# include = ["platform_core*"] discovered nothing (the wheel shipped no modules). The package root
+# is this directory; `prod` is its only subpackage. CI builds the wheel, installs it in a clean venv
+# and imports platform_core + platform_core.prod (tools/check_wheel.sh).
+[tool.setuptools]
+packages = ["platform_core", "platform_core.prod"]
+package-dir = { "platform_core" = ".", "platform_core.prod" = "prod" }
+include-package-data = false
 
 # Aegis Governance Pattern conformance (see docs/14-GOVERNANCE-PATTERN-VERSIONING.md).
 # This package is the CANONICAL reference implementation of AGP 1.0.

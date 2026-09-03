@@ -80,7 +80,7 @@ These are **not** platform-guaranteed and must be completed during a customer en
 | 1 | **Authorized cloud / region** (commercial, GovCloud) | A/R | C | I |
 | 2 | **BAA for HIPAA** (signed before any PHI) | R (provides) | C | A |
 | 3 | **Live connectors** to systems of record | I | R | A |
-| 4 | **IdP integration + MFA** (Entra/Okta/Ping/Login.gov via Cognito) | I | R | A |
+| 4 | **IdP integration + MFA** (Entra/Okta/Ping/Login.gov via Cognito) — **NOT BUILT in any repo**: every validated run uses a portable Cognito pool; the integration must supply the entitlement claim (`custom:tools` / `scope`) the gateway requires (zero tools without it, Run 13) | I | R | A |
 | 5 | **Data classification** (CJI/FTI/PHI/EDU/public) + class isolation | I | C | A/R |
 | 6 | **ATO / GovRAMP / FedRAMP authorization** | C (FedRAMP path) | R (control package) | A |
 | 7 | **Guardrail tuning** (grounding thresholds, automated-reasoning policy) | C | R | A |

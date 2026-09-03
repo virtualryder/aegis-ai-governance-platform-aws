@@ -20,3 +20,8 @@ infra/cdk/cdk.out/
 
 .build/
 
+release/
+dist/
+platform_core/build/
+platform_core/*.egg-info/
+

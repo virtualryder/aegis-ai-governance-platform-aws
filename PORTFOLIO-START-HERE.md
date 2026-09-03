@@ -80,7 +80,7 @@ sequence, strongest evidence first:
 Everything in these repos is at connector **tiers 1–3**; **tier 4 (a customer's production system of
 record — Veeva, Argus, Epic, ServiceNow, PowerSchool/Banner/Canvas, a real X12 835 feed) is NOT done
 in any repo** and is engagement work. The four terms and per-agent status are in each repo's
-[`docs/CONNECTOR-MATURITY.md`](CONNECTOR-MATURITY.md); the portfolio's tier-3 **live reference
+[`docs/CONNECTOR-MATURITY.md`](docs/CONNECTOR-MATURITY.md); the portfolio's tier-3 **live reference
 connectors** (real, public, read-only) are:
 
 | Pack | Hero agent | Live reference connector (tier 3, public) |

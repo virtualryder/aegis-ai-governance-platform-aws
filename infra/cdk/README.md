@@ -44,3 +44,16 @@ cdk deploy aegis-governance-core \
 > replay refusal, and a WORM delete refusal — recorded as **Run 11** in
 > `DEPLOYED-AND-VALIDATED.md` (2026-08-23). It remains synth-validated on every
 > CI run by the template assertions in `tests/`.
+
+## What the gateway Lambda in this stack is — and is not (COPILOT-7, 2026-09-03)
+
+The `GatewayFunction` here is a **stub** (`infra/terraform/modules/governance_core/index.py`, inlined
+byte-for-byte): it reads `/aegis/kill-switch` first (fail-closed), writes one append-only audit record and
+applies the Bedrock guardrail. It does **not** speak MCP, evaluate the deny-by-default predicate, consume
+approvals or execute tools. This stack validates the platform **primitives** as IaC — WORM vault, per-class
+CMKs, approval ledger, AWS Budgets, the CloudTrail evidence trail, the kill-switch engage/read SoD policies
+(Run 11 / Run 12 live). The governed gateways are `infra/golden-pilot/mcp-gateway.yaml` (the reviewed
+`platform_core` engine over API Gateway — offline-parity reference; tool execution is **fixture** only) and the
+AgentCore Gateway + REQUEST interceptor the agent packs run on (`governed-core`). `network.yaml` / `edge.yaml`
+are **not wired** to this stack. See `docs/DEPENDENCY-MODEL.md` and `MATURITY.yaml` (`reference_stack_gateway`,
+`network_edge`, `identity_federation`, `reference_tools`).

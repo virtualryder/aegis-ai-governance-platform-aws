@@ -7,6 +7,49 @@ and this project aims to adhere to [Semantic Versioning](https://semver.org/).
 Aegis has not yet cut a `1.0.0` release; everything below the `Unreleased`
 heading describes the current state of the `main` branch.
 
+## [0.2.0] — 2026-09-03 — Copilot-review hardening (tasks 129–135)
+
+First tagged release of `aegis-platform-core` (`v0.2.0`, GitHub release with the wheel + `RELEASE-HASHES.txt`
+attached by CI). AGP stays at **1.0** — these are implementation fixes and honesty corrections, not contract
+changes.
+
+### Fixed (critical, from the 2026-09-03 Copilot review)
+- **Durable intent / outbox ordering** (`platform_core/gateway.py`): an AUTHORIZED-INTENT row with an
+  idempotency key is durable *before* an approval is consumed or a connector runs (write fails ⇒ DENY,
+  nothing executed); the connector receives `idempotency_key=`; a replay of a completed key is refused
+  (`already_completed`) and never re-executed; a completion-record failure *after* execution answers the
+  new `Effect.INDETERMINATE` (`reconciliation_required`) — never DENY. `demo/test_outbox.py`;
+  `GATEWAY-MODES.md` ordering table with the governed-core mirror.
+- **Approvals bound to the full action at consumption** (deployed authorizer + reviewer services): the
+  ledger row stores `agent_id / tool_id / args_hash / purpose`; the gateway recomputes the binding from
+  the actual call inside the same atomic DynamoDB `ConditionExpression`. Live: Run 13.
+- **Zero tools without an entitlement claim** (deployed authorizer): no / malformed `custom:tools` /
+  `scope` ⇒ `tools/list` 403, `tools/call` 403; the demo default is an explicit, logged template parameter
+  (`DemoDefaultEntitlements`, default `0`) asserted OFF by `clean_account_acceptance` step 18 and the
+  deploy-evidence collector. Cognito pool carries the `custom:tools` attribute. Live: Run 13.
+- **Deploy-evidence pipeline actually runs**: the workflow gates on the secret via a preflight job (the old
+  condition was always true — five scheduled runs failed red); OIDC deploy role deployed (trust: `main` +
+  tags); every tracked `*.sh` is LF (`.gitattributes`) and `bash -n`-checked; the layer is staged and the
+  authorizer verified in CI. First green OIDC run: 2026-09-03 from `main` (see `DEPLOYED-AND-VALIDATED.md`).
+
+### Added
+- `docs/DEPENDENCY-MODEL.md` — `platform_core` (offline reference + conformance oracle) vs `governed-core`
+  (the product control plane the packs run on) vs the packs; pins, compatibility matrix, change protocol,
+  decision recorded (keep both).
+- Packaging: the wheel now ships modules (`[tool.setuptools] packages` + `package-dir`; before, `packages.find`
+  inside `platform_core/` discovered nothing); `prod` extra declares `cryptography` / `jsonschema` / `boto3`;
+  `tools/check_wheel.sh` builds + installs in a clean venv + imports, in CI; tag ⇒ release job.
+- `tools/build_release_packet.sh` (the script `RELEASE-PACKET.md` referenced but that did not exist);
+  `RELEASE-PACKET.md` reconciled to what `ci.yml` / `security.yml` actually run.
+- `tools/check_docs.py` — relative-link + UTF-8-mojibake gate, in CI (fixed 9 mojibake sites + 1 broken link).
+
+### Changed (honesty)
+- MATURITY components `reference_stack_gateway` (the CDK stack's gateway is a **stub**), `network_edge`
+  (**NOT WIRED**), `identity_federation` (**NOT BUILT** — portable Cognito only), `reference_tools`
+  (**FIXTURES**; the DynamoDB SoR connector of Run 9 is the only executed real connector). README, `infra/cdk/README.md`,
+  `infra/cloudformation/STACKS.md`, RACI row 4 and the handler's tool descriptions say so.
+- `demo/clean_account_acceptance.py` is 19 steps; the offline suite is 60 tests.
+
 ## [Unreleased]
 
 ### 2026-07-10 — Sprint-0 pilot-prep hardening (landed in `main`)

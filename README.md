@@ -185,6 +185,16 @@ interface endpoints for bedrock-runtime/kms/logs/sts/secretsmanager/states plus 
 endpoints) and [`infra/cloudformation/edge.yaml`](infra/cloudformation/edge.yaml) (regional WAFv2 Web
 ACL: AWS managed common + known-bad-inputs rules + a per-IP rate limit) — to harden and extend, not
 turnkey production; see [`infra/cloudformation/STACKS.md`](infra/cloudformation/STACKS.md).
+**Honest status (2026-09-03):** neither template is **wired** to a gateway workload (no `VpcConfig` on a
+gateway Lambda, no Web ACL association on an API stage) and neither has been deployed in a validated run —
+they are design artefacts until a run wires them (MATURITY `network_edge`). Likewise the CDK
+`aegis-governance-core` stack's gateway Lambda is a **stub** (audit + guardrail + kill switch, no MCP, no
+policy predicate) that exists to validate the platform primitives as IaC; the governed gateways are the
+golden-pilot reference (`platform_core` engine, Runs 10/13, fixture tool execution) and the AgentCore
+Gateway the packs run on (`governed-core`) — [`docs/DEPENDENCY-MODEL.md`](docs/DEPENDENCY-MODEL.md).
+Authentication in every validated run is a **portable Cognito pool**; enterprise IdP federation (Entra /
+Okta / Ping / Login.gov) is customer engagement work (RACI row 4), and the gateway grants **zero tools**
+without the entitlement claim such an integration must supply (Run 13).
 
 The control-plane enforcement sequence — every request, token, approval, and deny path:
 

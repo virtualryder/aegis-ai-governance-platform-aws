@@ -1,39 +1,120 @@
 {
-  "stack": "aegis-mcp-gateway-ci",
+  "stack": "aegis-mcp-gateway-ci-33797273003",
   "region": "us-east-1",
-  "_note": "Sample captured from a real run on 2026-07-12; account IDs redacted by the collector. Regenerated every pipeline run and uploaded as an artifact.",
   "decisions": {
     "ALLOW": {
       "jsonrpc": "2.0",
       "id": 1,
-      "result": {"content": [{"type": "text", "text": "[fixture] kb.search_policy executed. args={\"query\": \"privacy policy\"}"}], "isError": false}
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[fixture] kb.search_policy executed. args={\"query\": \"privacy policy\"}"
+          }
+        ],
+        "isError": false
+      },
+      "_http": 200
     },
     "ALLOW_MASKED": {
       "jsonrpc": "2.0",
       "id": 2,
-      "result": {"content": [{"type": "text", "text": "[fixture] ticket.create_draft executed. args={\"summary\": \"Resident SSN [SSN-REDACTED] email [EMAIL-REDACTED] needs help\"}"}], "isError": false}
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[fixture] ticket.create_draft executed. args={\"summary\": \"Resident SSN [SSN-REDACTED] email [EMAIL-REDACTED] needs help\"}"
+          }
+        ],
+        "isError": false
+      },
+      "_http": 200
     },
     "DENY_DEFAULT": {
       "jsonrpc": "2.0",
       "id": 3,
-      "error": {"code": -32601, "message": "deny: agent 'aegis-mcp-gateway' has no grant for tool 'db.drop'"}
+      "error": {
+        "code": -32601,
+        "message": "deny: agent 'aegis-mcp-gateway' has no grant for tool 'db.drop'"
+      },
+      "_http": 200
     },
     "HUMAN_GATE": {
       "jsonrpc": "2.0",
       "id": 4,
-      "error": {"code": -32003, "message": "deny: tool 'ticket.submit' is a consequential action withheld from the agent; a valid human-gate approval is required (bound single-use approval required — see reviewer service, Runs 5/7)"}
+      "error": {
+        "code": -32003,
+        "message": "deny: tool 'ticket.submit' is a consequential action withheld from the agent; a valid human-gate approval is required (bound single-use approval required \u2014 see reviewer service, Runs 5/7)"
+      },
+      "_http": 200
     }
   },
+  "no_entitlement_claim": {
+    "LIST": {
+      "jsonrpc": "2.0",
+      "id": 10,
+      "error": {
+        "code": -32003,
+        "message": "deny: no entitlement claim on the token - zero tools"
+      },
+      "_http": 403
+    },
+    "CALL": {
+      "jsonrpc": "2.0",
+      "id": 11,
+      "error": {
+        "code": -32003,
+        "message": "deny: no entitlement claim on the token - zero tools"
+      },
+      "_http": 403
+    }
+  },
+  "allow_default_entitlements": "0",
+  "bound_approvals": "not exercised (no --reviewer-stack)",
   "iam_simulation": {
     "dynamodb:PutItem": "allowed",
     "dynamodb:UpdateItem": "explicitDeny",
     "dynamodb:DeleteItem": "explicitDeny"
   },
   "audit_rows": [
-    {"tool": "kb.search_policy", "decision": "allow", "detail": "{\"query\": \"privacy policy\"}"},
-    {"tool": "ticket.create_draft", "decision": "allow", "detail": "{\"summary\": \"Resident SSN [SSN-REDACTED] email [EMAIL-REDACTED] needs help\"}"},
-    {"tool": "db.drop", "decision": "deny", "detail": "agent 'aegis-mcp-gateway' has no grant for tool 'db.drop'"},
-    {"tool": "ticket.submit", "decision": "deny", "detail": "approval_required: tool 'ticket.submit' is a consequential action withheld from the agent; a valid human-gate approval is required"}
+    {
+      "tool": "kb.search_policy",
+      "decision": "allow",
+      "detail": "{\"query\": \"privacy policy\"}"
+    },
+    {
+      "tool": "ticket.create_draft",
+      "decision": "allow",
+      "detail": "{\"summary\": \"Resident SSN [SSN-REDACTED] email [EMAIL-REDACTED] needs help\"}"
+    },
+    {
+      "tool": "db.drop",
+      "decision": "deny",
+      "detail": "agent 'aegis-mcp-gateway' has no grant for tool 'db.drop'"
+    },
+    {
+      "tool": "ticket.submit",
+      "decision": "deny",
+      "detail": "approval_required: tool 'ticket.submit' is a consequential action withheld from the agent; a valid human-gate approval is required"
+    },
+    {
+      "tool": "*",
+      "decision": "deny",
+      "detail": "tools/list: no entitlement claim (custom:tools/scope) - zero tools"
+    },
+    {
+      "tool": "kb.search_policy",
+      "decision": "deny",
+      "detail": "no entitlement claim (custom:tools/scope) - zero tools"
+    }
   ],
-  "control_checks": {"passed": true, "problems": []}
+  "control_checks": {
+    "passed": true,
+    "problems": []
+  },
+  "git": {
+    "ref": "refs/heads/main",
+    "sha": "117e8ecf38d0970e0196e674c9d0c1490f123a81",
+    "run_id": "33797273003"
+  }
 }

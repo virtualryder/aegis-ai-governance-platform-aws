@@ -1,10 +1,12 @@
-# CI deploy-evidence - B3 MCP gateway (reviewed engine)
+# CI deploy-evidence — B3 MCP gateway (reviewed engine)
 
-Stack `aegis-mcp-gateway-ci` in `us-east-1` (account redacted). Machine-captured; deploy -> verify -> teardown.
+Stack `aegis-mcp-gateway-ci-33797273003` in `us-east-1` (account redacted). Machine-captured; deploy → verify → teardown.
 
 | Control | Evidence | Result |
 |---|---|---|
 | Deny-by-default authz | reviewed engine returned ALLOW / DENY / APPROVAL over HTTPS | PASS |
+| Zero tools without an entitlement claim | no-claim caller: tools/list 403, tools/call 403; ALLOW_DEFAULT_ENTITLEMENTS=0 | PASS |
+| Approval bound to the full action at consumption | modified args / wrong tool / replay refused; exact action allowed once | not exercised |
 | Fail-closed masking | SSN/email redacted in response + audit row | PASS |
 | Append-only audit (IAM) | PutItem allowed; Update/DeleteItem denied by IAM simulation | PASS |
 
@@ -15,6 +17,3 @@ Stack `aegis-mcp-gateway-ci` in `us-east-1` (account redacted). Machine-captured
   "dynamodb:DeleteItem": "explicitDeny"
 }
 ```
-
-> Sample captured from a real run on 2026-07-12; account IDs redacted by the collector. This is a
-> checked-in reference — every pipeline run regenerates its own copy and uploads it as a run artifact.

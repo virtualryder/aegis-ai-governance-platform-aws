@@ -10,6 +10,12 @@
 Partition note: every stack parameterizes the partition (`aws` vs `aws-us-gov`) and region so the
 same template deploys to commercial or GovCloud.
 
+> **Wiring status (2026-09-03, COPILOT-7):** `network.yaml` and `edge.yaml` are shipped and lint-clean but
+> **not attached to any gateway workload** — no gateway Lambda carries a `VpcConfig` into the VPC, no API
+> stage has a `WebACLAssociation`, and no validated run (`DEPLOYED-AND-VALIDATED.md`, Runs 1–13) deploys them.
+> `governance-core.yaml`'s gateway is a **stub** (see `infra/cdk/README.md`). Wiring is tracked in MATURITY
+> (`network_edge`); until then these are design artefacts, not proven controls.
+
 ---
 
 ## `network.yaml` — Network foundation  ✅ *shipped (minimal reference)*

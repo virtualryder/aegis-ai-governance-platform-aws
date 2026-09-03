@@ -78,7 +78,7 @@ MANIFEST = {
 # denied deny-by-default by the engine (no grant).
 TOOLS = {
     "kb.search_policy": {
-        "description": "Search the approved policy knowledge base (read-only).",
+        "description": "[fixture] Search the approved policy knowledge base (read-only).",
         "consequential": False,
         "purpose": "policy_search",
         "scope": "read",
@@ -86,7 +86,7 @@ TOOLS = {
         "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
     },
     "ticket.create_draft": {
-        "description": "Draft a service ticket. Drafting only - no submit authority.",
+        "description": "[fixture] Draft a service ticket. Drafting only - no submit authority.",
         "consequential": False,
         "purpose": "draft_response",
         "scope": "write",
@@ -94,7 +94,7 @@ TOOLS = {
         "inputSchema": {"type": "object", "properties": {"summary": {"type": "string"}}, "required": ["summary"]},
     },
     "ticket.submit": {
-        "description": "CONSEQUENTIAL: submit a ticket. Requires a bound single-use approval.",
+        "description": "[fixture] CONSEQUENTIAL: submit a ticket. Requires a bound single-use approval.",
         "consequential": True,
         "purpose": "decision_support",
         "scope": "write",

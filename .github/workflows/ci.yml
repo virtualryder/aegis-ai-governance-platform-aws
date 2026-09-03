@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
 
@@ -40,8 +41,28 @@ jobs:
           test "$bad" -eq 0
           (cd infra/golden-pilot && bash prepare_layer.sh && python verify_authorizer_engine.py)
 
+      # COPILOT-6: the platform_core wheel must be a real, installable package (it shipped zero modules
+      # before 0.2.0). Build it, install it in a clean venv away from the repo, import everything.
+      - name: platform_core wheel builds, installs in a clean venv and imports
+        run: bash tools/check_wheel.sh dist
+
+      - name: Record the wheel hash
+        run: |
+          set -eu
+          cd dist && sha256sum *.whl | tee RELEASE-HASHES.txt
+          echo "Consumers pin this hash with pip --require-hashes; if it changes, installs fail loudly."
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: platform_core-wheel
+          path: dist/*
+
       - name: Check MATURITY.yaml test count (drift gate)
         run: python tools/check_maturity.py
+
+      # COPILOT-6d: every relative Markdown link resolves; no UTF-8 mojibake in tracked text files.
+      - name: Docs hygiene (links + encoding)
+        run: python tools/check_docs.py
 
       - name: Run clean-account acceptance demo
         run: python demo/clean_account_acceptance.py
@@ -115,3 +136,36 @@ jobs:
       - name: Run checkov on IaC (non-blocking)
         continue-on-error: true
         run: checkov -d infra/cloudformation --quiet --compact
+
+  # On a version tag (vX.Y.Z), publish the wheel + its hash on the GitHub release (created by the
+  # release step below if the tag has none) - the governed-core release discipline, adopted here
+  # 2026-09-03 (COPILOT-6). The release's assets are what a consumer's hash pin verifies.
+  release:
+    name: release (tag only)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: python
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: platform_core-wheel
+          path: dist
+      - name: Version in the tag matches VERSION + pyproject
+        run: |
+          set -eu
+          tag="${GITHUB_REF_NAME#v}"
+          test "$(cat VERSION | tr -d '[:space:]')" = "$tag" || { echo "VERSION=$(cat VERSION) != tag $tag"; exit 1; }
+          grep -q "^version = \"$tag\"" platform_core/pyproject.toml || { echo "pyproject version != tag"; exit 1; }
+          ls dist/aegis_platform_core-"$tag"-*.whl
+      - name: Create the release if the tag has none, then attach the wheel + hashes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --title "aegis-platform-core ${GITHUB_REF_NAME#v}" \
+              --notes "See CHANGELOG.md. Wheel + sha256 attached; pin with pip --require-hashes."
+          gh release upload "$GITHUB_REF_NAME" dist/*.whl dist/RELEASE-HASHES.txt --clobber
