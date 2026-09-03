@@ -9,7 +9,7 @@ OUT="${1:-dist}"
 rm -rf "$OUT"
 python -m pip install -q build
 python -m build --wheel --outdir "$OUT" platform_core
-WHEEL="$(ls "$OUT"/aegis_platform_core-*.whl)"
+WHEEL="$(cd "$OUT" && pwd)/$(ls "$OUT" | grep "^aegis_platform_core-.*\.whl$")"   # absolute: we cd away below
 VENV="$(mktemp -d)/venv"
 python -m venv "$VENV"
 if [ -x "$VENV/bin/python" ]; then PY="$VENV/bin/python"; else PY="$VENV/Scripts/python.exe"; fi
