@@ -1,6 +1,6 @@
 # CI deploy-evidence — B3 MCP gateway (reviewed engine)
 
-Stack `aegis-mcp-gateway-ci-33797273003` in `us-east-1` (account redacted). Machine-captured; deploy → verify → teardown.
+Stack `aegis-mcp-gateway-ci-33799042751` in `us-east-1` (account redacted). Machine-captured; deploy → verify → teardown.
 
 | Control | Evidence | Result |
 |---|---|---|

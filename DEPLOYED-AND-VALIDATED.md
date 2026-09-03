@@ -394,4 +394,14 @@ Evidence: [`evidence/RUN13-BOUND-APPROVALS-ZERO-ENTITLEMENTS-2026-09-03.md`](evi
   (`aegis-golden-pilot-ci-deploy`, trust scoped to `refs/heads/main` + `refs/tags/*` of this repo) is deployed and
   the repo secret set; the workflow now skips cleanly when the secret is absent instead of failing red, every
   tracked shell script is LF and `bash -n`-clean in CI, and the layer is staged + the authorizer verified on every
-  push. The green run from a tag is recorded under "CI deploy-evidence" below once it completes.
+  push. **Green runs (OIDC, no stored keys, deploy → verify → teardown in ~3 min):** run
+  [33797273003](https://github.com/virtualryder/aegis-ai-governance-platform-aws/actions/runs/33797273003)
+  from `main` (`117e8ec`) and run
+  [33799042751](https://github.com/virtualryder/aegis-ai-governance-platform-aws/actions/runs/33799042751)
+  from the release tag **`v0.2.0`** (`4021492`) — both `control_checks.passed: true`: ALLOW / masked ALLOW /
+  deny-by-default / human gate over HTTPS, zero tools without an entitlement claim (403/403, demo default `0`),
+  IAM simulation `PutItem` allowed + `UpdateItem`/`DeleteItem` `explicitDeny`, audit stored masked. The evidence
+  artifact of the tagged run is checked in at `infra/golden-pilot/evidence-ci/` (account redacted).
+- **Release discipline (COPILOT-6).** `v0.2.0` is the first tagged release: CI built the wheel, installed it in a
+  clean venv and imported it, then attached `aegis_platform_core-0.2.0-py3-none-any.whl` + `RELEASE-HASHES.txt`
+  to the GitHub release.

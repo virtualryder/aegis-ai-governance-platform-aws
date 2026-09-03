@@ -60,8 +60,9 @@ fixed (a `preflight` job turns the secret's presence into an output — the old 
 condition was always true, so five scheduled runs failed red assuming an empty role ARN), the tracked shell
 scripts were renormalized to LF (`.gitattributes`) and are `bash -n`-checked in CI, the collector now also
 proves **zero tools without an entitlement claim** and (with `--reviewer-stack`) **approvals bound to the full
-action at consumption** — see `evidence/RUN13-BOUND-APPROVALS-ZERO-ENTITLEMENTS-2026-09-03.md`. The green
-run from a release tag is linked from `DEPLOYED-AND-VALIDATED.md` (Run 13).
+action at consumption** — see `evidence/RUN13-BOUND-APPROVALS-ZERO-ENTITLEMENTS-2026-09-03.md`. **Green runs:**
+33797273003 (from `main`) and 33799042751 (from the release tag `v0.2.0`) — linked from `DEPLOYED-AND-VALIDATED.md`
+(Run 13); the tagged run's artifact is the checked-in sample in `infra/golden-pilot/evidence-ci/`.
 
 
 **Verified live (2026-07-12):** the collector ran against a real `aegis-mcp-gateway-ci` deploy in

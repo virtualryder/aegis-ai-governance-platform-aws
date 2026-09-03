@@ -1,5 +1,5 @@
 {
-  "stack": "aegis-mcp-gateway-ci-33797273003",
+  "stack": "aegis-mcp-gateway-ci-33799042751",
   "region": "us-east-1",
   "decisions": {
     "ALLOW": {
@@ -113,8 +113,8 @@
     "problems": []
   },
   "git": {
-    "ref": "refs/heads/main",
-    "sha": "117e8ecf38d0970e0196e674c9d0c1490f123a81",
-    "run_id": "33797273003"
+    "ref": "refs/tags/v0.2.0",
+    "sha": "4021492006e0cdcf66606a0a68c360f3f03a0088",
+    "run_id": "33799042751"
   }
 }
