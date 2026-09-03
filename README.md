@@ -207,6 +207,17 @@ In deployment this is **Amazon Bedrock AgentCore Gateway** (managed) or the **po
 See [`docs/02-REFERENCE-ARCHITECTURE.md`](docs/02-REFERENCE-ARCHITECTURE.md) for the full
 edge-to-data architecture, per-component talking points, and the control→regime mapping.
 
+**As-deployed diagram (honest, 2026-09-02):** [`docs/ARCHITECTURE-DEPLOYED.drawio`](docs/ARCHITECTURE-DEPLOYED.drawio)
+([PNG](docs/ARCHITECTURE-DEPLOYED.png) · [PDF](docs/ARCHITECTURE-DEPLOYED.pdf)) draws only what is
+deployed and live-validated on benefits `v0.3.0-pilot-rc1` + governed-core 1.7.1: seven layers
+(identity/JWT → runtime + model → governed tool gateway → governed tools → deterministic workflow →
+per-tenant data + WORM → transparency), what each protects and tracks, the evidence file behind each
+claim, and an issue → control → proof table. Every element carries a LIVE / OFFLINE / NOT BUILT pill;
+the token-budget/cost-ceiling and kill-switch status boxes are deliberately labelled with what is
+**not** built yet ([`docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md`](docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md),
+[`docs/ops/KILL-SWITCH.md`](docs/ops/KILL-SWITCH.md)). Regenerate with
+`python tools/build_architecture_diagram.py` (writes the .drawio; export PNG/PDF with draw.io desktop).
+
 ## Regulatory control-mapping packs
 
 The governance core is industry-agnostic. An **overlay pack** is a declarative bundle that turns
@@ -315,6 +326,9 @@ DEMO.md                          Step-by-step demo walkthrough
 docs/
   01-PLATFORM-OVERVIEW.md         What it is, the five layers, the value narrative
   02-REFERENCE-ARCHITECTURE.md    Edge-to-data AWS architecture + per-component talking points
+  ARCHITECTURE-DEPLOYED.drawio/.png/.pdf  AS-DEPLOYED diagram (LIVE / OFFLINE / NOT BUILT pills, evidence-cited)
+  TOKEN-BUDGETS-AND-COST-CEILINGS.md      Token budgets + $ ceilings: what is live, what is offline, build list B1-B5
+  ops/KILL-SWITCH.md                       Kill switch: where it is wired today, fast stops A1-A5, build plan
   03-COMPLIANCE-OVERLAY-PACKS.md  Regime-by-regime control mapping (Implemented vs Configurable)
   04-AGENT-ONBOARDING-STANDARD.md The minimum bar + manifest + CI gates
   05-FINOPS-TOKEN-BUDGETS-CHARGEBACK.md  Token budgets + per-department chargeback/showback

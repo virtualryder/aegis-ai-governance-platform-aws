@@ -110,7 +110,7 @@ Interceptor GA/preview status is unconfirmed in the docs read; verify availabili
 two-tenant live gate. If interceptors are not available, the fallback is per-tenant gateways (each
 tenant's gateway pins `TENANT_ID`) — stronger isolation, less "single shared control plane."
 
-## Interceptor availability + config (verified 2026-09-02, account 864217980669)
+## Interceptor availability + config (verified 2026-09-02, account 111122223333)
 
 `bedrock-agentcore-control` `CreateGateway` **accepts `interceptorConfigurations`** (boto3 1.43.46) —
 the request-interceptor mechanism is available in-region, so the shared-control-plane hybrid is

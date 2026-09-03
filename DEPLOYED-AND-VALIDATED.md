@@ -330,7 +330,7 @@ governance core for first-agent onboarding.
 
 ## Run 12 — 2026-08-29 · Full-observability wave + benefits agent hardening (live)
 
-Account `864217980669` · `us-east-1` · stack `aegis-governance-core` (UPDATE_COMPLETE, 19 resources).
+Account `111122223333` · `us-east-1` · stack `aegis-governance-core` (UPDATE_COMPLETE, 19 resources).
 Layered observability deployed and verified end-to-end against the live benefits agent (`ben-demo`);
 platform, benefits, PV and financial-aid templates brought to a single baseline.
 
