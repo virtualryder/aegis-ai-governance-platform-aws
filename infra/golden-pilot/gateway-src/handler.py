@@ -34,11 +34,17 @@ import boto3
 # --- the REVIEWED engine, imported from the platform_core Lambda layer ------- #
 # (staged into the layer's python/ by infra/golden-pilot/prepare_layer.sh)
 from platform_core import masker, policy_engine
+from platform_core.approval_ledger import arguments_hash
 from platform_core.policy_engine import AuthContext, Effect, PolicyEngine
 
 ddb = boto3.client("dynamodb")
 TABLE = os.environ["TABLE"]
 LEDGER = os.environ.get("LEDGER", "")
+# COPILOT-3 (2026-09-03): a caller with no entitlement claim gets ZERO tools. The pilot's
+# "default to the whole tool set" behaviour is now an explicit, logged DEMO switch that the
+# deploy scripts never set for a customer stack and clean_account_acceptance asserts is OFF.
+ALLOW_DEFAULT_ENTITLEMENTS = os.environ.get("ALLOW_DEFAULT_ENTITLEMENTS", "") == "1"
+ENTITLEMENT_CLAIMS = ("custom:tools", "scope")
 
 # One shared instance of the reviewed predicate for the life of the container.
 POLICY = PolicyEngine()
@@ -101,17 +107,31 @@ TOOLS = {
     },
 }
 
-# Default entitlements for an authenticated caller (least-privilege INTERSECTION
-# is still enforced by the engine — an entitlement without a matching agent grant
-# is not sufficient). A real IdP supplies these via a claim; the pilot defaults to
-# the pilot tool set so the intersection clause is exercised, not bypassed.
+# The DEMO-ONLY default entitlement set (least-privilege INTERSECTION is still
+# enforced by the engine — an entitlement without a matching agent grant is not
+# sufficient). A real IdP supplies entitlements via a claim (`custom:tools` on the
+# Cognito ID token, or `scope`); with no claim the caller has NO tools unless the
+# stack was deployed with ALLOW_DEFAULT_ENTITLEMENTS=1, which is logged on every use.
 _DEFAULT_ENTITLEMENTS = {"kb.search_policy", "ticket.create_draft", "ticket.submit"}
 
 
 def _entitlements(claims):
-    raw = claims.get("custom:tools") or claims.get("scope") or ""
+    """Entitlements from the VERIFIED token claims only. Missing, empty, or malformed
+    (non-string) claim => the empty set (zero tools). Never a default."""
+    raw = ""
+    for k in ENTITLEMENT_CLAIMS:
+        v = claims.get(k)
+        if isinstance(v, str) and v.strip():
+            raw = v
+            break
     ents = {t.strip() for t in raw.replace(",", " ").split() if t.strip()}
-    return ents or set(_DEFAULT_ENTITLEMENTS)
+    if not ents and ALLOW_DEFAULT_ENTITLEMENTS:
+        print(json.dumps({"aegis": "entitlements", "mode": "DEMO_DEFAULT",
+                          "warning": "ALLOW_DEFAULT_ENTITLEMENTS=1: caller has no entitlement claim; "
+                                     "granting the demo tool set - never set this on a customer stack",
+                          "sub": claims.get("sub", "anonymous")}))
+        return set(_DEFAULT_ENTITLEMENTS)
+    return ents
 
 
 def _mask(text, data_classes):
@@ -135,11 +155,21 @@ def audit(sub, tool, decision, detail, data_classes):
     )
 
 
-def _consume_approval(aid, sub):
-    """Atomic single-use consume against the reviewer ledger: the approval must
-    exist, be unconsumed, unexpired, AND bound to the calling identity. Returns
-    True iff consumed. Any other case (unknown/expired/replayed/unbound) -> False.
-    Fail-closed: no ledger configured or any error -> False."""
+def _call_args_hash(args):
+    """The arguments the approval was bound to: the tool call MINUS the approval_id the
+    caller attaches at consumption time (canonical platform_core.arguments_hash - the
+    same function the reviewer service / offline ledger use)."""
+    return arguments_hash({k: v for k, v in (args or {}).items() if k != "approval_id"})
+
+
+def _consume_approval(aid, sub, agent_id, tool_id, args_hash, purpose):
+    """Atomic single-use consume against the reviewer ledger. COPILOT-2 (2026-09-03):
+    the approval must exist, be unconsumed, unexpired, bound to the calling identity
+    AND bound to the FULL action - agent, tool, arguments hash and purpose recomputed
+    from the actual call - all in ONE DynamoDB ConditionExpression, so a valid
+    approval_id can never be replayed with different arguments or against another
+    tool. Returns True iff consumed. Any other case (unknown / expired / replayed /
+    unbound / re-bound) -> False. Fail-closed: no ledger or any error -> False."""
     if not LEDGER:
         return False
     now = int(time.time())
@@ -147,12 +177,16 @@ def _consume_approval(aid, sub):
         ddb.update_item(
             TableName=LEDGER,
             Key={"approval_id": {"S": str(aid)}},
-            UpdateExpression="SET consumed_at = :now",
+            UpdateExpression="SET consumed_at = :now, consumed_by = :sub",
             ConditionExpression=(
                 "attribute_exists(approval_id) AND attribute_not_exists(consumed_at) "
-                "AND expires_at > :now AND requester = :sub"
+                "AND expires_at > :now AND requester = :sub "
+                "AND agent_id = :agent AND tool_id = :tool AND args_hash = :args AND purpose = :purpose"
             ),
-            ExpressionAttributeValues={":now": {"N": str(now)}, ":sub": {"S": sub}},
+            ExpressionAttributeValues={
+                ":now": {"N": str(now)}, ":sub": {"S": sub}, ":agent": {"S": agent_id},
+                ":tool": {"S": tool_id}, ":args": {"S": args_hash}, ":purpose": {"S": purpose},
+            },
         )
         return True
     except Exception:
@@ -198,11 +232,17 @@ def _evaluate(claims, name, args):
 
     # If the only blocker is the human gate on a consequential tool, try to
     # consume a bound single-use approval, then re-affirm with the reviewed engine.
-    if decision.effect is Effect.APPROVAL_REQUIRED:
+    # The binding is recomputed from THIS call (agent, tool, args hash, purpose) and
+    # checked atomically at consumption - not trusted from the caller.
+    if decision.effect is Effect.APPROVAL_REQUIRED and meta:
         aid = (args or {}).get("approval_id")
-        if aid and _consume_approval(aid, sub):
+        if aid and _consume_approval(aid, sub, MANIFEST["metadata"]["id"], name,
+                                     _call_args_hash(args), meta["purpose"]):
             ctx.approval_valid = True
             decision = POLICY.evaluate(ctx, MANIFEST)
+        elif aid:
+            return (Effect.DENY, "approval not consumable: unknown, expired, already used, or not bound "
+                                 "to this caller + agent + tool + arguments + purpose", data_classes)
     return decision.effect, decision.reason, data_classes
 
 
@@ -226,16 +266,26 @@ def handler(event, context):
         }))
     if method == "notifications/initialized":
         return resp(202, {})
+    ents = _entitlements(claims)
     if method == "tools/list":
+        # A caller with no entitlement claim sees ZERO tools (COPILOT-3); otherwise the
+        # list is the intersection of the caller's entitlements and the tools this agent
+        # exposes - the same least-privilege intersection the engine enforces on tools/call.
+        if not ents:
+            audit(sub, "*", "deny", "tools/list: no entitlement claim (%s) - zero tools" % "/".join(ENTITLEMENT_CLAIMS), ["public"])
+            return resp(403, err(rid, -32003, "deny: no entitlement claim on the token - zero tools"))
         audit(sub, "*", "allow", "tools/list", ["public"])
         return resp(200, ok(rid, {"tools": [
             {"name": k, "description": v["description"], "inputSchema": v["inputSchema"]}
-            for k, v in TOOLS.items()
+            for k, v in TOOLS.items() if k in ents
         ]}))
     if method == "tools/call":
         p = req.get("params", {})
         name = p.get("name", "")
         args = p.get("arguments", {})
+        if not ents:
+            audit(sub, name, "deny", "no entitlement claim (%s) - zero tools" % "/".join(ENTITLEMENT_CLAIMS), ["public"])
+            return resp(403, err(rid, -32003, "deny: no entitlement claim on the token - zero tools"))
         try:
             effect, reason, data_classes = _evaluate(claims, name, args)
         except masker.MaskingFailClosed as exc:

@@ -22,7 +22,7 @@ grounding without re-deriving them. The canonical, versioned contract lives in t
 | 3. Least-privilege intersection — effective = agent grant ∩ user entitlement | `policy_engine.py` | `platform_core/tests/test_agp_conformance.py` |
 | 4. Human approval (SoD, single-use) — consequential acts withheld in code; bound, single-use, approver ≠ requester | `approval_ledger.py` | `demo/test_negative_security.py` |
 | 5. PII/PHI/regulated-data masking — fail-closed at every log/audit boundary | `masker.py` | `demo/test_fail_closed.py` |
-| 6. Audit (append-only + WORM) — every decision recorded; IAM deny on mutate; S3 Object Lock | `audit_ledger.py` | `demo/test_acceptance.py` |
+| 6. Audit (append-only + WORM) — every decision recorded; IAM deny on mutate; S3 Object Lock; **durable INTENT before any side effect, INDETERMINATE (never DENY) when the completion record fails after execution** | `audit_ledger.py`, `gateway.py` (outbox ordering) | `demo/test_acceptance.py`, `demo/test_outbox.py` |
 | 7. Token budgets — per-agent hard cap enforced before spend | `token_budget.py` | `platform_core/tests` / `demo` |
 | 8. Model gateway + grounding — brokered model access; grounding / output-schema checks | `model_gateway.py` | `demo/test_acceptance.py` |
 

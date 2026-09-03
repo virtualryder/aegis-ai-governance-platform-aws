@@ -14,10 +14,14 @@ Parameters:
     Description: Repository name (e.g. aegis-ai-governance-platform-aws)
   GitHubRef:
     Type: String
-    Default: "*"
+    Default: "refs/heads/main"
     Description: >-
-      Git ref to allow (e.g. refs/heads/main). Default "*" allows any ref in the repo — tighten this to
-      a branch for production.
+      Branch ref allowed to assume the role (default refs/heads/main). The evidence run is meant to be
+      reproducible from a RELEASE, so a tag pattern is allowed alongside it (GitHubTagRef).
+  GitHubTagRef:
+    Type: String
+    Default: "refs/tags/*"
+    Description: Tag ref pattern allowed alongside the branch (set to "-" to allow no tags).
   CreateOIDCProvider:
     Type: String
     Default: "true"
@@ -56,7 +60,9 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${GitHubRepo}:ref:${GitHubRef}
+                token.actions.githubusercontent.com:sub:
+                  - !Sub repo:${GitHubOrg}/${GitHubRepo}:ref:${GitHubRef}
+                  - !Sub repo:${GitHubOrg}/${GitHubRepo}:ref:${GitHubTagRef}
       Policies:
         - PolicyName: golden-pilot-deploy
           PolicyDocument:
@@ -67,8 +73,12 @@ Resources:
                 Action: [cloudformation:*]
                 Resource: "*"
               - Effect: Allow
-                Action: [s3:CreateBucket, s3:PutObject, s3:GetObject, s3:ListBucket, s3:PutBucketPolicy, s3:PutEncryptionConfiguration, s3:PutBucketVersioning, s3:GetBucketLocation, s3:DeleteObject]
+                Action: [s3:CreateBucket, s3:PutObject, s3:GetObject, s3:ListBucket, s3:PutBucketPolicy, s3:GetBucketPolicy, s3:PutEncryptionConfiguration, s3:PutBucketVersioning, s3:PutBucketPublicAccessBlock, s3:PutBucketOwnershipControls, s3:PutBucketTagging, s3:GetBucketLocation, s3:DeleteObject]
                 Resource: [!Sub "arn:${AWS::Partition}:s3:::aws-sam-cli-managed-default*"]
+              # The stack's Lambda log group + reading the gateway's configuration (evidence: demo default OFF).
+              - Effect: Allow
+                Action: [logs:CreateLogGroup, logs:DeleteLogGroup, logs:PutRetentionPolicy, logs:DescribeLogGroups, logs:TagResource, logs:FilterLogEvents]
+                Resource: "*"
               # The resources the stack creates (kept to the services the golden path uses).
               - Effect: Allow
                 Action: [lambda:*, apigateway:*, dynamodb:*, cognito-idp:*]

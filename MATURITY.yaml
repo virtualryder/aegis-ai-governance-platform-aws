@@ -10,16 +10,18 @@ positioning: reference-accelerator
 updated: 2026-07-09
 
 tests:
-  offline_total: 55                            # Canonical offline suite: 43 collected & passing, 0 skipped â€” verified 2026-07-12 by `PYTHONPATH=platform_core:. pytest demo platform_core/tests -q`; machine-checked by tools/check_maturity.py. MATURITY.yaml is the single source of truth.
+  offline_total: 60                            # Canonical offline suite: 43 collected & passing, 0 skipped â€” verified 2026-07-12 by `PYTHONPATH=platform_core:. pytest demo platform_core/tests -q`; machine-checked by tools/check_maturity.py. MATURITY.yaml is the single source of truth.
   reproduce: "PYTHONPATH=platform_core:. pytest demo platform_core/tests -q"
   last_verified: 2026-07-09
 
 clean_account_deploy:
   status: platform-controls-validated
-  detail: "10 live AWS runs of the governance core -> MCP endpoint (deployed, exercised with real
-           requests, torn down). Live external SaaS connectors, monitoring, DR, and production
-           certification remain OUTSIDE the repo (engagement/customer-owned)."
+  detail: "13 live AWS runs of the governance core -> MCP endpoint (deployed, exercised with real
+           requests, torn down; Run 13 = 2026-09-03 Copilot-review hardening). Live external SaaS
+           connectors, monitoring, DR, and production certification remain OUTSIDE the repo
+           (engagement/customer-owned)."
   evidence: evidence/CLEAN-ACCOUNT-ACCEPTANCE.md
+  dependency_model: docs/DEPENDENCY-MODEL.md   # COPILOT-5: platform_core (oracle) vs governed-core (product) vs packs
   # HONESTY / scope of 'deploy-validated' below (updated 2026-07-12, B3): the inline governance SUBSET
   # has been REMOVED from mcp-gateway.yaml. The authorizer Lambda now imports the REVIEWED platform_core
   # engine from a Lambda layer â€” its authorization DECISION comes from platform_core.policy_engine (the
@@ -38,9 +40,9 @@ clean_account_deploy:
 
 is_the_platform: true
 components:
-  - {id: policy_engine, name: Deny-by-default policy (least-privilege intersection), maturity: deploy-validated, note: "B3 (2026-07-12): inline subset deleted; mcp-gateway authorizer imports the reviewed platform_core.policy_engine (full 9-clause predicate) + masker from a Lambda layer, cfn-lint-clean. LIVE-REDEPLOYED on a clean account (aegis-mcp-gateway-b3, us-east-1) and torn down zero-residual: reviewed engine returned ALLOW/ALLOW+masked/DENY(deny-by-default)/APPROVAL_REQUIRED over HTTPS, deny strings verbatim from platform_core â€” deployed == reviewed engine. See infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md"}
-  - {id: gateway, name: MCP authorization gateway, maturity: deploy-validated}
-  - {id: approval_ledger, name: Bound single-use SoD approvals, maturity: deploy-validated}
+  - {id: policy_engine, name: Deny-by-default policy (least-privilege intersection), maturity: deploy-validated, note: "B3 (2026-07-12): inline subset deleted; mcp-gateway authorizer imports the reviewed platform_core.policy_engine (full 9-clause predicate) + masker from a Lambda layer, cfn-lint-clean. LIVE-REDEPLOYED on a clean account (aegis-mcp-gateway-b3, us-east-1) and torn down zero-residual: reviewed engine returned ALLOW/ALLOW+masked/DENY(deny-by-default)/APPROVAL_REQUIRED over HTTPS, deny strings verbatim from platform_core â€” deployed == reviewed engine. See infra/golden-pilot/B3-LIVE-DEPLOY-EVIDENCE.md. COPILOT-3 (2026-09-03, Run 13 LIVE): a caller with no entitlement claim (custom:tools / scope) gets ZERO tools - tools/list 403, tools/call 403; the demo default is an explicit, logged template parameter (DemoDefaultEntitlements, default 0) asserted OFF by clean_account_acceptance step 18 and by the deploy-evidence collector on the live function."}
+  - {id: gateway, name: MCP authorization gateway, maturity: deploy-validated, note: "COPILOT-1 (2026-09-03): the reference engine now writes a durable AUTHORIZED-INTENT row (with an idempotency key) BEFORE consuming an approval or executing a connector, passes the key to the connector, keeps an outbox that refuses replays of a completed key, and answers INDETERMINATE (reconciliation_required) - never DENY - when the completion record cannot be written after execution. Proof demo/test_outbox.py; ordering table in GATEWAY-MODES.md. Offline reference change; the deployed golden-pilot authorizer executes fixtures only (no side effect to order)."}
+  - {id: approval_ledger, name: Bound single-use SoD approvals, maturity: deploy-validated, note: "COPILOT-2 (2026-09-03, Run 13 LIVE): the deployed authorizer consumes an approval only for the FULL bound action - the reviewer stores agent_id/tool_id/args_hash/purpose on the ledger row and the gateway recomputes the binding from the actual call inside the same atomic DynamoDB ConditionExpression (exists + unconsumed + unexpired + requester + agent + tool + args + purpose). Live: modified args / wrong tool / replay -> DENY, exact -> ALLOW once. evidence/RUN13-BOUND-APPROVALS-ZERO-ENTITLEMENTS-2026-09-03.md"}
   - {id: masker, name: Fail-closed PII/PHI masking, maturity: deploy-validated, note: "B3 (2026-07-12): the reviewed platform_core.masker now runs in the deployed authorizer via the Lambda layer â€” live-verified redacting SSN/email before the append-only audit write on the aegis-mcp-gateway-b3 clean-account run"}
   - {id: audit_ledger, name: Append-only + WORM audit, maturity: deploy-validated}
   - {id: token_budget, name: Token budgets / cost control, maturity: deploy-validated, note: "2026-09-03: LIVE on the AgentCore path in the benefits pack (governed-core 1.9.0) - per-tenant token + USD meter with reserve-before / commit-after on every model call, plus an AWS Budgets USD ceiling whose breach engages the kill switch. See agentcore.budget_live."}

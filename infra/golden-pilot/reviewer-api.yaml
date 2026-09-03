@@ -210,6 +210,8 @@ Resources:
               try:
                   ddb.put_item(TableName=LEDGER, Item={"approval_id":{"S":approval_id},"request_id":{"S":rid},
                       "reviewer":{"S":reviewer},"requester":{"S":requester},"ts":{"N":str(int(time.time()))},
+                      # COPILOT-2: the binding fields are STORED so the gateway can re-check them at consumption
+                      "agent_id":{"S":g["agent_id"]["S"]},"tool_id":{"S":g["tool_id"]["S"]},"args_hash":{"S":g["args_hash"]["S"]},"purpose":{"S":g["purpose"]["S"]},
                       "expires_at":{"N":str(int(time.time())+3600)}},
                       ConditionExpression="attribute_not_exists(approval_id)")
               except ClientError as ex:

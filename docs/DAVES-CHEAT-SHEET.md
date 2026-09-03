@@ -31,7 +31,7 @@ hallucination risk, cost control, and *who has authority to act*.
 9 Governed connector: idempotency + saga rollback. **Evidence:** `DEPLOYED-AND-VALIDATED.md`.
 
 ## Two demos
-- **Safe (always works):** `python demo/clean_account_acceptance.py` — 18/18 green, no AWS, no API key.
+- **Safe (always works):** `python demo/clean_account_acceptance.py` — 19/19 green, no AWS, no API key.
 - **Real (2 min):** `infra/golden-pilot/run_authz_tests.sh` — live Cedar ALLOW/DENY on Verified Permissions.
 
 ## Objection handling

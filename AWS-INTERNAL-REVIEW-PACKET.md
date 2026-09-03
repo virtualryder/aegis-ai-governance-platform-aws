@@ -18,7 +18,7 @@ Each repo runs its full suite with no credentials. Representative commands:
 ```bash
 # platform
 cd aegis-ai-governance-platform-aws && PYTHONPATH=platform_core:. pytest demo platform_core/tests -q
-python demo/clean_account_acceptance.py          # 18-step control walk-through, offline
+python demo/clean_account_acceptance.py          # 19-step control walk-through, offline
 
 # a vertical (life sciences)
 cd hcls-ai-agents && make test                    # 583 tests via scripts/run_all_tests.sh

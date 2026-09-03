@@ -370,3 +370,28 @@ CloudTrail data event. Evidence: `benefits_eligibility_agent/evidence/OBSERVABIL
 **Cost delta:** roughly **+$4–5/month** at rest (platform trail S3 + DynamoDB data events at pilot
 volume, data-only agent trails, X-Ray inside the free tier, invocation logging on small de-identified
 payloads). The ~$1/month platform-at-rest story is unchanged.
+
+## Run 13 — 2026-09-03 · Copilot-review hardening of the portable reference gateway (live)
+
+Account `111122223333` · `us-east-1` · stacks `aegis-mcp-gateway-r13` (reviewed engine as a layer, ledger
+attached) + `aegis-reviewer-r13` (the real reviewer service) — deployed, exercised over HTTPS, **torn down**.
+Evidence: [`evidence/RUN13-BOUND-APPROVALS-ZERO-ENTITLEMENTS-2026-09-03.md`](evidence/RUN13-BOUND-APPROVALS-ZERO-ENTITLEMENTS-2026-09-03.md).
+
+- **Zero tools without an entitlement claim (COPILOT-3).** A valid Cognito JWT with no `custom:tools` /
+  `scope` claim gets `tools/list` **403** and `tools/call` **403** (before: the whole pilot tool set). The demo
+  default is a template parameter (`DemoDefaultEntitlements`, default `"0"`) that is logged on every use and
+  asserted OFF by the offline acceptance walk-through and by the deploy-evidence collector on the live function.
+- **Approvals bound to the full action at consumption (COPILOT-2).** The reviewer stores `agent_id, tool_id,
+  args_hash, purpose` on the ledger row; the gateway recomputes the binding from the actual call and checks it
+  in the same atomic DynamoDB `ConditionExpression` as exists / unconsumed / unexpired / requester. Live:
+  modified args → DENY, wrong tool → DENY, exact → ALLOW once (`consumed_by` = requester), replay → DENY;
+  the wrong-tool approval stayed unconsumed.
+- **Durable intent / outbox ordering (COPILOT-1)** landed in the reference engine the same day (offline:
+  `demo/test_outbox.py`; ordering table in `GATEWAY-MODES.md`) — the portable gateway executes fixtures only, so
+  there is no side effect to order live; the AgentCore packs' mirror (`AuditIntent` → `FINAL#` marker →
+  `COMMITTED`) was already live in benefits.
+- **Reproducible deploy-evidence pipeline (COPILOT-4).** The GitHub OIDC deploy role
+  (`aegis-golden-pilot-ci-deploy`, trust scoped to `refs/heads/main` + `refs/tags/*` of this repo) is deployed and
+  the repo secret set; the workflow now skips cleanly when the secret is absent instead of failing red, every
+  tracked shell script is LF and `bash -n`-clean in CI, and the layer is staged + the authorizer verified on every
+  push. The green run from a tag is recorded under "CI deploy-evidence" below once it completes.

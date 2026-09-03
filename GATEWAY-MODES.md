@@ -35,6 +35,25 @@ AgentCore path is optional and customer-specific unless separately evidenced."*
   an un-credentialed outbound path — the negative-test matrix proves a call without a valid scoped
   credential is refused (case #11).
 
+## Side-effect ordering (durable intent / outbox) — both modes
+
+A governed gateway must never (a) run a side effect without a durable record that it was authorized,
+or (b) answer **DENY** for an action that already happened — a caller that hears "no" retries, and a
+real-world action happens twice. Copilot's 2026-09-03 review found exactly (b) in the reference engine
+(`platform_core/gateway.py`: consume approval → execute → audit → DENY on audit failure). The order is now:
+
+| Step | Reference engine (`platform_core/gateway.py`) | AgentCore packs (governed-core, benefits) |
+|---|---|---|
+| 1. Authorized intent, durable **before** anything | `INTENT` row (request, agent, tool, args hash, purpose, approval id, **idempotency key**); write fails ⇒ `DENY` (nothing consumed, nothing run — a retry is safe) | Step Functions `AuditIntent` state → `write_audit` writes the `INTENT` evidence record before `HumanSignoff` (`benefits cdk/ben_stacks/workflow_stack.py`) |
+| 2. Consume the bound single-use approval | `approval_ledger.consume()` (agent, tool, args hash, purpose) | `approve_signoff` consumes; `finalize_signoff` re-verifies the approval **path** (G2) |
+| 3. Execute with the idempotency key | the connector receives `idempotency_key=`; the gateway keeps an outbox of completed keys and **refuses a replay** (`already_completed=True`) — never executes twice | `finalize_signoff._exactly_once_marker`: conditional `FINAL#<case>` put **before** the commit record; a repeat returns the original submission (`idempotent: true`) |
+| 4. Completion, durable | `ALLOW`/`ERROR` row with the same key; write fails ⇒ **`INDETERMINATE`** (`reconciliation_required`), never `DENY` | `COMMITTED` record; write fails ⇒ `committed:false` with the `FINAL#` marker in place (the workflow's `FinalizeOk` routes it to `ManualReview`); a retry is idempotent |
+
+Proof: `demo/test_outbox.py` (intent-write failure ⇒ handler not called + approval not consumed;
+completion-write failure ⇒ `INDETERMINATE` + one execution + replay refused; the key on both rows; an
+unregistered consequential tool no longer burns the approval). The connector contract — accept
+`idempotency_key` — is the governed-connector rule in `infra/golden-pilot/CONNECTOR-PILOT.md`.
+
 ## What is actually evidenced
 
 - **Portable path:** deployed + exercised in a clean account (identity → deny-by-default → scoped token

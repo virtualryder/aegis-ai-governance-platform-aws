@@ -29,6 +29,17 @@ Parameters:
       this ledger with an atomic single-use consume bound to the calling identity. When empty,
       the gateway DENIES all consequential tools (fail-closed) rather than trusting the caller.
 
+  DemoDefaultEntitlements:
+    Type: String
+    Default: "0"
+    AllowedValues: ["0", "1"]
+    Description: >-
+      COPILOT-3 (2026-09-03). "0" (the only value for a customer stack): a caller whose token carries no
+      entitlement claim (custom:tools, or scope) gets ZERO tools - tools/list is empty and every
+      tools/call is refused 403. "1" = DEMO ONLY: such a caller is granted the pilot tool set and the
+      gateway logs a warning on every such request. Never set "1" for a customer deployment;
+      demo/clean_account_acceptance.py asserts the deployed value is "0".
+
 Conditions:
   HasLedger: !Not [!Equals [!Ref LedgerTableName, ""]]
 
@@ -39,6 +50,15 @@ Resources:
       UserPoolName: !Sub aegis-mcp-${Environment}
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: true
+      # The entitlement claim. An enterprise IdP would map it from groups / app roles; in the
+      # portable pilot it is a mutable custom attribute the operator sets per user and Cognito
+      # emits on the ID token as `custom:tools` (space- or comma-separated tool ids).
+      Schema:
+        - Name: tools
+          AttributeDataType: String
+          Mutable: true
+          StringAttributeConstraints:
+            MaxLength: "2048"
       Policies:
         PasswordPolicy:
           MinimumLength: 16
@@ -145,6 +165,7 @@ Resources:
         Variables:
           TABLE: !Ref AuditTable
           LEDGER: !If [HasLedger, !Ref LedgerTableName, ""]
+          ALLOW_DEFAULT_ENTITLEMENTS: !Ref DemoDefaultEntitlements
 
   HttpApi:
     Type: AWS::ApiGatewayV2::Api

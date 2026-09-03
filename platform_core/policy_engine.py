@@ -32,6 +32,11 @@ class Effect(str, Enum):
     ALLOW = "ALLOW"
     DENY = "DENY"
     APPROVAL_REQUIRED = "APPROVAL_REQUIRED"
+    # Returned ONLY by the gateway (never by the predicate): the side effect was
+    # executed but its COMPLETED record could not be made durable. The caller must
+    # NOT retry (the action may have happened); an operator reconciles from the
+    # INTENT record. See gateway.py "durable intent / outbox" and task COPILOT-1.
+    INDETERMINATE = "INDETERMINATE"
 
 
 @dataclass

@@ -32,7 +32,7 @@ slide is what separates you from vendors who only have a diagram.
 - **The skeptic** -> `DEPLOYED-AND-VALIDATED.md` (the nine runs)
 
 ### A4. Rehearse two demos
-- **Laptop demo (cannot fail):** `python demo/clean_account_acceptance.py` — 18/18 green, no AWS/API key.
+- **Laptop demo (cannot fail):** `python demo/clean_account_acceptance.py` — 19/19 green, no AWS/API key.
 - **Live proof (2 min):** `infra/golden-pilot/run_authz_tests.sh` — Cedar ALLOW/DENY on Verified Permissions.
 **Why:** the laptop demo removes demo-gods risk; the live run answers "is this real?" on the spot.
 

@@ -43,7 +43,7 @@ class AuditRecord:
     tool_id: str
     purpose: str
     data_class: list
-    policy_decision: str           # ALLOW | DENY | APPROVAL_REQUIRED | ERROR | PENDING
+    policy_decision: str           # ALLOW | DENY | APPROVAL_REQUIRED | ERROR | PENDING | INTENT | INDETERMINATE
     decision_reason: str
     model_profile: str = ""
     prompt_version: str = ""
@@ -56,6 +56,7 @@ class AuditRecord:
     cost_usd: float = 0.0
     masked_fields: list = field(default_factory=list)
     grounded: bool = None
+    idempotency_key: str = ""      # outbox key: INTENT and its COMPLETED/FAILED record share it
     seq: int = 0
     prev_hash: str = ""
     record_hash: str = ""

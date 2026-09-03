@@ -54,6 +54,16 @@ nothing about your normal CI.
 
 ## Status
 
+**2026-09-03 (COPILOT-4):** the OIDC deploy role is deployed (`aegis-golden-pilot-ci-role`; trust scoped to
+`refs/heads/main` and `refs/tags/*` of this repo) and `AWS_DEPLOY_ROLE_ARN` is set. The workflow gate was
+fixed (a `preflight` job turns the secret's presence into an output — the old `github.repository_owner != ''`
+condition was always true, so five scheduled runs failed red assuming an empty role ARN), the tracked shell
+scripts were renormalized to LF (`.gitattributes`) and are `bash -n`-checked in CI, the collector now also
+proves **zero tools without an entitlement claim** and (with `--reviewer-stack`) **approvals bound to the full
+action at consumption** — see `evidence/RUN13-BOUND-APPROVALS-ZERO-ENTITLEMENTS-2026-09-03.md`. The green
+run from a release tag is linked from `DEPLOYED-AND-VALIDATED.md` (Run 13).
+
+
 **Verified live (2026-07-12):** the collector ran against a real `aegis-mcp-gateway-ci` deploy in
 `us-east-1` and reported `control_checks.passed: true` (append-only IAM = `explicitDeny` on Update/Delete,
 masking fired, all four decisions correct), then the stack was torn down with zero residual. The GitHub

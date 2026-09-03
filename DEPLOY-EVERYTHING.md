@@ -101,7 +101,7 @@ make neg-demo
 ```bash
 cd aegis-ai-governance-platform-aws
 PYTHONPATH=platform_core:. pytest demo platform_core/tests -q    # 44 tests
-python demo/clean_account_acceptance.py                          # 18-step offline control walk-through
+python demo/clean_account_acceptance.py                          # 19-step offline control walk-through
 ```
 
 This proves the governed pattern, the 10 refusals, and the scored quality gate **before** any account

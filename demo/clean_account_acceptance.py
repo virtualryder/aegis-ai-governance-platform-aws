@@ -380,6 +380,41 @@ def main():
         step(17, "clean teardown of demo_out", False, "exception: %s" % exc)
         return _finish()
 
+    # 18 - COPILOT-3 (2026-09-03): the DEPLOYED authorizer grants ZERO tools to a caller with no
+    # entitlement claim. The demo default is an explicit switch that must be OFF everywhere a
+    # customer stack could be deployed from: the template default, the handler's own default, and
+    # every deploy script / workflow in the repo.
+    try:
+        import re
+        gp = os.path.join(_REPO_ROOT, "infra", "golden-pilot")
+        tmpl = open(os.path.join(gp, "mcp-gateway.yaml"), encoding="utf-8").read()
+        m = re.search(r"DemoDefaultEntitlements:\s*\n\s*Type: String\s*\n\s*Default: \"(\d)\"", tmpl)
+        template_off = bool(m) and m.group(1) == "0"
+        handler_src = open(os.path.join(gp, "gateway-src", "handler.py"), encoding="utf-8").read()
+        handler_off = 'os.environ.get("ALLOW_DEFAULT_ENTITLEMENTS", "") == "1"' in handler_src
+        offenders = []
+        for root, _dirs, files in os.walk(_REPO_ROOT):
+            if any(x in root for x in (os.sep + ".git", "node_modules", "cdk.out", os.sep + "layer")):
+                continue
+            for f in files:
+                if not f.endswith((".sh", ".yml", ".yaml", ".ps1", ".py", ".json", ".toml")):
+                    continue
+                fp = os.path.join(root, f)
+                if fp.endswith(("handler.py", "clean_account_acceptance.py", "verify_authorizer_engine.py", "mcp-gateway.yaml")):
+                    continue
+                try:
+                    txt = open(fp, encoding="utf-8", errors="ignore").read()
+                except OSError:
+                    continue
+                if re.search(r"ALLOW_DEFAULT_ENTITLEMENTS\s*[=:]\s*[\"']?1|DemoDefaultEntitlements\s*[=:]\s*[\"']?1", txt):
+                    offenders.append(os.path.relpath(fp, _REPO_ROOT))
+        ok = template_off and handler_off and not offenders
+        step(18, "deployed gateway: zero tools without an entitlement claim (demo default OFF everywhere)", ok,
+             "template default=%s handler default-off=%s offenders=%s" % ("0" if template_off else "?", handler_off, offenders or "none"))
+    except Exception as exc:
+        step(18, "deployed gateway: demo default OFF", False, "exception: %s" % exc)
+        return _finish()
+
     return _finish()
 
 

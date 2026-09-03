@@ -28,16 +28,50 @@ env:
   AWS_REGION: us-east-1
 
 jobs:
-  deploy-verify-teardown:
+  # Secrets are not readable in a job-level `if`, so a tiny job turns the secret's presence into an
+  # output (COPILOT-4: the previous `github.repository_owner != ''` gate was always true, so every
+  # scheduled run assumed an empty role ARN and failed red).
+  preflight:
     runs-on: ubuntu-latest
-    # Skips cleanly on forks / before the secret is configured, rather than failing red.
-    if: ${{ github.repository_owner != '' }}
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          if [ -n "$ROLE_ARN" ]; then echo "configured=true" >> "$GITHUB_OUTPUT"; else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::AWS_DEPLOY_ROLE_ARN is not configured - deploy-evidence skipped (see docs/CI-DEPLOY-EVIDENCE.md)"
+          fi
+
+  deploy-verify-teardown:
+    needs: preflight
+    if: needs.preflight.outputs.configured == 'true'
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: infra/golden-pilot
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Record the exact tree under test (tag or commit)
+        run: |
+          echo "REF=${GITHUB_REF}" >> "$GITHUB_ENV"
+          echo "SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          git describe --tags --exact-match 2>/dev/null || echo "(not a tag)"
+
+      - name: Shell scripts are LF and parse (bash -n)
+        working-directory: .
+        run: |
+          set -e
+          bad=0
+          while IFS= read -r f; do
+            if grep -q $'\r' "$f"; then echo "CRLF: $f"; bad=1; fi
+            bash -n "$f" || bad=1
+          done < <(git ls-files '*.sh')
+          test "$bad" -eq 0
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -73,6 +107,12 @@ jobs:
       - name: Collect deploy evidence (fails the job on any control regression)
         run: |
           python ci/collect_evidence.py --stack "$STACK" --region "$AWS_REGION" --out evidence-ci
+          python - <<'EOF'
+          import json, os
+          p = "evidence-ci/deploy-evidence.json"
+          d = json.load(open(p)); d["git"] = {"ref": os.environ["REF"], "sha": os.environ["SHA"], "run_id": os.environ["GITHUB_RUN_ID"]}
+          json.dump(d, open(p, "w"), indent=2)
+          EOF
 
       - name: Upload evidence artifact
         if: always()

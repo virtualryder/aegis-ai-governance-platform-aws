@@ -8,6 +8,24 @@ Consequential actions declared in the manifest are WITHHELD and require the
 human gate. Every attempt — allow / deny / pending / error — is written to the
 append-only audit with masked sensitive fields and full lineage.
 
+Durable intent / outbox ordering (COPILOT-1, 2026-09-03). A side effect must never
+run without a durable record that it was authorized, and an audit failure must
+never be reported as DENY *after* the side effect happened (the caller would
+retry and duplicate a real-world action). So the ALLOW path is:
+
+    1. append AUTHORIZED-INTENT (request, agent, tool, args hash, purpose,
+       approval id, idempotency key)      -> fails => DENY, nothing consumed/run
+    2. consume the bound single-use approval (consequential only)
+    3. execute the connector with the idempotency key (the gateway also
+       de-duplicates by that key: a completed key is never executed twice -
+       a replay is DENIED with already_completed=True, output not re-served)
+    4. append COMPLETED / FAILED           -> fails => INDETERMINATE
+       (RECONCILIATION_REQUIRED): the effect happened, the INTENT row is the
+       reconciliation anchor, the caller must not retry.
+
+Mirror on the AgentCore path: governed-core finalize_signoff writes INTENT
+before COMMITTED and refuses on an unwritable INTENT (benefits DEPLOYMENT-GUIDE).
+
 This is the offline analog of AgentCore Gateway + Policy in AgentCore (Cedar).
 No AWS, no network.
 """
@@ -15,12 +33,13 @@ No AWS, no network.
 from __future__ import annotations
 
 import hashlib
+import inspect
 import secrets
 import time
 from dataclasses import dataclass, field
 
 from . import masker
-from .approval_ledger import ApprovalError, ApprovalLedger
+from .approval_ledger import ApprovalError, ApprovalLedger, arguments_hash
 from .audit_ledger import AuditLedger
 from .chargeback import UsageLedger
 from .policy_engine import AuthContext, Decision, Effect, PolicyEngine
@@ -29,6 +48,17 @@ from .token_budget import BudgetRegistry
 
 def _hash(s) -> str:
     return hashlib.sha256(str(s).encode("utf-8")).hexdigest()[:16]
+
+
+def _accepts_idempotency_key(handler) -> bool:
+    """True if the connector takes an `idempotency_key` keyword (or **kwargs)."""
+    try:
+        params = inspect.signature(handler).parameters
+    except (TypeError, ValueError):
+        return False
+    if "idempotency_key" in params:
+        return True
+    return any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
 
 
 @dataclass
@@ -62,10 +92,18 @@ class GatewayResult:
     audit_record: object = None
     scoped_token: str = ""
     masked_payload: str = ""
+    idempotency_key: str = ""
+    intent_record: object = None    # the AUTHORIZED-INTENT row (reconciliation anchor)
+    already_completed: bool = False # replay of a key that reached COMPLETED (never re-executed)
 
     @property
     def allowed(self) -> bool:
         return self.effect is Effect.ALLOW
+
+    @property
+    def reconciliation_required(self) -> bool:
+        """The side effect ran but its completion could not be recorded."""
+        return self.effect is Effect.INDETERMINATE
 
 
 class AuthorizationGateway:
@@ -86,8 +124,12 @@ class AuthorizationGateway:
         self.usage = usage
         self.policy = policy or PolicyEngine()
         self.kill_switch = kill_switch
-        self._tools = {}   # tool_id -> callable(arguments) -> output
+        self._tools = {}   # tool_id -> callable(arguments[, idempotency_key]) -> output
         self._agents = {}  # agent_id -> manifest
+        # Outbox: idempotency keys that reached COMPLETED. The offline analog
+        # of the DynamoDB conditional put on the intent table; a key that already
+        # completed is answered from here and NEVER executed again.
+        self._completed = {}
 
     # ----- registration ------------------------------------------------- #
     def register_agent(self, manifest: dict) -> None:
@@ -95,7 +137,19 @@ class AuthorizationGateway:
         self.budgets.register_from_manifest(manifest)
 
     def register_tool(self, tool_id: str, handler) -> None:
-        self._tools[tool_id] = handler
+        """Register a connector. A connector that accepts `idempotency_key` receives the
+        gateway's key on every call (mandatory for real connectors — see
+        infra/golden-pilot/CONNECTOR-PILOT.md); one that does not is still protected by
+        the gateway-level de-duplication in call()."""
+        self._tools[tool_id] = (handler, _accepts_idempotency_key(handler))
+
+    @staticmethod
+    def idempotency_key(agent_id: str, tool_id: str, arguments, approval_id: str, request_id: str) -> str:
+        """One key per authorized action: a consequential call is keyed by its single-use
+        approval (so a retry after INDETERMINATE can never execute twice), any other
+        call by its request id."""
+        material = "|".join([agent_id, tool_id, arguments_hash(arguments), approval_id or request_id])
+        return hashlib.sha256(material.encode("utf-8")).hexdigest()[:32]
 
     # ----- the brokered call -------------------------------------------- #
     def call(self, tc: ToolCall) -> GatewayResult:
@@ -144,6 +198,33 @@ class AuthorizationGateway:
             )
             return GatewayResult(
                 Effect.DENY, f"masking_fail_closed: {exc}", audit_record=rec
+            )
+
+        # --- outbox de-duplication: a completed key never runs twice ---- #
+        # Checked BEFORE policy / budget / approval. A key that already reached
+        # COMPLETED is a replay - after an INDETERMINATE answer or a hostile
+        # re-submission alike - and is DENIED without touching the connector.
+        # Single-use means single response too: the recorded output is not
+        # re-served; the INTENT/COMPLETED rows (same key) are the reconciliation
+        # record. `already_completed` tells a reconciling caller not to retry.
+        idem_key = self.idempotency_key(
+            tc.agent_id, tc.tool_id, tc.arguments, tc.approval_id, request_id)
+        if idem_key in self._completed:
+            reason = ("already_completed: single-use approval already consumed and the action "
+                      "executed once; replay refused, not re-executed")
+            try:
+                rec = self.audit.append(
+                    request_id=request_id, user=tc.user, agent_id=tc.agent_id,
+                    tool_id=tc.tool_id, purpose=tc.purpose, data_class=tc.data_classes,
+                    policy_decision="DENY", decision_reason=reason,
+                    input_hash=_hash(tc.arguments), approval_id=tc.approval_id,
+                    masked_fields=masked_fields, idempotency_key=idem_key,
+                )
+            except Exception:  # noqa: BLE001 - a refusal needs no new side effect
+                rec = None
+            return GatewayResult(
+                Effect.DENY, reason, audit_record=rec, masked_payload=masked_payload,
+                idempotency_key=idem_key, already_completed=True,
             )
 
         # --- FinOps budget preflight ------------------------------------ #
@@ -221,9 +302,54 @@ class AuthorizationGateway:
                 audit_record=rec, masked_payload=masked_payload,
             )
 
-        # --- consequential: consume the bound, single-use approval ------ #
+        # (The bound single-use approval is consumed AFTER the AUTHORIZED-INTENT
+        # record is durable and only for a registered connector - see below.)
+
+        # --- default-deny: a tool with no registered handler cannot run - #
+        # The gateway is fail-closed: policy may ALLOW, but if nothing is
+        # actually wired to service the call we DENY rather than fabricate
+        # a success. This closes the offline fail-open where an unregistered
+        # tool returned {"ok": True}.
+        registered = self._tools.get(tc.tool_id)
+        if registered is None:
+            rec = self.audit.append(
+                request_id=request_id, user=tc.user, agent_id=tc.agent_id,
+                tool_id=tc.tool_id, purpose=tc.purpose,
+                data_class=tc.data_classes, policy_decision="DENY",
+                decision_reason="tool-not-registered",
+                approval_id=tc.approval_id, masked_fields=masked_fields,
+            )
+            return GatewayResult(
+                Effect.DENY, "tool-not-registered",
+                audit_record=rec, masked_payload=masked_payload,
+            )
+        handler, accepts_key = registered
         consequential = set(manifest.get("grants", {}).get("consequential", []))
-        if tc.tool_id in consequential:
+        is_consequential = tc.tool_id in consequential
+
+        # --- 1. AUTHORIZED-INTENT, durable BEFORE any consume / execute -- #
+        # If this write fails nothing has happened yet, so DENY is truthful and
+        # a retry is safe: no approval consumed, no connector called.
+        try:
+            intent = self.audit.append(
+                request_id=request_id, user=tc.user, agent_id=tc.agent_id,
+                tool_id=tc.tool_id, purpose=tc.purpose, data_class=tc.data_classes,
+                policy_decision="INTENT",
+                decision_reason=f"authorized_intent: {decision.reason}",
+                model_profile=tc.model_profile, prompt_version=tc.prompt_version,
+                retrieved_source_ids=tc.retrieved_source_ids,
+                input_hash=_hash(tc.arguments), approval_id=tc.approval_id,
+                masked_fields=masked_fields, grounded=tc.grounded,
+                idempotency_key=idem_key,
+            )
+        except Exception as exc:  # noqa: BLE001 - intent must be durable first
+            return GatewayResult(
+                Effect.DENY, f"audit_fail_closed: intent not durable, nothing executed: {exc}",
+                masked_payload=masked_payload, idempotency_key=idem_key,
+            )
+
+        # --- 2. consequential: consume the bound, single-use approval --- #
+        if is_consequential:
             try:
                 self.approvals.consume(
                     tc.approval_id, tc.agent_id, tc.tool_id,
@@ -236,36 +362,22 @@ class AuthorizationGateway:
                     data_class=tc.data_classes, policy_decision="DENY",
                     decision_reason=f"approval_consume_failed: {exc}",
                     approval_id=tc.approval_id, masked_fields=masked_fields,
+                    idempotency_key=idem_key,
                 )
                 return GatewayResult(
-                    Effect.DENY, f"approval_consume_failed: {exc}", audit_record=rec
+                    Effect.DENY, f"approval_consume_failed: {exc}",
+                    audit_record=rec, intent_record=intent, idempotency_key=idem_key,
                 )
-
-        # --- default-deny: a tool with no registered handler cannot run - #
-        # The gateway is fail-closed: policy may ALLOW, but if nothing is
-        # actually wired to service the call we DENY rather than fabricate
-        # a success. This closes the offline fail-open where an unregistered
-        # tool returned {"ok": True}.
-        handler = self._tools.get(tc.tool_id)
-        if handler is None:
-            rec = self.audit.append(
-                request_id=request_id, user=tc.user, agent_id=tc.agent_id,
-                tool_id=tc.tool_id, purpose=tc.purpose,
-                data_class=tc.data_classes, policy_decision="DENY",
-                decision_reason="tool-not-registered",
-                approval_id=tc.approval_id, masked_fields=masked_fields,
-            )
-            return GatewayResult(
-                Effect.DENY, "tool-not-registered",
-                audit_record=rec, masked_payload=masked_payload,
-            )
 
         # --- mint a scoped, per-call token (simulated OBO/STS) ---------- #
         scoped_token = self._mint_scoped_token(tc)
 
-        # --- execute the tool ------------------------------------------- #
+        # --- 3. execute the connector with the idempotency key ---------- #
         try:
-            output = handler(tc.arguments)
+            if accepts_key:
+                output = handler(tc.arguments, idempotency_key=idem_key)
+            else:
+                output = handler(tc.arguments)
             exec_error = None
         except Exception as exc:  # noqa: BLE001 - boundary must capture all
             output, exec_error = None, str(exc)
@@ -298,11 +410,10 @@ class AuthorizationGateway:
             cost_usd=cost_usd,
         )
 
-        # --- masked append-only audit ----------------------------------- #
-        # If the audit write fails on a consequential or sensitive call we
-        # DENY: an unauditable side effect is not permitted (fail closed).
-        consequential = set(manifest.get("grants", {}).get("consequential", []))
-        sensitive = bool(set(tc.data_classes or []) - {"public"})
+        # --- 4. COMPLETED / FAILED record ------------------------------- #
+        # The side effect has ALREADY happened. If this write fails the truthful
+        # answer is INDETERMINATE (reconciliation required from the INTENT row),
+        # never DENY - a DENY here would invite a retry and a duplicate action.
         try:
             rec = self.audit.append(
                 request_id=request_id, user=tc.user, agent_id=tc.agent_id,
@@ -315,25 +426,32 @@ class AuthorizationGateway:
                 approval_id=tc.approval_id, tokens_in=tokens_in,
                 tokens_out=tokens_out, cost_usd=cost_usd,
                 masked_fields=masked_fields, grounded=tc.grounded,
+                idempotency_key=idem_key,
             )
-        except Exception as exc:  # noqa: BLE001 - audit fault handling
-            if tc.tool_id in consequential or sensitive:
-                return GatewayResult(
-                    Effect.DENY, f"audit_fail_closed: {exc}",
-                    masked_payload=masked_payload,
-                )
-            raise
+        except Exception as exc:  # noqa: BLE001 - completion not durable
+            if exec_error is None:
+                # Recorded in the outbox so a retry with the same key is answered
+                # from here and never executed again.
+                self._completed[idem_key] = True
+            return GatewayResult(
+                Effect.INDETERMINATE,
+                f"reconciliation_required: side effect executed, completion record not durable: {exc}",
+                output=output, intent_record=intent, scoped_token=scoped_token,
+                masked_payload=masked_payload, idempotency_key=idem_key,
+            )
 
         if exec_error:
             return GatewayResult(
                 Effect.DENY, f"tool_exec_error: {exec_error}",
-                audit_record=rec, masked_payload=masked_payload,
+                audit_record=rec, intent_record=intent,
+                masked_payload=masked_payload, idempotency_key=idem_key,
             )
 
+        self._completed[idem_key] = True
         return GatewayResult(
             Effect.ALLOW, decision.reason, output=output,
-            audit_record=rec, scoped_token=scoped_token,
-            masked_payload=masked_payload,
+            audit_record=rec, intent_record=intent, scoped_token=scoped_token,
+            masked_payload=masked_payload, idempotency_key=idem_key,
         )
 
     def _mint_scoped_token(self, tc: ToolCall) -> str:

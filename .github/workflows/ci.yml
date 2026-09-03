@@ -28,6 +28,18 @@ jobs:
       - name: Byte-compile control plane, demo, and tools
         run: python -m compileall platform_core demo tools
 
+      # COPILOT-4: every tracked shell script must be LF and parse; the layer staging script must run.
+      - name: Shell scripts are LF and parse (bash -n); stage the layer; the deployed authorizer is the reviewed engine
+        run: |
+          set -e
+          bad=0
+          while IFS= read -r f; do
+            if grep -q $'\r' "$f"; then echo "CRLF line endings: $f"; bad=1; fi
+            bash -n "$f" || bad=1
+          done < <(git ls-files '*.sh')
+          test "$bad" -eq 0
+          (cd infra/golden-pilot && bash prepare_layer.sh && python verify_authorizer_engine.py)
+
       - name: Check MATURITY.yaml test count (drift gate)
         run: python tools/check_maturity.py
 
@@ -42,6 +54,9 @@ jobs:
 
       - name: Run negative-security suite
         run: python demo/test_negative_security.py
+
+      - name: Durable intent / outbox ordering (COPILOT-1)
+        run: PYTHONPATH=platform_core:. python -m pytest demo/test_outbox.py -q -rs
 
       # Previously NOT run by CI at all: platform_core/tests (AGP conformance, NER masker,
       # status-drift gate) and demo/test_acceptance.py + demo/test_evidence_vault.py. They passed,

@@ -58,7 +58,7 @@ TOTAL                                                                4       5,0
 
 [PASS] step 17: clean teardown of demo_out
 ============================================================
-  RESULT: 18/18 steps passed, 0 failed
+  RESULT: 19/19 steps passed, 0 failed
 ============================================================
 ```
 

@@ -1,0 +1,185 @@
+{
+  "stack": "aegis-mcp-gateway-r13",
+  "region": "us-east-1",
+  "decisions": {
+    "ALLOW": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[fixture] kb.search_policy executed. args={\"query\": \"privacy policy\"}"
+          }
+        ],
+        "isError": false
+      },
+      "_http": 200
+    },
+    "ALLOW_MASKED": {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "[fixture] ticket.create_draft executed. args={\"summary\": \"Resident SSN [SSN-REDACTED] email [EMAIL-REDACTED] needs help\"}"
+          }
+        ],
+        "isError": false
+      },
+      "_http": 200
+    },
+    "DENY_DEFAULT": {
+      "jsonrpc": "2.0",
+      "id": 3,
+      "error": {
+        "code": -32601,
+        "message": "deny: agent 'aegis-mcp-gateway' has no grant for tool 'db.drop'"
+      },
+      "_http": 200
+    },
+    "HUMAN_GATE": {
+      "jsonrpc": "2.0",
+      "id": 4,
+      "error": {
+        "code": -32003,
+        "message": "deny: tool 'ticket.submit' is a consequential action withheld from the agent; a valid human-gate approval is required (bound single-use approval required \u2014 see reviewer service, Runs 5/7)"
+      },
+      "_http": 200
+    }
+  },
+  "no_entitlement_claim": {
+    "LIST": {
+      "jsonrpc": "2.0",
+      "id": 10,
+      "error": {
+        "code": -32003,
+        "message": "deny: no entitlement claim on the token - zero tools"
+      },
+      "_http": 403
+    },
+    "CALL": {
+      "jsonrpc": "2.0",
+      "id": 11,
+      "error": {
+        "code": -32003,
+        "message": "deny: no entitlement claim on the token - zero tools"
+      },
+      "_http": 403
+    }
+  },
+  "allow_default_entitlements": "0",
+  "bound_approvals": {
+    "issued": {
+      "decision": "APPROVE",
+      "approval_id": "73711f1ab338…",
+      "reviewer": "supervisor-bob"
+    },
+    "approval_id_prefix": "73711f1ab338",
+    "cases": {
+      "MODIFIED_ARGS": {
+        "jsonrpc": "2.0",
+        "id": 20,
+        "error": {
+          "code": -32601,
+          "message": "deny: approval not consumable: unknown, expired, already used, or not bound to this caller + agent + tool + arguments + purpose"
+        },
+        "_http": 200
+      },
+      "WRONG_TOOL": {
+        "jsonrpc": "2.0",
+        "id": 21,
+        "error": {
+          "code": -32601,
+          "message": "deny: approval not consumable: unknown, expired, already used, or not bound to this caller + agent + tool + arguments + purpose"
+        },
+        "_http": 200
+      },
+      "EXACT": {
+        "jsonrpc": "2.0",
+        "id": 22,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "[fixture] ticket.submit executed. args={\"ticket_id\": \"T-R13\", \"approval_id\": \"73711f1ab338dce4ffedd23bd45f8d70daebb1e5898ae491239f02ce2cd593c9\"}"
+            }
+          ],
+          "isError": false
+        },
+        "_http": 200
+      },
+      "REPLAY": {
+        "jsonrpc": "2.0",
+        "id": 23,
+        "error": {
+          "code": -32601,
+          "message": "deny: approval not consumable: unknown, expired, already used, or not bound to this caller + agent + tool + arguments + purpose"
+        },
+        "_http": 200
+      }
+    }
+  },
+  "iam_simulation": {
+    "dynamodb:PutItem": "allowed",
+    "dynamodb:UpdateItem": "explicitDeny",
+    "dynamodb:DeleteItem": "explicitDeny"
+  },
+  "audit_rows": [
+    {
+      "tool": "kb.search_policy",
+      "decision": "allow",
+      "detail": "{\"query\": \"privacy policy\"}"
+    },
+    {
+      "tool": "ticket.create_draft",
+      "decision": "allow",
+      "detail": "{\"summary\": \"Resident SSN [SSN-REDACTED] email [EMAIL-REDACTED] needs help\"}"
+    },
+    {
+      "tool": "db.drop",
+      "decision": "deny",
+      "detail": "agent 'aegis-mcp-gateway' has no grant for tool 'db.drop'"
+    },
+    {
+      "tool": "ticket.submit",
+      "decision": "deny",
+      "detail": "approval_required: tool 'ticket.submit' is a consequential action withheld from the agent; a valid human-gate approval is required"
+    },
+    {
+      "tool": "*",
+      "decision": "deny",
+      "detail": "tools/list: no entitlement claim (custom:tools/scope) - zero tools"
+    },
+    {
+      "tool": "kb.search_policy",
+      "decision": "deny",
+      "detail": "no entitlement claim (custom:tools/scope) - zero tools"
+    },
+    {
+      "tool": "ticket.submit",
+      "decision": "deny",
+      "detail": "approval not consumable: unknown, expired, already used, or not bound to this caller + agent + tool + arguments + purpose"
+    },
+    {
+      "tool": "ticket.submit",
+      "decision": "deny",
+      "detail": "approval not consumable: unknown, expired, already used, or not bound to this caller + agent + tool + arguments + purpose"
+    },
+    {
+      "tool": "ticket.submit",
+      "decision": "allow",
+      "detail": "{\"ticket_id\": \"T-R13\", \"approval_id\": \"73711f1ab338dce4ffedd23bd45f8d70daebb1e5898ae491239f02ce2cd593c9\"}"
+    },
+    {
+      "tool": "ticket.submit",
+      "decision": "deny",
+      "detail": "approval not consumable: unknown, expired, already used, or not bound to this caller + agent + tool + arguments + purpose"
+    }
+  ],
+  "control_checks": {
+    "passed": true,
+    "problems": []
+  }
+}

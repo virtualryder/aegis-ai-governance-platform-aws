@@ -31,24 +31,37 @@ def main() -> int:
     sys.path.insert(0, os.path.join(HERE, "gateway-src"))
 
     os.environ.setdefault("TABLE", "verify-table")
-    os.environ["LEDGER"] = ""  # no ledger -> consequential must fail closed
+    os.environ["LEDGER"] = ""  # no ledger -> consequential must fail closed (re-enabled per check below)
+    os.environ.pop("ALLOW_DEFAULT_ENTITLEMENTS", None)
 
-    # Stub boto3 so the handler imports without AWS; capture audit writes.
+    # Stub boto3 so the handler imports without AWS; capture audit writes. The stub
+    # ledger evaluates the SAME binding the real ConditionExpression enforces
+    # (COPILOT-2), so the consume path is exercised offline exactly as deployed.
     writes = []
+    ledger = {}
+
+    def _update_item(**kw):
+        row = ledger.get(kw["Key"]["approval_id"]["S"])
+        v = kw["ExpressionAttributeValues"]
+        cond = (row is not None and "consumed_at" not in row and int(row["expires_at"]) > int(v[":now"]["N"])
+                and row["requester"] == v[":sub"]["S"] and row["agent_id"] == v[":agent"]["S"]
+                and row["tool_id"] == v[":tool"]["S"] and row["args_hash"] == v[":args"]["S"]
+                and row["purpose"] == v[":purpose"]["S"])
+        if not cond:
+            raise Exception("ConditionalCheckFailedException")
+        row["consumed_at"] = v[":now"]["N"]
     boto3 = types.ModuleType("boto3")
-    boto3.client = lambda *a, **k: types.SimpleNamespace(
-        put_item=lambda **kw: writes.append(kw),
-        update_item=lambda **kw: (_ for _ in ()).throw(Exception("no ledger")),
-    )
+    boto3.client = lambda *a, **k: types.SimpleNamespace(put_item=lambda **kw: writes.append(kw), update_item=_update_item)
     sys.modules["boto3"] = boto3
 
     import handler as h
     from platform_core import masker, policy_engine
+    from platform_core.approval_ledger import arguments_hash
 
     # 1) Decisions must come from the reviewed predicate.
     assert isinstance(h.POLICY, policy_engine.PolicyEngine), "authorizer must use platform_core.PolicyEngine"
 
-    claims = {"sub": "alice"}
+    claims = {"sub": "alice", "custom:tools": "kb.search_policy ticket.create_draft ticket.submit"}
     cases = {
         "kb.search_policy": "ALLOW",          # granted + entitled + purpose ok
         "db.drop": "DENY",                    # deny-by-default: no agent grant
@@ -59,6 +72,45 @@ def main() -> int:
         got = eff.value
         assert got == expected, f"{tool}: expected {expected}, got {got} ({reason})"
         print(f"  ok  {tool:20s} -> {got}")
+
+    # 1b) COPILOT-3: no / malformed entitlement claim => ZERO tools, never a default.
+    assert h.ALLOW_DEFAULT_ENTITLEMENTS is False, "demo default must be OFF unless ALLOW_DEFAULT_ENTITLEMENTS=1"
+    for bad in ({"sub": "bob"}, {"sub": "bob", "custom:tools": ""}, {"sub": "bob", "custom:tools": ["kb.search_policy"]},
+                {"sub": "bob", "scope": 42}):
+        assert h._entitlements(bad) == set(), f"claims {bad} must yield zero entitlements"
+        eff, reason, _ = h._evaluate(bad, "kb.search_policy", {})
+        assert eff.value == "DENY", f"no-claim caller must be denied: {reason}"
+    ev = lambda body, c: h.handler({"requestContext": {"authorizer": {"jwt": {"claims": c}}}, "body": json.dumps(body)}, None)
+    r = ev({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}, {"sub": "bob"})
+    assert r["statusCode"] == 403 and "zero tools" in r["body"], r
+    r = ev({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "kb.search_policy", "arguments": {"query": "x"}}}, {"sub": "bob"})
+    assert r["statusCode"] == 403 and "zero tools" in r["body"], r
+    r = ev({"jsonrpc": "2.0", "id": 3, "method": "tools/list"}, {"sub": "carol", "custom:tools": "kb.search_policy"})
+    assert [t["name"] for t in json.loads(r["body"])["result"]["tools"]] == ["kb.search_policy"], "tools/list must be the entitlement intersection"
+    print("  ok  no / malformed entitlement claim -> zero tools (403); tools/list = intersection")
+
+    # 1c) COPILOT-2: the approval is bound to the FULL action at consumption.
+    h.LEDGER = "verify-ledger"
+    agent = h.MANIFEST["metadata"]["id"]
+    good_args = {"ticket_id": "T1"}
+    def mint(aid, **over):
+        row = {"requester": "alice", "expires_at": str(int(__import__("time").time()) + 600), "agent_id": agent,
+               "tool_id": "ticket.submit", "args_hash": arguments_hash(good_args), "purpose": "decision_support"}
+        row.update(over); ledger[aid] = row
+    mint("ap-args");  eff, reason, _ = h._evaluate(claims, "ticket.submit", {"ticket_id": "T2", "approval_id": "ap-args"})
+    assert eff.value == "DENY" and "consumed_at" not in ledger["ap-args"], f"modified args must be refused: {reason}"
+    mint("ap-tool", tool_id="ticket.create_draft"); eff, reason, _ = h._evaluate(claims, "ticket.submit", {"ticket_id": "T1", "approval_id": "ap-tool"})
+    assert eff.value == "DENY" and "consumed_at" not in ledger["ap-tool"], f"wrong tool must be refused: {reason}"
+    mint("ap-purpose", purpose="lookup"); eff, reason, _ = h._evaluate(claims, "ticket.submit", {"ticket_id": "T1", "approval_id": "ap-purpose"})
+    assert eff.value == "DENY", f"wrong purpose must be refused: {reason}"
+    mint("ap-other", requester="mallory"); eff, reason, _ = h._evaluate(claims, "ticket.submit", {"ticket_id": "T1", "approval_id": "ap-other"})
+    assert eff.value == "DENY", f"another requester's approval must be refused: {reason}"
+    mint("ap-good"); eff, reason, _ = h._evaluate(claims, "ticket.submit", {"ticket_id": "T1", "approval_id": "ap-good"})
+    assert eff.value == "ALLOW" and "consumed_at" in ledger["ap-good"], f"the exact bound action must consume + ALLOW: {reason}"
+    eff, reason, _ = h._evaluate(claims, "ticket.submit", {"ticket_id": "T1", "approval_id": "ap-good"})
+    assert eff.value == "DENY", f"replay of the consumed approval must be refused: {reason}"
+    h.LEDGER = ""
+    print("  ok  approval bound at consumption: args / tool / purpose / requester mismatch -> DENY; exact -> ALLOW once")
 
     # 2) Masking must come from the reviewed fail-closed masker (not a one-liner).
     masked = h._mask("SSN 123-45-6789, card 4111 1111 1111 1111, email a@b.com", ["pii", "card"])

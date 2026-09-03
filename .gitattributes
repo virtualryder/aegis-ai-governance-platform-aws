@@ -33,3 +33,13 @@
 
 # SVG is text (XML) — keep diffable, but pin LF so it round-trips cleanly.
 *.svg   text eol=lf
+
+# COPILOT-4 (2026-09-03): shell scripts, Python, YAML, JSON and TOML are LF in the repository — a script
+# committed with CRLF fails on Linux (`set -euo pipefail\r`: "invalid option name"), which is exactly
+# how the deploy-evidence workflow's layer-staging step broke. CI runs `bash -n` over every *.sh.
+*.sh    text eol=lf
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.json  text eol=lf
+*.toml  text eol=lf
