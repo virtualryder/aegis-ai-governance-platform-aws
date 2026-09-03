@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generate docs/ARCHITECTURE-DEPLOYED.drawio — the governance platform as ACTUALLY deployed and
-live-validated (benefits v0.3.0-pilot-rc1 + kill switch on main 2026-09-03, governed-core 1.8.0, platform reference stack).
+live-validated (benefits v0.3.0-pilot-rc1 + kill switch + per-tenant budget on main 2026-09-03, governed-core 1.9.0, platform reference stack).
 
 Every element carries one of three status tags, rendered as a colored pill:
   LIVE      deployed + exercised with real requests, evidence file cited
@@ -87,11 +87,11 @@ def text(label, x, y, w, h, fs=11, bold=0, color="#232F3E", parent="1", align="l
 W = 2360
 # ---------------------------------------------------------------- title ----------------------------
 text("<b>AEGIS Governance Platform on Amazon Bedrock AgentCore — as DEPLOYED and LIVE-VALIDATED (2026-09-03)</b>", 20, 10, 1500, 30, fs=20)
-text("Benefits Eligibility pack <b>v0.3.0-pilot-rc1</b> + kill switch (main, 2026-09-03) · governed-core <b>1.8.0</b> (hash-pinned) · AWS account-agnostic, us-east-1 · Every element is tagged "
+text("Benefits Eligibility pack <b>v0.3.0-pilot-rc1</b> + kill switch + per-tenant token/USD budget (main, 2026-09-03) · governed-core <b>1.9.0</b> (hash-pinned) · AWS account-agnostic, us-east-1 · Every element is tagged "
      "<font color='#1D8102'><b>LIVE</b></font> (deployed + exercised with real requests; evidence file cited) · "
      "<font color='#B7791F'><b>OFFLINE</b></font> (implemented + unit-tested in platform_core, not wired into a deployed path) · "
      "<font color='#8B8B8B'><b>NOT BUILT</b></font> (design only). Nothing aspirational is drawn as if it existed. Sources: "
-     "benefits/evidence/AGENTCORE-*-2026-09-02.md, AGENTCORE-111-GATE-2026-09-02.md, AGENTCORE-KILL-SWITCH-2026-09-03.md, EP1-VALIDATION.md; platform DEPLOYED-AND-VALIDATED.md, MATURITY.yaml.",
+     "benefits/evidence/AGENTCORE-*-2026-09-02.md, AGENTCORE-111-GATE-2026-09-02.md, AGENTCORE-KILL-SWITCH-2026-09-03.md, AGENTCORE-BUDGET-2026-09-03.md, EP1-VALIDATION.md; platform DEPLOYED-AND-VALIDATED.md, MATURITY.yaml.",
      20, 42, 2300, 44, fs=11)
 
 # ---------------------------------------------------------------- AWS cloud ------------------------
@@ -116,7 +116,7 @@ box("<b>Evidence</b>: cw-a / cw-b / cw-none live runs — AGENTCORE-MULTITENANT-
 
 # ===== Layer 2: Runtime + model ====================================================================
 L2 = group("LAYER 2 · AGENT RUNTIME + MODEL — the reasoning.  Protects: session isolation, tenant-bound session, guardrailed generation, masked-before-model.  Tracks: every span + every model call, tagged per tenant / session / case.",
-           "group_ai_ml", C_ML, 40, 355, 1120, 330, parent=cloud)
+           "group_ai_ml", C_ML, 40, 355, 1120, 365, parent=cloud)
 rt = icon("bedrock", "Amazon Bedrock AgentCore RUNTIME — Strands agent, ADOT, microVM per session", C_ML, 100, 420, parent=L2, lw=140)
 pill("LIVE", 100, 538, parent=L2)
 model = icon("bedrock", "Amazon Bedrock model — Claude Sonnet 4.5 (ConverseStream)", C_ML, 300, 420, parent=L2, lw=170)
@@ -131,15 +131,17 @@ box("<b>What the runtime does on every invocation</b><br>• binds <code>session
 box("<b>Evidence</b>: real Runtime, 2 tenants, 13/13 checks each — AGENTCORE-OBSERVABILITY-2026-09-02.md; repeated on the release tag — AGENTCORE-111-GATE-2026-09-02.md; masked_before_model = true on every model invocation. "
     "Guardrail G1 wired + validated 2026-08-29 (ben-demo); the multi-tenant runs used the sandbox (unguarded) switch.",
     690, 545, 450, 130, fill="#F7F7F7", parent=L2)
-box("<b>TOKEN BUDGETS / COST CEILING — honest status</b><br>"
-    "<font color='#1D8102'><b>LIVE</b></font> tracked: inputTokenCount / outputTokenCount per invocation (model log) + gen_ai.usage on every span, tagged per tenant / session / case.<br>"
-    "<font color='#B7791F'><b>OFFLINE</b></font> capped: platform_core/token_budget.py hard/soft meter (preflight denies) + manifest <code>budget:</code> 5M tokens/month hard — read by NO deployed component today.<br>"
-    "<font color='#8B8B8B'><b>NOT BUILT</b></font>: AWS Budgets $ ceiling with an action → kill switch; per-tenant live meter. Design + build list B1–B5: docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md",
-    70, 562, 600, 113, fill="#FFF8E7", stroke=OFFLINE, parent=L2)
+box("<b>PER-TENANT TOKEN + USD BUDGET / COST CEILING</b> &nbsp;<font color='#1D8102'><b>LIVE 2026-09-03 · 24/24</b></font><br>"
+    "governed-core 1.9.0 <code>budget.py</code>: <b>reserve BEFORE every model call</b> (one conditional DynamoDB ADD, <code>used &lt;= cap</code>, no oversell) in the Runtime (botocore hook), the drafter and the gateway interceptor (at cap ⇒ 403 + DENIED WORM record); "
+    "<b>commit the real Converse usage AFTER</b>, USD from a pinned price table (version on every row). Meter == model-invocation log to the token. Hard = fail-closed (a RUNNING session stops at its next model call; DraftNotice ⇒ ManualReview); soft = flag. "
+    "Alarms 60/85/100 % (Aegis/Budget). <b>AWS Budgets</b> $ ceiling (Bedrock; ACTUAL + FORECASTED) → IAM-deny action at 100 % + breach Lambda → <b>kill switch</b> (Budgets lags ≤ 3×/day; the meter is the real-time guard). Manifest <code>budget:</code> = what is enforced.",
+    70, 562, 470, 150, fill="#EAF7EA", stroke=LIVE, parent=L2)
+bud_tbl = icon("dynamodb", "&lt;prefix&gt;-budgets table — the per-tenant meter (tenant#YYYY-MM)", C_DB, 590, 566, w=40, h=40, parent=L2, lw=120)
+bud_aws = icon("budgets", "AWS Budgets $ ceiling → IAM deny + breach → kill switch", C_MGMT, 590, 640, w=40, h=40, parent=L2, lw=120)
 
 # ===== Layer 3: Gateway + policy ===================================================================
 L3 = group("LAYER 3 · GOVERNED TOOL GATEWAY — every tool call is authorized.  Protects: deny-by-default, mask-before-use, no self-commit, tenant scope.  Tracks: every request row (initialize / tools/list / tools/call) with trace + request ids.",
-           "group_security_identity_compliance", C_SEC, 1180, 355, 1140, 330, parent=cloud)
+           "group_security_identity_compliance", C_SEC, 1180, 355, 1140, 365, parent=cloud)
 gw = icon("bedrock", "AgentCore GATEWAY (MCP, CUSTOM_JWT) — 10 tools over 8 Lambda targets", C_ML, 1730, 420, parent=L3, lw=170)
 pill("LIVE", 1730, 538, parent=L3)
 pe = icon("identity_and_access_management", "AgentCore POLICY engine — Cedar, ENFORCE (AWS preview); platform_core engine = fail-closed oracle", C_SEC, 1940, 420, parent=L3, lw=170)
@@ -151,15 +153,15 @@ box("<b>Cedar policies (deny-by-default)</b>: caseworker_permit · mask_before_a
     "from the MCP _meta context; un-tenanted ⇒ 403 verbatim. Caller-supplied values are overwritten; targets trust ONLY a verifying signature.",
     1210, 395, 480, 115, parent=L3)
 box("<b>Evidence</b>: ENFORCE from zero — AGENTCORE-E2E-FROMZERO-2026-09-02.md · cross-tenant deny (cw-none: 0 tools, 403) — AGENTCORE-MULTITENANT-E2E · 33 gateway request rows per session joined by trace id — AGENTCORE-OBSERVABILITY · "
-    "kill switch 29/29, 13.9 s to effect — AGENTCORE-KILL-SWITCH-2026-09-03.md · red-team + 29-check demo — README.",
-    1730, 562, 360, 113, fill="#F7F7F7", parent=L3)
+    "kill switch 29/29, 13.9 s to effect — AGENTCORE-KILL-SWITCH-2026-09-03.md · budget: capped tenant 403 at the gateway + DENIED row — AGENTCORE-BUDGET-2026-09-03.md (24/24) · red-team + 29-check demo — README.",
+    1730, 562, 360, 148, fill="#F7F7F7", parent=L3)
 box("<b>KILL SWITCH — one command stops everything</b> &nbsp;<font color='#1D8102'><b>LIVE 2026-09-03 · 29/29 · 13.9 s to effect</b></font><br>"
     "SSM <code>/ben-&lt;env&gt;-eligibility/kill-switch</code> (+ optional platform-wide <code>/aegis/kill-switch</code>) is read FIRST — before tenancy, Cedar, masking, sign-off — by the REQUEST interceptor "
     "(tools/list + tools/call ⇒ 403 + DENIED record in the tenant's WORM ledger), by EVERY tool Lambda (<code>KillSwitchEngaged</code> before the handler; a running workflow fails at its next state) and by the Runtime "
     "(new invocation refused; a RUNNING session stopped at its next model call). Fail-closed if unreadable; 15 s TTL cache.<br>"
     "<b>Engage / disengage</b> = two Lambda function URLs (AuthType AWS_IAM, SigV4), one IAM policy each (SoD) + in-code same-identity refusal; the actor is the IAM-verified caller ARN; "
     "every state change = COMMITTED row in the base ledger's hash-chained KILL-SWITCH case, WORM copy. Platform reference gateway: same design, LIVE (Run 11).",
-    1210, 520, 480, 155, fill="#EAF7EA", stroke=LIVE, parent=L3)
+    1210, 520, 480, 190, fill="#EAF7EA", stroke=LIVE, parent=L3)
 ssm_ks = icon("systems_manager", "SSM Parameter Store — the kill-switch flag (read by every Lambda + the Runtime; written only by the controller)", C_MGMT, 2160, 578, w=44, h=44, parent=L3, lw=110)
 
 # ===== Layer 4: governed tools =====================================================================
@@ -167,19 +169,19 @@ L4 = group("LAYER 4 · GOVERNED TOOLS — one Lambda per manifest target, least-
            "group_compute", C_COMPUTE, 40, 730, 2280, 270, parent=cloud)
 tools = ["ingest-application", "intake-application", "mask-pii", "assess-eligibility", "redetermine", "overpayment", "ben-core", "write-audit",
          "request-signoff", "signoff-register", "finalize", "approve-signoff", "workflow-guards", "tenant-interceptor",
-         "kill-switch-engage (AWS_IAM URL)", "kill-switch-disengage (AWS_IAM URL)"]
+         "kill-switch-engage (AWS_IAM URL)", "kill-switch-disengage (AWS_IAM URL)", "budget-breach (SNS ← AWS Budgets)"]
 x = 70
 for name in tools:
     icon("lambda", name, C_COMPUTE, x, 775, w=48, h=48, parent=L4, lw=100)
-    x += 106
+    x += 102
 pill("LIVE", 70, 850, parent=L4)
 comp = icon("comprehend", "Amazon Comprehend DetectPiiEntities", C_ML, 1810, 775, w=48, h=48, parent=L4, lw=110)
 sm = icon("secrets_manager", "Secrets Manager — per-deploy HMAC key (sanitized_ref + tenant pair)", C_SEC, 1960, 775, w=48, h=48, parent=L4, lw=140)
 box("<b>Roles</b>: ingest = the only door for raw content (R3-2; multi-tenant: token-verified tenant) · intake = decision fields · mask_pii → Comprehend, mints the signed sanitized_ref · assess / redetermine / overpayment = deterministic rules (FPL-pinned; due-process classification) · "
-    "ben-core = draft_notice (guardrailed) / finalize / refer_fraud (Cedar-forbidden to the agent) · write_audit = canonical evidence · request_signoff / signoff_register / approve_signoff / finalize = the SoD sign-off gate · workflow_guards = state-transition guards · tenant-interceptor = Layer 3 · kill-switch-engage / -disengage = the containment controller (function URLs, IAM SoD).",
+    "ben-core = draft_notice (guardrailed) / finalize / refer_fraud (Cedar-forbidden to the agent) · write_audit = canonical evidence · request_signoff / signoff_register / approve_signoff / finalize = the SoD sign-off gate · workflow_guards = state-transition guards · tenant-interceptor = Layer 3 · kill-switch-engage / -disengage = the containment controller (function URLs, IAM SoD) · budget-breach = AWS Budgets notification → kill-switch engage.",
     70, 875, 1100, 112, parent=L4)
-box("<b>Controls in code</b> (governed-core 1.8.0 = the shared, hash-pinned control plane; benefits overrides mask_pii + provenance, declared): fail-closed masking (no proof ⇒ refuse) · sanitized_ref HMAC bound to content + tenant · R3-2 pass-by-reference (raw text never in workflow state; strict PII canary PASS) · "
-    "evidence.record_event hash chain + WORM copy + correlation block · finalize FINAL# exactly-once + approval-path verification · tenancy.route_store to the tenant's physical stores, fail-closed · telemetry.instrument = one aegis.call line per call + the kill-switch gate before every handler.",
+box("<b>Controls in code</b> (governed-core 1.9.0 = the shared, hash-pinned control plane; benefits overrides mask_pii + provenance, declared): fail-closed masking (no proof ⇒ refuse) · sanitized_ref HMAC bound to content + tenant · R3-2 pass-by-reference (raw text never in workflow state; strict PII canary PASS) · "
+    "evidence.record_event hash chain + WORM copy + correlation block · finalize FINAL# exactly-once + approval-path verification · tenancy.route_store to the tenant's physical stores, fail-closed · telemetry.instrument = one aegis.call line per call + the kill-switch gate before every handler · budget.reserve / commit around every model call (drafter, Runtime) + budget.check in the interceptor.",
     1190, 875, 700, 112, parent=L4)
 box("<b>Evidence</b>: EP1-VALIDATION.md (canary 0 leaks, AdverseNoticeHold) · AGENTCORE-MULTITENANT-AUDIT (routing 12/12) · 111 gate (0 unexpected errors, 20 log groups) · governed-core tests + 46-file lock.",
     1910, 875, 390, 112, fill="#F7F7F7", parent=L4)
@@ -216,7 +218,7 @@ cw = icon("cloudwatch", "CloudWatch Logs — Lambda · Step Functions · gateway
 xr = icon("xray", "X-Ray + Transaction Search — aws/spans: agent, model, tool + Lambda segments under ONE trace id", C_MGMT, 300, 1405, parent=L7, lw=190)
 ml = icon("bedrock", "Bedrock model-invocation log (-c model_logging=1) — exact bodies, requestMetadata per tenant / session", C_ML, 540, 1405, parent=L7, lw=190)
 ct = icon("cloudtrail", "CloudTrail data events on the WORM vault", C_MGMT, 780, 1405, parent=L7, lw=150)
-dash = icon("cloudwatch", "Dashboard + alarms → SNS (workflow failed / timed out, guard failures, governance Lambda errors)", C_MGMT, 980, 1405, parent=L7, lw=190)
+dash = icon("cloudwatch", "Dashboard + alarms → SNS (workflow failed / timed out, guard failures, governance Lambda errors, per-tenant budget 60/85/100 %)", C_MGMT, 980, 1405, parent=L7, lw=190)
 for xx in (100, 300, 540, 780, 980):
     pill("LIVE", xx, 1525, parent=L7)
 box("<b>trace_case.py</b> — one auditor timeline per case: WORM rows → correlation keys → runtime spans + reasoning events (session.id) → gateway rows (trace id) → Lambda aegis.call lines → model-invocation rows (requestMetadata.case_id; requestId = the span's aws.request_id) → Step Functions history; "
@@ -255,8 +257,8 @@ rows = [
      "record_event → transact append + WORM put → verify_chain", "LIVE", "EP1; OBSERVABILITY-VALIDATION-2026-08-29; MULTITENANT-AUDIT"),
     ("\"Show me everything that touched this case\"", "One correlation set on every span, gateway row, Lambda line, model row and WORM record; trace_case.py builds the timeline per tenant",
      "runtime → gateway → tool → WORM, joined by session/trace/request ids", "LIVE", "OBSERVABILITY 13/13 per tenant; 111 gate"),
-    ("Runaway spend / \"never exceed $X\"", "Per-tenant token usage TRACKED live (model log + spans); hard/soft cap meter exists OFFLINE (platform_core); AWS Budgets $ action NOT BUILT",
-     "today: measure per tenant, alert manually; build B1–B5: preflight deny + Budgets action → kill switch", "OFFLINE", "docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md"),
+    ("Runaway spend / \"never exceed $X\"", "governed-core 1.9.0 per-tenant meter: reserve-before / commit-after on EVERY model call (Runtime hook, drafter, interceptor), atomic conditional ADD (no oversell), USD from a pinned price table; hard cap = fail-closed incl. mid-session; 60/85/100 % alarms; AWS Budgets $ ceiling → IAM deny + kill switch",
+     "reserve (DynamoDB) → model call → commit real usage + metrics; at cap: 403 / ManualReview / session stopped; $ breach → kill switch → security lead releases", "LIVE", "AGENTCORE-BUDGET-2026-09-03 (24/24: meter == model log; alarms; breach → kill switch)"),
     ("\"Stop everything, now, and prove you did\"", "One SSM flag read FIRST by the interceptor, every tool Lambda and the Runtime (fail-closed, 15 s TTL); engage/disengage via AWS_IAM function URLs — IAM + in-code separation of duties, IAM-verified actor, every change a COMMITTED WORM row, every refusal a DENIED row",
      "engage → 403 at the gateway within one TTL, workflow fails at its next state, running session stops → security lead (different identity) releases", "LIVE", "AGENTCORE-KILL-SWITCH-2026-09-03 (29/29, 13.9 s); platform Run 11"),
     ("The IaC drifts from the claims", "MATURITY.yaml single source of truth + drift-checker in CI; hash-pinned governed-core; doc-count gates; account-id scan; release tag = validated tree",

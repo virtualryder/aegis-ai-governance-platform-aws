@@ -43,7 +43,11 @@ How each hop obtains it (all derived at a trusted boundary, none typed by the mo
    same keys as **`requestMetadata`** on every `Converse` call through a botocore event hook on the
    Bedrock client — so the model-invocation log row carries `tenant`/`session_id`/`case_id` and can be
    filtered per tenant without reading bodies. Join to the span: `requestId` ↔ the span's `aws.request_id`
-   (botocore instrumentation) and the timestamps within the same `session.id`.
+   (botocore instrumentation) and the timestamps within the same `session.id`. Since 2026-09-03 the
+   drafter's **server-side** `Converse` (`draft_notice`, the only model call made outside the Runtime) is
+   tagged the same way — `{tenant, component=draft_notice, trace_id, execution_arn, request_id}`, never a case
+   id (R3-2) — so *every* model-invocation row in the account is per-tenant filterable, and the per-tenant
+   budget meter reconciles against the log by `requestMetadata.tenant` (`AGENTCORE-BUDGET-2026-09-03.md`).
 2. **Runtime → gateway → tool.** The Strands MCP client propagates the OTEL context (`traceparent`,
    `X-Amzn-Trace-Id`, `baggage`) in the MCP request's `params._meta` (observed live — HTTP headers alone carry
    nothing); the gateway forwards it to the **REQUEST interceptor**, which — next to the

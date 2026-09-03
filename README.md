@@ -209,12 +209,13 @@ edge-to-data architecture, per-component talking points, and the control→regim
 
 **As-deployed diagram (honest, 2026-09-03):** [`docs/ARCHITECTURE-DEPLOYED.drawio`](docs/ARCHITECTURE-DEPLOYED.drawio)
 ([PNG](docs/ARCHITECTURE-DEPLOYED.png) · [PDF](docs/ARCHITECTURE-DEPLOYED.pdf)) draws only what is
-deployed and live-validated on benefits `v0.3.0-pilot-rc1` (+ the kill switch, main 2026-09-03) + governed-core 1.8.0: seven layers
+deployed and live-validated on benefits `v0.3.0-pilot-rc1` (+ the kill switch and the per-tenant budget, main 2026-09-03) + governed-core 1.9.0: seven layers
 (identity/JWT → runtime + model → governed tool gateway → governed tools → deterministic workflow →
 per-tenant data + WORM → transparency), what each protects and tracks, the evidence file behind each
 claim, and an issue → control → proof table. Every element carries a LIVE / OFFLINE / NOT BUILT pill;
-the kill switch is LIVE on the AgentCore path (29/29, 13.9 s to effect); the token-budget/cost-ceiling box is deliberately labelled with what is
-**not** built yet ([`docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md`](docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md),
+the kill switch is LIVE on the AgentCore path (29/29, 13.9 s to effect) and so is the per-tenant token + USD budget
+(24/24: meter == model-invocation log, cap refusals at gateway / drafter / runtime incl. mid-session, 60/85/100 % alarms,
+AWS Budgets USD ceiling → kill switch — [`docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md`](docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md),
 [`docs/ops/KILL-SWITCH.md`](docs/ops/KILL-SWITCH.md)). Regenerate with
 `python tools/build_architecture_diagram.py` (writes the .drawio; export PNG/PDF with draw.io desktop).
 
