@@ -207,13 +207,13 @@ In deployment this is **Amazon Bedrock AgentCore Gateway** (managed) or the **po
 See [`docs/02-REFERENCE-ARCHITECTURE.md`](docs/02-REFERENCE-ARCHITECTURE.md) for the full
 edge-to-data architecture, per-component talking points, and the control→regime mapping.
 
-**As-deployed diagram (honest, 2026-09-02):** [`docs/ARCHITECTURE-DEPLOYED.drawio`](docs/ARCHITECTURE-DEPLOYED.drawio)
+**As-deployed diagram (honest, 2026-09-03):** [`docs/ARCHITECTURE-DEPLOYED.drawio`](docs/ARCHITECTURE-DEPLOYED.drawio)
 ([PNG](docs/ARCHITECTURE-DEPLOYED.png) · [PDF](docs/ARCHITECTURE-DEPLOYED.pdf)) draws only what is
-deployed and live-validated on benefits `v0.3.0-pilot-rc1` + governed-core 1.7.1: seven layers
+deployed and live-validated on benefits `v0.3.0-pilot-rc1` (+ the kill switch, main 2026-09-03) + governed-core 1.8.0: seven layers
 (identity/JWT → runtime + model → governed tool gateway → governed tools → deterministic workflow →
 per-tenant data + WORM → transparency), what each protects and tracks, the evidence file behind each
 claim, and an issue → control → proof table. Every element carries a LIVE / OFFLINE / NOT BUILT pill;
-the token-budget/cost-ceiling and kill-switch status boxes are deliberately labelled with what is
+the kill switch is LIVE on the AgentCore path (29/29, 13.9 s to effect); the token-budget/cost-ceiling box is deliberately labelled with what is
 **not** built yet ([`docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md`](docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md),
 [`docs/ops/KILL-SWITCH.md`](docs/ops/KILL-SWITCH.md)). Regenerate with
 `python tools/build_architecture_diagram.py` (writes the .drawio; export PNG/PDF with draw.io desktop).

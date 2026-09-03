@@ -80,5 +80,5 @@ against the CUR (the financial truth) exactly as `05-FINOPS-TOKEN-BUDGETS-CHARGE
 | B4 | AWS Budgets (USD) for the account/tag with an action → engage `/aegis/kill-switch` | the dollar ceiling holds even if a meter is bypassed | budget action wired (Budgets fires on real billing data; simulate via `describe-budget-action`) |
 | B5 | Manifest `budget:` block becomes the source of the caps the CDK deploys (`-c tenants=` → per-tenant caps) | one place to set the number | synth test |
 
-Until B2 lands the Kill Switch (`docs/ops/KILL-SWITCH.md`) is the only *hard* stop, and it stops everything,
+Until B2 lands the Kill Switch (`docs/ops/KILL-SWITCH.md`; LIVE on the AgentCore path since 2026-09-03, 29/29) is the only *hard* stop, and it stops everything,
 not one tenant.

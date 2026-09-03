@@ -37,16 +37,21 @@ Engage   : aws ssm put-parameter --name /aegis/kill-switch --value '{"engaged":t
 Disengage: aws ssm put-parameter --name /aegis/kill-switch --value '{"engaged":false,"actor":"security_lead","reason":"contained; reviewed"}' --overwrite
 ```
 
-## Where it is actually wired today (2026-09-02 inventory — read before showing a customer)
-
-There are TWO deployed request paths and the Kill Switch is wired into only one of them.
+## Where it is actually wired today (2026-09-03 — LIVE on BOTH paths)
 
 | Path | Kill Switch state | Evidence |
 |---|---|---|
-| **Platform reference stack** (`aegis-governance-core`, CDK): the gateway Lambda reads `/aegis/kill-switch` **first**, 15 s TTL cache, **fail-closed if unreadable**, denies with `guardrail_action=KILL_SWITCH` and writes the denial to the append-only audit; engage/read IAM managed policies | **LIVE + validated** — engaged → canary 403 within one cache TTL, disengaged → allow, both audited (`DEPLOYED-AND-VALIDATED.md` Run 11) | platform `infra/cdk/governance_core/governance_core_stack.py`, `DEPLOYED-AND-VALIDATED.md` |
-| **Agent packs on AgentCore** (benefits `v0.3.0-pilot-rc1`: AgentCore Gateway + Cedar policy engine + REQUEST interceptor + tool Lambdas + Runtime): **nothing reads the switch.** The pack's deny-by-default is Cedar; there is no single flag that stops it | **NOT WIRED** — the fast stops below are manual API calls, not one command, and none of them is recorded in the pack's WORM ledger by design | this table |
+| **Platform reference stack** (`aegis-governance-core`, CDK): the gateway Lambda reads `/aegis/kill-switch` **first**, 15 s TTL cache, **fail-closed if unreadable**, denies with `guardrail_action=KILL_SWITCH` and writes the denial to the append-only audit; engage/read IAM managed policies (value-based SoD is runbook-enforced there — IAM cannot inspect a parameter value) | **LIVE + validated** — engaged → canary 403 within one cache TTL, disengaged → allow, both audited (`DEPLOYED-AND-VALIDATED.md` Run 11) | platform `infra/cdk/governance_core/governance_core_stack.py`, `DEPLOYED-AND-VALIDATED.md` |
+| **Agent packs on AgentCore** (benefits, governed-core **1.8.0**): the pack's own `/ben-<env>-eligibility/kill-switch` (+ optionally the platform-wide parameter, `-c global_kill_switch=/aegis/kill-switch`) is read FIRST by the gateway REQUEST interceptor (403 + `DENIED` WORM record in the acting tenant's ledger), by every tool Lambda (`telemetry.instrument` → `KillSwitchEngaged`, so the workflow stops at its next state) and by the Runtime (new invocations refused; a running session stops at its next model call). Engage / disengage = two `AWS_IAM` function URLs, one managed policy each; the actor is the IAM-verified caller and the controller refuses same-identity release (`DENIED` record); every state change is a `COMMITTED` row in the base ledger's `KILL-SWITCH` chain | **LIVE + validated 2026-09-03** — `scripts/kill_switch_proof.py` **29/29 PASS** on `ben-mt5` (2 tenants, real AgentCore Runtime): time-to-effect at the gateway **13.9 s**; interceptor 403 + per-tenant DENIED records; direct tool invoke and a Step Functions execution fail with `KillSwitchEngaged` at the first state; a new runtime invocation refused and a **running session stopped mid-session**; engage-only role refused at the disengage URL by IAM, over-privileged identity refused releasing its own engagement (DENIED record), second identity releases; base-ledger `KILL-SWITCH` chain hash-linked with WORM copies; full recovery; 0-unexpected-errors sweep after. `benefits/evidence/AGENTCORE-KILL-SWITCH-2026-09-03.md` | governed-core `controls/kill_switch.py`, `kill_switch_control.py`; benefits `cdk/ben_stacks/compute_stack.py`, `lib/runtime/agent.py`, `DEPLOYMENT-GUIDE.md` §1c |
 
-### Fast stops available TODAY in the AgentCore path (all manual, all reversible, time-to-effect measured or estimated)
+### Design decisions on the AgentCore path (grounded in AWS documentation)
+
+- **Parameter Store, not AppConfig.** One JSON flag per deployment, read with `GetParameter`. AWS AppConfig is the purpose-built feature-flag service (immediate disable "without rolling back the deployment", CloudWatch-alarm auto-rollback) and remains a valid future home; Parameter Store was kept for parity with the reference stack and because a containment flag needs no deployment strategy, validator or gradual rollout. Throughput: the default is **40 TPS shared across `GetParameter`/`GetParameters`/`GetParametersByPath`** (higher-throughput option: 10,000 TPS for `GetParameter`, billed per interaction) — with a 15 s cache per warm execution environment the pack reads a few times a minute, not per call.
+- **Cache, fail-closed.** AWS's documented pattern for Lambda reads is the **Parameters and Secrets Lambda Extension** (in-process cache, default TTL 300 s); the pack implements the same idea in-process with a containment-grade 15 s TTL, and treats an unreadable or malformed value as **engaged**.
+- **Interceptor short-circuit.** A REQUEST interceptor that returns `transformedGatewayResponse` makes the gateway "respond with that content immediately" — the target is never invoked (AgentCore Gateway interceptor types doc).
+- **IAM-verified actor + SoD.** For a function URL with `AuthType: AWS_IAM`, Lambda populates `requestContext.authorizer.iam.userArn` / `userId` / `accountId` (Lambda dev guide, "Invoking function URLs"), so the recorded actor is never self-declared; two functions ⇒ two `lambda:InvokeFunctionUrl` grants ⇒ IAM separation of duties, plus the in-code same-identity refusal (exact ARN or same assumed role) that IAM alone cannot express.
+
+### Fast stops still available (manual, CloudTrail-logged) — for a deployment on a core < 1.8.0
 
 | # | Action | Scope | Time to effect | Who | Audited where | Reversal |
 |---|---|---|---|---|---|---|
@@ -56,31 +61,16 @@ There are TWO deployed request paths and the Kill Switch is wired into only one 
 | A4 | Lambda reserved concurrency = 0 on the tool functions | tools (workflow + gateway) | immediate | Lambda admin | CloudTrail; invocations throttle (visible as Throttles metric) | remove the reservation |
 | A5 | IAM: deny `bedrock:InvokeModel*` on the runtime/tool roles | model calls | immediate on next call | IAM admin | CloudTrail | remove the deny |
 
-None of A1–A5 is separation-of-duties-protected, none writes an ENGAGE/DISENGAGE record into the hash-chained
-ledger, and A2/A3 are destructive to state (sessions, sign-off waits). They are what an operator can do
-*right now*; they are not "the Kill Switch".
+None of A1–A5 is separation-of-duties-protected or writes an ENGAGE/DISENGAGE record into the hash-chained
+ledger; A2/A3 are destructive to state. They remain the fallback for packs not yet on governed-core 1.8.0.
 
-### The build to make the Kill Switch real for the packs (tracked as a task)
+### Drill (quarterly) — AgentCore path
 
-The pack already has two components that see every request before anything else runs: the gateway
-**REQUEST interceptor** (every `tools/call`) and the **runtime agent** (every model call). Wiring the
-platform's own design in there:
-
-1. Interceptor: read `/aegis/kill-switch` (short-TTL cache, **fail-closed if unreadable**), on `engaged`
-   return the 403 deny **and** `write_audit` an `INTENT/DENIED kill_switch` record into the tenant's WORM
-   ledger (correlation keys included) — containment precedes evaluation, and the denial is evidence.
-2. Tool Lambdas (workflow hop, no interceptor): the same check in `telemetry.instrument` before the handler
-   runs, so an in-flight Step Functions execution stops at its next state.
-3. Runtime: check before each model call; refuse the session with the same audited reason.
-4. Engage/disengage: the platform's SSM parameter + the two IAM managed policies (engage-only /
-   disengage-only identities) — SoD in IAM, exactly as the reference stack does; every state change lands
-   in the ledger via `write_audit`.
-5. Live gate: engage → every tool call and the runtime refused within ≤ 30 s, WORM shows ENGAGE + the
-   denials, `trace_case` shows them under the session; disengage by a *different* identity → allowed again.
-
-Until that lands, the honest customer sentence is: "The platform reference gateway has a live, audited,
-fail-closed Kill Switch; the AgentCore agent packs can be stopped in seconds by policy or infrastructure
-actions (A1–A5) but do not yet have the one-command, audited switch — it is the next build."
+1. Responder (engage-only role): `POST {reason}` to `KillSwitchEngageUrl` → 200, `state.engaged=true`, `audit.stored=true`.
+2. Within 15 s: a caseworker's `tools/list` → 403 "containment engaged"; a runtime invocation → `guardrail_action: KILL_SWITCH`.
+3. Responder tries `KillSwitchDisengageUrl` → 403 from IAM (no `InvokeFunctionUrl` on that function).
+4. Security lead (disengage-only role): `POST {reason}` → 200, `state.engaged=false`, `state.released.engaged_by` = the responder's ARN.
+5. Verify the base ledger's `KILL-SWITCH` chain has ENGAGE + DISENGAGE `COMMITTED` and each tenant ledger has the `DENIED` calls; `trace_case.py` shows them under the session.
 
 ## Relationship to the incident runbook
 
