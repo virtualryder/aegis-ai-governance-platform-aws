@@ -69,6 +69,7 @@ out_of_repo:                                   # what Aegis needs before "operat
   - monitoring / alerting operations
   - disaster recovery
   - production security certification / ATO
+  - multi-tenant SaaS OPERATIONS (multi-account/Organizations tenancy, tenant onboarding automation, metering/billing, operator console, a named design partner) - the hybrid multi-tenant control plane itself IS built and live-validated (see agentcore.multitenant_live / multitenant_audit_live / observability_live)
 
 references:
   readme: README.md

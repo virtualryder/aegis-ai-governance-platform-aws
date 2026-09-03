@@ -114,14 +114,24 @@ AgentCore closes most of this gap natively:
 - **Multi-account**: one control-plane account + per-tenant workload accounts via AWS Organizations;
   cross-account roles scoped by tenant.
 
-**Business-model gate — DECIDED 2026-09-02 (David):** near-term model is the **per-customer engagement accelerator** (single-tenant, scoped deploy in each customer's own AWS account); the multi-tenant SaaS build below is **ROADMAP, not near-term**. MATURITY.yaml keeps multi-tenant as `out_of_repo`; public story says "per-customer accelerator."
-- *Platform for customers (plural)* → build the multi-tenant control plane above. Larger effort; this is
-  the SaaS story.
-- *Per-customer engagement accelerator* → multi-tenancy not required; each customer gets a scoped,
-  single-tenant deploy in their own account. Smaller, and a fine business — just a different one.
+**Business-model gate — DECIDED 2026-09-02 (David):** near-term model is the **per-customer engagement
+accelerator** (single-tenant, scoped deploy in each customer's own AWS account); the multi-tenant SaaS
+is the **roadmap** story. Both paths now exist in the benefits pack as CDK switches, and the
+multi-tenant path is **BUILT and LIVE-VALIDATED (2026-09-02, later the same day)** — the note that
+"until multi-tenancy is built MATURITY.yaml must keep it out_of_repo" no longer applies:
 
-Until that decision is made and multi-tenancy is built, MATURITY.yaml must keep multi-tenant as
-`out_of_repo` and the public story must say "per-customer accelerator," not "platform for many tenants."
+| Phase | What | Proof |
+|---|---|---|
+| 107 runtime/session isolation + tenant derivation | shared control plane, per-tenant DataStacks, gateway REQUEST interceptor injects an HMAC-signed tenant derived from the verified identity (`tenant_<id>` group); every Lambda verifies before routing | benefits `evidence/AGENTCORE-MULTITENANT-E2E-2026-09-02.md` (2 tenants) |
+| 108 per-tenant Cedar scope | `require_tenant` forbid (multi-tenant only) refuses un-tenanted identities; cross-tenant deny proven (0 tools + 403 verbatim) | same |
+| 109 per-tenant WORM partitions | governed-core 1.6.0 routes the canonical evidence writer, exactly-once marker and approvals register to `<prefix>-<tenant>-…` + the tenant's own Object-Lock vault, on the gateway AND the workflow hop, fail-closed | benefits `evidence/AGENTCORE-MULTITENANT-AUDIT-2026-09-02.md` (12/12) |
+| 110 full transparency | one correlation set (tenant · session · trace · request · case) across runtime spans, gateway rows, tool-Lambda lines, model-invocation bodies and the WORM record; masked-before-model measured | benefits `evidence/AGENTCORE-OBSERVABILITY-2026-09-02.md` (real Runtime, 13/13 per tenant) |
+| 111 live gate | two-tenant end-to-end | PASSED (see `MULTI-TENANT-SAAS-DESIGN.md`) |
+
+What is still NOT built for a SaaS: multi-account (Organizations) tenancy, tenant onboarding
+automation and billing/metering, an operator console, and a named design partner — these stay
+engagement/roadmap items and `MATURITY.yaml` says so. The public story remains "per-customer
+accelerator, multi-tenant SaaS on the roadmap (live-validated prototype)".
 
 ---
 
