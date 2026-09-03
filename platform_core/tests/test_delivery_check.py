@@ -33,7 +33,7 @@ def test_clean_manifest_passes():
 
 def test_placeholder_credentials_block_delivery():
     m = copy.deepcopy(CLEAN)
-    m["identity"]["users"][0]["password"] = "ChangeMe-Reviewer1!"
+    m["identity"]["users"][0]["password"] = "ChangeMe-Reviewer1!"  # pragma: allowlist secret (deliberate placeholder: the test proves it is REFUSED)
     ok, errors = delivery_check(m)
     assert not ok
     assert any("placeholder_credential" in e for e in errors)

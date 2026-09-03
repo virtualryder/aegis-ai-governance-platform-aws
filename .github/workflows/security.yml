@@ -56,7 +56,7 @@ jobs:
       - name: detect-secrets (BLOCKING vs committed .secrets.baseline)
         run: |
           cp .secrets.baseline .secrets.baseline.orig
-          detect-secrets scan --baseline .secrets.baseline --exclude-files 'node_modules/.*' --exclude-files '.*\.(png|jpg|jpeg|pdf|pptx|xlsx)$'
+          detect-secrets scan --baseline .secrets.baseline --exclude-files 'node_modules/.*' --exclude-files '.*\.(png|jpg|jpeg|pdf|pptx|xlsx)$' --exclude-files 'infra/cdk/cdk\.out/.*'
           # detect-secrets re-stamps the volatile "generated_at" timestamp on every
           # scan, so a raw diff always differs. Compare with that line removed; any
           # NEW/removed finding still changes the results and fails the gate.
