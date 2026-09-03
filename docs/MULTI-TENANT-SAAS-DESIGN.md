@@ -60,6 +60,7 @@ context value → `TENANT_ID` env). Hybrid keeps the control-plane stacks shared
 - **Correlate** all three by one `session/trace id`, **tagged with tenant** → per-tenant, end-to-end view of
   every API call across every AgentCore component. Four independent captures per governed action.
 - **Gate:** for one action, show the OTEL trace + the invocation log (masked) + the WORM entry, same id, one tenant.
+- **Design + join keys (2026-09-02):** [`OBSERVABILITY-CORRELATION.md`](OBSERVABILITY-CORRELATION.md).
 
 ## Phase 111 — Live multi-tenant validation gate (end-to-end) — **PASSED 2026-09-02** (env `mt`, 2 tenants; see benefits `evidence/AGENTCORE-MULTITENANT-E2E-2026-09-02.md`)
 Deploy the shared control plane + two tenants (A, B). Prove, live and torn down:
