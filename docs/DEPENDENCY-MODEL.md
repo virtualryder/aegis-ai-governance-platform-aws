@@ -29,7 +29,7 @@ is the single place that says so, and every README below points here.*
  │  Reference stacks (WOGplatform)     │    │  Agent packs (their own repos)                   │
  │  infra/golden-pilot  mcp-gateway    │    │  benefits_eligibility_agent   core 1.9.0  LIVE   │
  │   (API GW + Cognito JWT + reviewed  │    │  pharmacovigilance_agent      core 1.9.0  LIVE   │
- │   engine, fixture tool execution)   │    │  edu_financial_aid_agent      core 1.5.0         │
+ │   engine, fixture tool execution)   │    │  edu_financial_aid_agent      core 1.9.0  LIVE   │
  │  infra/cdk  aegis-governance-core   │    │  Housing_eligibility_agent    core 1.4.0         │
  │   (STUB gateway: audit+guardrail+   │    │  each: manifest, tools, Cedar policies, CDK      │
  │   kill switch; Budgets; WORM; KMS)  │    │  (real AgentCore Runtime + Gateway + Policy)     │
@@ -81,11 +81,12 @@ and the two reference stacks are the *specification and its proof*, not a second
 | 1.8.0 | kill switch on the AgentCore path (containment precedes evaluation) | benefits main (2026-09-03) — `AGENTCORE-KILL-SWITCH` 29/29 | `docs/ops/KILL-SWITCH.md` |
 | **1.9.0** | per-tenant token + USD budget meter | **benefits main (2026-09-03)** — `AGENTCORE-BUDGET` 24/24 | `docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md`; platform_core 0.2.0 (outbox ordering, zero-default entitlements, bound approvals at consumption — Run 13) |
 | 1.9.0 | (same core) — first non-lead pack to re-pin and re-gate all four SaaS/containment/budget controls | **benefits `v0.4.0-pilot-rc1` (2026-09-03)** — kill switch + budget on the tag; **pharmacovigilance `v0.3.0-pilot-rc1` (2026-09-03)** — from-zero two-tenant gate: isolation 12/12, transparency 13/13 per tenant, canary 0, kill switch 29/29, budget 24/24, regression sweep 0 (`pharmacovigilance_agent/evidence/AGENTCORE-*-2026-09-03.*`) | GAP-1 of the 2026-09-03 platform review |
+| 1.9.0 | (same core) — EDU financial-aid pack re-pinned and re-gated LIVE | **edu_financial_aid `v0.3.0-pilot-rc1` (2026-09-04)** — from-zero two-tenant gate: isolation 12/12, transparency 13/13 per tenant (model invocations tenant-tagged, masked-before-model), canary 0, kill switch 29/29 (in-flight mid-session stop), budget 24/24, regression sweep 0 (`edu_financial_aid_agent/evidence/AGENTCORE-*-2026-09-04.*`). The gate caught a cluster of latent port defects: the runtime pinned to the wrong (`fa-financial`) deployment, a runtime role missing its SSM/budget grants, a runtime never re-pinned to the full 1.9.0 features (correlation/budget/kill-switch/model-invocation tenant tagging), a workflow that hard-coded verification-hold so no case could reach sign-off, and an MCP-teardown bug that masked the governed mid-session kill. Offline suite 174→190. | GAP-1 of the 2026-09-03 platform review |
 
 Rules of the matrix: a pack's tag names exactly one governed-core version (`requirements-core.txt`);
-a pack on an older core is **not wrong**, it is **behind** — the EDU pack (1.5.0) and Housing (1.4.0) lack
+a pack on an older core is **not wrong**, it is **behind** — Housing (1.4.0) still lacks
 multi-tenant routing, correlation, kill switch and budget until they re-pin and re-run their gates; PV
-caught up to 1.9.0 on 2026-09-03 (GAP-1). Benefits is the lead pack; the others follow it.
+caught up to 1.9.0 on 2026-09-03 (GAP-1), and EDU on 2026-09-04. Benefits is the lead pack; Housing still follows.
 
 **Known cross-pack wart (to reconcile at the next governed-core bump).** The shared runtime
 (`lib/runtime/_launch.sh` / `_obs_setup.sh`) derives the deployment PREFIX from the SSM path. PV's
