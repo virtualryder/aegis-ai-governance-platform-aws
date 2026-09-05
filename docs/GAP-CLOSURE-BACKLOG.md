@@ -124,3 +124,147 @@ Legend: **D** Designed · **IO** Implemented offline (Python demo) · **DA** Dep
 > deployable, live-validated control-core demonstration and a working human-gate agent. It is
 > being hardened into a repeatable production-pilot platform." Also soften "no lock-in" to:
 > "customer-owned, readable, AWS-native implementation with no proprietary Aegis runtime dependency."
+
+
+---
+
+# 2026-09-05 — Production-readiness refresh & Well-Architected gap register
+
+The scorecard and P0/P1/P2 lists above are the **2026-07 review** and are kept for provenance. This
+section is the **current** state and the honest remaining-work list, framed against the six AWS
+Well-Architected pillars plus the governance-specific concern an auditor actually opens the platform for:
+**can I reconstruct, for any one case, every decision, every API call, every model input/output, who
+approved what, and what it cost — and prove none of it was tampered with?** On the AgentCore path that
+question is now answerable end-to-end (pillar-by-pillar below).
+
+Everything marked **LIVE** was proven on a from-zero AWS deploy in `111122223333`/us-east-1 and torn down
+to zero residue, with the account model-invocation logging restored. Account ids in committed evidence are
+redacted to `111122223333`.
+
+## A. What has CLOSED since the 2026-07 review (correcting the scorecard above)
+
+| Capability | 2026-07 state | Now (2026-09) | Evidence |
+|---|---|---|---|
+| Managed policy enforcement | Cedar on Verified Permissions (demo) | **AgentCore Gateway (MCP, CUSTOM_JWT) + GA Cedar Policy engine in ENFORCE, deny-by-default, stood up as IaC by a CFN custom resource** — LIVE | benefits `evidence/AGENTCORE-LIVE-2026-09-02.md` |
+| Zero-trust entitlement | Group→role claim | **Zero-default entitlement — no `custom:tools` claim ⇒ zero tools (list+call denied); action-scoped Cedar perimeter (#160/#161)** — LIVE | `evidence/AGENTCORE-CEDAR-PERIMETER-2026-09-05.md` |
+| Output guardrail | READY, hand-created | **Bedrock Guardrail created from the manifest as IaC (PROMPT_ATTACK + PII ANONYMIZE + pinned published version), wired into the drafter fail-closed (#166)** — LIVE | `evidence/AGENTCORE-GUARDRAIL-2026-09-05.md` |
+| Contextual grounding | Filter present | **Enforced end-to-end on the drafter — grounded factual core is grounding-scored, boilerplate appended deterministically; a hallucinated determination is blocked, a legitimate notice is not (#150/#190)** — LIVE | `evidence/AGENTCORE-GROUNDING-DRAFTER-190-2026-09-05.md` |
+| Multi-tenant isolation | Documented topology | **Hybrid multi-tenant LIVE — shared control plane, per-tenant data incl. each tenant's own audit ledger / WORM vault / approvals; cross-tenant deny proven; tenant derived from verified identity** | `evidence/AGENTCORE-MULTITENANT-{E2E,AUDIT}-2026-09-02.md` |
+| Full traceability | Audit rows | **One correlation set joins agent reasoning spans + every gateway request + each tool's `aegis.call` + every Bedrock model body + the hash-chained WORM record, per tenant — LIVE; plus capture-every-API-call lineage via account CloudTrail→WORM with a zero-orphan coverage proof (#168)** | `evidence/AGENTCORE-OBSERVABILITY-2026-09-02.md`; `GOVERNED-CORE-1.10.0-LIVE-GATE-2026-09-05.md` |
+| Containment | — | **Kill switch on the AgentCore path — interceptor + every tool Lambda + the Runtime read an SSM flag first, fail-closed, 13.9 s to effect, IAM SoD on engage/disengage (#)** — LIVE | `evidence/AGENTCORE-KILL-SWITCH-2026-09-03.md` |
+| Cost governance | Reservation demo | **Per-tenant token + USD meter on every model call (reserve-before/commit-after), AWS Budgets USD ceiling whose breach engages the kill switch, meter == the Bedrock invocation log to the token; USD reconciled against Cost Explorer (#169)** — LIVE | `evidence/AGENTCORE-BUDGET-2026-09-03.md` |
+| Audit fail-closed | Fail-open found | **Finalize writes COMMITTED WORM/hash-chained evidence BEFORE the exactly-once marker; args-hash-bound approvals cannot be reused for another action (#159/#162)** — LIVE | `GOVERNED-CORE-1.10.0-LIVE-GATE-2026-09-05.md` |
+| Network posture | network.yaml not wired | **Tool + drafter Lambdas in private subnets w/ VPC endpoints; live sweep measured 0 NAT / 0 IGW (#170)** — LIVE | `evidence/AGENTCORE-NETWORK-WAF-2026-09-05.md` |
+
+The single most important upgrade for an auditor: **capture-every-API-call lineage (#168) + token
+chargeback (#169)** — one query now returns, for a case, every governed API call, model body, Cedar
+decision, approval, and reconciled cost, in a tamper-evident WORM record.
+
+## B. Remaining items to production-ready — by Well-Architected pillar
+
+Status key: **[P]** product/platform work we own and can do now · **[A]** blocked on a real
+(non-sandbox / AWS Organizations) account · **[E]** engagement / customer-owned by design.
+
+### Security
+- **[P] Enterprise IdP federation** — SAML/OIDC into Cognito, MFA policy, SCIM provisioning, and the
+  group→`custom:tools`/scope entitlement mapping the gateway already consumes. Today every validated run
+  uses a portable Cognito pool with admin-created users; the entitlement *contract* is proven, the
+  federation is not built. This is the single biggest "demo vs production identity" gap.
+- **[P] Delegated authorization / OBO** — distinct agent vs human identity, on-behalf-of token exchange,
+  short-lived downstream credentials, revocation, and explicit confused-deputy / privilege-escalation
+  tests. Partially present (bound approvals, IAM-verified kill-switch actor); the OBO exchange is not wired.
+- **[A] WAF↔Cognito association (#189)** — the REGIONAL Web ACL is built as IaC; the association is blocked
+  at the account level in the sandbox (native association hangs for Cognito; `AssociateWebACL` →
+  `WAFUnavailableEntityException`; the account is not in an Organization). One-liner in a normal account.
+- **[A] Organizations SCP/RCP guardrails (#172)** — preventative org-level controls (deny regions, deny
+  disabling CloudTrail/guardrails, data-perimeter RCPs) need real AWS Organizations connectivity.
+- **[P] Customer-managed KMS per data class** + rotation, and a **cross-account log/evidence archive**
+  (the WORM vault + CloudTrail bucket should replicate to a separate security account).
+- **[E] Independent third-party penetration test** and the **ATO / HITRUST / FedRAMP / IL** authorization.
+- **[E] Real connector secrets** — Secrets Manager under the env path + a controlled egress path for any
+  tier-4 system of record (Veeva/Argus, Epic/Availity, X12 835, SIS/LMS).
+
+### Reliability
+- **[P] DR for the evidence plane** — backup/restore and cross-region strategy for the audit ledger + WORM
+  vault + approvals register, with stated RTO/RPO, plus a **DR game day**. WORM + retention is proven;
+  regional failure recovery is not.
+- **[P] Model fallback tested** — cross-region inference profiles / alternate model on Bedrock throttle or
+  regional outage, exercised (the budget meter + kill switch must behave under fallback).
+- **[P] Exactly-once + isolation under production-scale load** — the exactly-once finalize and per-tenant
+  routing are unit- and gate-proven; a concurrency/replay storm at pilot scale (Gate-B exit) is not yet run.
+- **[P] Quotas / throttling / DLQ operations** — document AgentCore Gateway + Runtime + Bedrock quotas,
+  and the DLQ inspect/replay runbook for the workflow hop.
+
+### Operational Excellence
+- **[P] Day-2 operator console** — kill-switch status, per-tenant budget burn + alarm state, the pending-
+  approval queue, and the per-case lineage viewer, in one pane. Today these are CLI/evidence-script driven.
+- **[P] Full CI/CD** — deployment roles (not human creds), change sets, canary + rollback alarms, artifact
+  signing (KMS/Sigstore), pinned deps + SBOM. A CI-evidence workflow exists; the release pipeline does not.
+- **[P] Propagate governed-core 1.10.0 across all packs and re-gate LIVE** — benefits is live-gated at
+  1.10.0; pharmacovigilance + edu are re-pinned offline (suites green) but need a live re-gate; **Housing
+  shows a 1.10.0 pin in its requirements while `MATURITY.yaml` still records it at 1.4.0 "pending" —
+  reconcile this drift**, then update the pharma/edu/housing pack READMEs to state the current pin.
+- **[P] Platform-repo AgentCore reference deploy** — the packs deploy on AgentCore; the platform repo's
+  own CDK/TF stack is still a primitive-validation stub (network_edge/identity_federation not wired there).
+
+### Performance Efficiency
+- **[P] Governed-hop latency budget** — measure and publish p50/p99 for a full case with all controls on
+  (guardrail + Cedar + interceptor + masking add hops); set a latency SLO and right-size Lambda memory /
+  provisioned concurrency for the drafter.
+- **[P] Model right-sizing** — task-appropriate model selection (e.g. Haiku for classification, Sonnet for
+  drafting) bound to the budget meter, with the choice recorded on the invocation.
+
+### Cost Optimization
+- **[P] Continuous CUR/Cost-Explorer reconciliation** — chargeback is proven once (#169); schedule it as a
+  recurring job and surface per-tenant / per-case **showback** in the operator console.
+- **[P] Cost of the controls themselves** — model and document the added cost of capture-every-API-call
+  (CloudTrail data events), Comprehend, guardrail, and WORM storage, so the governance overhead is a known
+  line item, and add evidence-lifecycle tiering (aged WORM evidence → cheaper storage class within the
+  retention policy).
+
+### Sustainability
+- **[P] Region + model efficiency guidance** — prefer the smallest model that passes grounding; evidence/
+  log lifecycle tiering; document region selection. Low urgency, but name it so it isn't a silent gap.
+
+### Governance & audit-defensibility (the cross-cutting pillar this product exists for)
+- **[E/P] Compliance EVIDENCE package per framework** — the CJIS / IRS-1075 / 42-CFR-Part-2 / GxP / FERPA /
+  HIPAA control *mappings* exist; the auditor-ready binder (each control → its test → the live evidence
+  artifact, indexed) is the gap. This is what converts "mapped" into "would pass an audit."
+- **[P] Model-risk / evaluation gate** — a grounding/refusal/bias/prompt-injection eval harness run as a
+  release gate (AgentCore Evaluations is in preview; wire it or a portable analog).
+- **[P] Accessibility (WCAG 2.2 / Section 508, ahead of ADA Title II)** for any human-facing reviewer UI.
+- **[P] Records management + legal hold** — COMPLIANCE Object-Lock profile + legal-hold workflow on the
+  WORM vault for a real deployment (demo runs use GOVERNANCE/short retention).
+- **[E] A named design partner + scoped pilot SOW** with success metrics — the commercial precondition to
+  a production pilot.
+
+## C. Ownership summary — what "finished" depends on
+
+- **We can finish now (product/platform, [P]):** IdP-federation wiring, OBO exchange, the day-2 operator
+  console, full CI/CD + signing, propagate + live-re-gate governed-core 1.10.0 across all packs (and fix
+  the Housing version drift), the platform-repo AgentCore reference deploy, latency/cost SLOs, the
+  compliance evidence binder, and the model-eval gate. These are the backlog we control.
+- **Needs a real account ([A]):** the WAF↔Cognito association (#189) and Organizations SCP/RCP (#172).
+  Code + IaC are in place and tested to the account boundary; they finish in a customer/non-sandbox account.
+- **Customer / engagement-owned ([E]):** third-party pen test, ATO/HITRUST/FedRAMP authorization, live
+  tier-4 connector credentials, and the signed pilot SOW + design partner.
+
+## D. Highest-leverage next five (recommendation)
+
+1. **Enterprise IdP federation + MFA + OBO** — closes the biggest identity gap and unblocks a real pilot.
+2. **Propagate + live-re-gate governed-core 1.10.0 across all packs; reconcile the Housing 1.4.0↔1.10.0
+   drift** — makes the whole portfolio consistent at the current control bar (an auditor checks consistency).
+3. **Compliance evidence binder** (control → test → live artifact) for one framework end-to-end — turns the
+   proven controls into something an auditor signs.
+4. **Day-2 operator console** — kill-switch / budget / approvals / per-case lineage in one pane; this is
+   what a CISO asks to see on day one.
+5. **DR game day for the evidence plane + model-fallback test** — the reliability story behind the audit
+   claims.
+
+> Positioning that matches the evidence (2026-09-05): *"Aegis is an AWS-native governed-agent control plane
+> whose core controls — deny-by-default Cedar authorization, fail-closed PII masking, tamper-evident WORM
+> audit with capture-every-API-call lineage, per-tenant cost metering with a hard USD ceiling, one-command
+> containment, and contextual-grounding enforcement — are live-validated end-to-end on Amazon Bedrock
+> AgentCore in the vertical packs. It is being hardened from live-validated control core to a
+> production-pilot platform: enterprise IdP federation, day-2 operations, a per-framework evidence binder,
+> and DR are the remaining path."*
