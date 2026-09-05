@@ -115,6 +115,53 @@ sequences them:
    conformance oracle; the agents' manifests and Cedar policies are unchanged
    either way. Track service GA/region status at deploy time.
 
+### 1.7.1 What changed (2026-09 refresh)
+
+Five control-surface uplifts landed on the AgentCore path since the 2026-08
+revision. All were proven live on a from-zero deploy and torn down to zero
+residue; each is machine-checked and evidenced in the pack repos (start with the
+benefits pack, then the re-pinned heroes). This runbook only sequences them — the
+deploy commands in sections 3–4 are unchanged, the controls come with the pack.
+
+1. **governed-core 1.10.0 — correctness batch + full lineage + token chargeback.**
+   Audit is now fail-closed *before* the exactly-once finalize marker (an
+   evidence-store failure finalizes nothing and a retry re-commits cleanly);
+   approvals are bound to case/requester/agent/action/purpose/args-hash and a
+   consumed approval cannot be reused for a different action; PII/PHI detection
+   chunks past Comprehend's sync size limit with a Luhn-checked regex backstop.
+   **Capture-every-API-call (#168):** an account CloudTrail (management ALL + S3/
+   Lambda data events, multi-region, log-file validation) into a WORM Object-Lock
+   bucket, joined with the gateway log, per-Lambda `aegis.call`, Step Functions
+   history, the Bedrock model-invocation log and the WORM ledger into ONE lineage
+   keyed by execution/trace/case id, with a coverage proof of zero orphan governed
+   API calls. **Token chargeback (#169):** the per-tenant USD meter is reconciled
+   against authoritative AWS billing (Cost Explorer). This is the spine of the
+   auditor story — one query returns every API call, model body, decision and cost
+   for a case.
+2. **Cedar perimeter — zero-default entitlement (#160/#161).** A caller with no
+   entitlement claim (`custom:tools`) and no `tools_granted` group gets **zero
+   tools** (tools/list and tools/call both denied). The remaining action-scoped
+   conditions (service-window, consent+purpose-before-assess, budget-before-draft,
+   a decimal amount cap) ship as `scope: perimeter` `.cedar` policies globbed into
+   the gateway by IaC and validated ACTIVE on the GA engine.
+3. **Bedrock output guardrail as IaC (#166).** The compute stack creates the
+   guardrail from the manifest (PROMPT_ATTACK + PII ANONYMIZE + a published
+   immutable version pinned by a config-signature so a policy change republishes)
+   and wires it into the drafter (`ApplyGuardrail`, fail-closed on intervention).
+4. **Contextual grounding enforced end-to-end (#150/#190).** The guardrail carries
+   a GROUNDING+RELEVANCE policy AND the notice drafter enforces it: the model
+   writes only the grounded factual core (case as `grounding_source` + a query via
+   `guardContent`), so a hallucinated determination is grounding-blocked
+   fail-closed, while the fixed notice boilerplate is appended deterministically
+   outside the guardrail scope so a legitimate notice is never false-blocked.
+5. **Private-VPC posture measured, not asserted (#170).** The benefits tool +
+   drafter Lambdas run in private subnets with VPC endpoints; a live sweep measured
+   0 NAT gateways / 0 internet gateways. A REGIONAL WAFv2 Web ACL is built as IaC
+   on the Cognito front door. **Account-level items to flag (see §7):** the WAF↔
+   Cognito *association* (#189) and Organizations SCP/RCP guardrails (#172) require
+   a non-sandbox account in an AWS Organization — they are customer-account work,
+   not a code gap.
+
 ## 2. Step 1 — Prove it offline first (no AWS, no keys)
 
 Establish trust before spending a cent. Each repo runs its full governance suite offline. **The
@@ -310,6 +357,16 @@ Beyond a synthetic-data pilot, the customer owns: a **Control Tower landing zone
 federation** (SAML/OIDC) into Cognito; a **live tier-4 connector** (Veeva/Argus, X12 835, Epic/Availity,
 SIS/LMS); a **penetration test**; **DR + monitoring** ops; and the applicable **ATO/HITRUST/FedRAMP**
 authorization. These are the P1/P2 roadmap, not pilot blockers.
+
+**Two edge controls are built but need a real (non-sandbox) account to finish wiring — flag them, don't
+hide them.** (a) The REGIONAL **WAFv2 Web ACL** on the Cognito front door is created as IaC, but the
+Web ACL↔Cognito *association* is blocked at the AWS **account** level in the development sandbox (#189 —
+reproduced in isolation: the native association hangs for Cognito and `AssociateWebACL` returns
+`WAFUnavailableEntityException`; the sandbox is not in an Organization, so a permission boundary blocks
+it). In a customer account with normal WAF permissions the association is a one-liner. (b) **Organizations
+SCP/RCP** guardrails (#172) require real AWS Organizations connectivity — same as the Control Tower item
+above. Both are **customer-account** work, not code gaps; the code and IaC are in place and tested up to
+the account boundary.
 
 **Now done (2026-07-12), no longer customer-owned gaps:** the HCLS hero's draft calls **real Bedrock via
 boto3 Converse behind the deployed Guardrail** (validated live: `drafted_by: bedrock`, ~4.4 s incl.
