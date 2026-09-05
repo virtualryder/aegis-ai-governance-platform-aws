@@ -268,3 +268,125 @@ Status key: **[P]** product/platform work we own and can do now · **[A]** block
 > AgentCore in the vertical packs. It is being hardened from live-validated control core to a
 > production-pilot platform: enterprise IdP federation, day-2 operations, a per-framework evidence binder,
 > and DR are the remaining path."*
+
+
+---
+
+# 2026-09-05 — External deep-dive review: validation + action status
+
+An external technical review (assessed at platform commit `211bbe7`, governed-core 1.10.0, all four
+packs) reproduced several defects where "the strongest guarantees fail in exactly the fault conditions
+those guarantees are supposed to cover." **Every finding below was re-validated against the actual code
+(and AWS docs) — not taken on faith — then acted on.** Status key: **FIXED** (code changed + tests) ·
+**CORRECTED** (claim/doc fixed) · **STAGED** (implemented, live re-gate pending) · **OPEN** (tracked).
+
+## Critical blockers
+
+**#1 WORM failure still permitted a commit — CONFIRMED → FIXED (governed-core 1.10.1).**
+Verified: `evidence.record_event()` returned `stored=True, worm=False` on an S3 Object-Lock failure, and
+`finalize_signoff` gated on `stored` alone (`committed = bool(res.get("stored")) or ...`) — so a commit
+proceeded with `worm=False`. Fix: a single `evidence.is_durable()` predicate now requires the
+hash-chained ledger write **and** the WORM copy; finalize/request/approve gate every side effect on it.
+`record_event` REPAIRS a missing WORM copy on replay from the authoritative stored item, so a transient
+S3 failure heals on retry instead of committing. Explicit `EVIDENCE_WORM_REQUIRED=false` opt-out for a
+WORM-less sandbox (secure by default). Tests: `tests/test_finalize_failclosed.py` (stored=True/worm=False
+must NOT commit; WORM-repair-on-replay commits; replay-without-WORM refuses).
+
+**#2 request/approve audit-before-side-effect fail-open — CONFIRMED → FIXED (governed-core 1.10.1).**
+Verified: `request_signoff` ignored its INTENT `record_event` result and started Step Functions anyway;
+`approve_signoff` consumed the approval, released the task token, THEN wrote (and ignored) APPROVED
+evidence — strandable. Fix: `request_signoff` refuses to start the execution unless the INTENT is durable.
+`approve_signoff` is now an un-strandable idempotent saga: reserve (a retry by the same approver that has
+not released re-enters) → **durable** APPROVED evidence → idempotent token release (already-released /
+timed-out counts as released) → mark released. Evidence precedes the side effect; nothing strands.
+Tests: `tests/test_signoff_saga_failclosed.py`.
+
+**#3 nine-condition Cedar trusted caller assertions — CONFIRMED → FIXED (governed-core 1.10.1).**
+Verified: the interceptor injected the signed tenant but forwarded `consent`/`purpose`/`budget_ok`/
+`within_service_window` unchanged from the caller. Fix: the interceptor now STRIPS any caller-supplied
+copy of those fields and injects only server-authoritative values — the server clock
+(`within_service_window` from `SERVICE_WINDOW_*`), the live meter (`budget_ok`), and an optional pack
+`authoritative_context` resolver for `consent`/`purpose`; without a resolver those stay UNSET so Cedar
+denies (fail-closed). Tests: `tests/test_interceptor_authoritative.py` (caller values stripped/overwritten).
+Follow-up (OPEN): the benefits pack should ship an `authoritative_context` resolver that reads consent
+from an authoritative consent record and binds purpose to the case/workflow, plus a target-side re-check
+(defense in depth if the Gateway ever evaluates pre-interceptor args).
+
+**#4 supported release tag lacked the fixes — CONFIRMED → FIXED.**
+Verified: `v0.4.0-pilot-rc1 = be39f1c` (2026-09-03, governed-core 1.9.0) predates the Sept-5 work, yet
+RELEASE-MANIFEST claimed it was "cut from this tree and matches this count." Fix: RELEASE-MANIFEST
+corrected (the false claim retracted); `RELEASE` + deploy guide + anchor docs moved to
+**`v0.5.0-pilot-rc1`**, cut from current main (governed-core 1.10.1 + all Sept-5 work + the 1.10.1
+fixes), release-consistency gate green. **STAGED:** the full live clean-account gate against this exact
+tag has not yet been re-run — that is the remaining step, called out explicitly in the manifest.
+
+**#5 zero-egress breaks cold-start JWT verification — CONFIRMED → FIXED (IaC) / STAGED (live).**
+Verified: the private NetworkStack created endpoints for Secrets/SFN/Comprehend/Bedrock/Logs/KMS/STS but
+**no cognito-idp endpoint**, while the verifier fetches Cognito JWKS at cold start over a VPC with no
+NAT/IGW. Fix: added the `cognito-idp` interface VPC endpoint (private DNS on). **STAGED:** a live
+cold-start + key-rotation test in the zero-egress profile is the remaining verification.
+
+**#6 no enforced production profile — CONFIRMED → FIXED.**
+Verified: `env=prod` synthesized with dev defaults. Fix: `cdk/app.py` now REFUSES to synthesize
+`env=prod` (or `-c profile=production`) unless every production control is explicitly on — customer KMS,
+production/compliance retention, private network, non-sandbox identity + OIDC federation, WAF, Cedar
+perimeter, model logging, account capture, COMPLIANCE Object-Lock — with an audited `-c
+allow_insecure_prod=1` override. Proven live to refuse; regression test in `tests/test_cdk_context_flags.py`.
+
+## Claims corrected (honesty)
+
+- **"WAF association blocked at the account/Organizations level" (#189) — RETRACTED / CORRECTED.** AWS
+  documents WAF↔Cognito association as **supported** and `WAFUnavailableEntityException` as a
+  **propagation delay** (seconds to minutes); the repro retried only ~60 s, inside that window. The
+  association harness now retries with backoff across ~6 min; a live re-run is pending. Evidence file and
+  MATURITY corrected.
+- **"AgentCore Gateway is not WAF-associable" — RETRACTED.** AWS now documents `GatewayAssociateWebACL`
+  (<https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-waf.html>); the MCP runtime
+  front door can be WAF-fronted directly. Corrected in the evidence + MATURITY.
+- **"Every agent/model/tool/API call flows through Aegis" — SCOPED.** Only calls through the governed
+  gateway or instrumented workflow are governed; direct Bedrock/Lambda/other-AWS calls are possible
+  unless IAM/Organizations forbid them. See OPEN item below (IAM/org guardrails). Docs should say
+  "every *governed-path* call," not "every call."
+- **"Full nine-condition authorization" — now TRUE at the enforcement point** after #3 (fields
+  authoritative); previously the predicates existed but four were caller-supplied. The authoritative
+  consent/purpose *source* (consent record + workflow-bound purpose) remains a pack follow-up (#3 OPEN).
+- **"Capture every API call" (#168) — SCOPED.** The trail captures management events + S3/Lambda data
+  events; it is not literally every AWS data-event type (AgentCore Gateway data events need explicit
+  advanced selectors). Describe as "every governed API call in the captured event set," and add selectors
+  where a data-event type matters. (OPEN.)
+- **"Every model body captured" — CONDITIONAL.** Only when Bedrock model-invocation logging is enabled
+  (`-c model_logging=1`; AWS default off). The production profile (#6) now REQUIRES it for prod. Wording
+  corrected to "when model logging is enabled (required by the production profile)."
+- **"Signed agent manifests" — CONDITIONAL.** The capability exists; the benefits manifest ships
+  `signature: null` and direct CDK deploy does not enforce verification. OPEN: sign the manifest and make
+  the deploy/delivery gate refuse an unsigned/`null` manifest in the production profile.
+- **"Independently verified" — CORRECTED to "internally reproduced."** The evidence is author-produced;
+  there is no external signed attestation. RELEASE-MANIFEST already says "author-produced, synthetic data
+  only — not independently audited or pen-tested"; keep that wording everywhere.
+
+## Other production gaps (tracked)
+
+- **OPEN — burn down the Checkov/Bandit baselines** (PITR, API access logging, Lambda DLQ/reserved
+  concurrency, log-group KMS, bucket access logging, broad IAM). A baseline is a debt register, not
+  "hardened"; start with the approval/evidence-durability, logging and IAM findings.
+- **OPEN — restrict direct Bedrock/Lambda bypass + protect ENFORCE config.** Least-privilege the
+  AgentCore attachment provider's `bedrock-agentcore:*` (UpdateGateway can flip ENFORCE→LOG_ONLY or drop
+  the policy engine — separate that permission); add an IAM/account/org **mandatory-guardrail** condition
+  (`bedrock:GuardrailIdentifier`) so no Bedrock call escapes the guardrail.
+- **NOTED — AWS Budgets is a backstop, not a real-time breaker** (updates ~8–12 h). The real-time control
+  is the per-call meter + kill switch; Budgets is the belt-and-suspenders ceiling. Docs already frame it
+  this way; keep it.
+- **OPEN — production-scale concurrency/replay test, DR game day, regional recovery, external pen test**
+  before real customer data (also in the pillar register above).
+- **OPEN — real system-of-record connector, enterprise OBO/delegation, full IdP-federation lifecycle**
+  (the entitlement claim contract is proven; the lifecycle is not deployed).
+
+## Net effect on the review's verdict
+
+The review's headline blocker — *"a consequential action cannot occur without durable, immutable
+evidence" is not currently true* — is now addressed in code (governed-core 1.10.1: #1, #2) with
+fault-injection tests, released and re-pinned across all four packs, and the enforcement point no longer
+trusts caller assertions (#3). The remaining path to a design-partner pilot is the **live re-gate against
+`v0.5.0-pilot-rc1`** (including the private-network JWKS path and the WAF association with the corrected
+retry window), the authoritative consent/purpose source, and the burn-down items above — none of which
+re-open the durable-evidence guarantee.
