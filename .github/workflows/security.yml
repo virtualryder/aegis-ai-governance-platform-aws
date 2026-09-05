@@ -3,7 +3,7 @@ name: security
 # Standardized security harness — SAST, dependency CVEs, secret scan, IaC scan, SBOM.
 # Bandit + detect-secrets are BLOCKING against committed baselines (.bandit-baseline.json /
 # .secrets.baseline) — a NEW finding fails CI, baselined ones do not. pip-audit + Semgrep are
-# report-only pending a hash-pinned lockfile / a triaged ruleset; Checkov is soft-fail. See SECURITY-CI.md.
+# Semgrep report-only pending a hash-pinned ruleset. Checkov is BLOCKING vs infra/.checkov.baseline (#165). See SECURITY-CI.md.
 
 on:
   push:
@@ -83,9 +83,12 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install checkov
-      # soft-fail: pre-existing reference-template findings are surfaced, not blocking.
-      - name: Checkov (soft-fail)
-        run: checkov -d infra --framework cloudformation --compact --soft-fail || true
+      # HARD-FAIL (#165): the committed baseline (infra/.checkov.baseline) grandfathers the triaged
+      # reference-template findings; any NEW IaC misconfiguration relative to it FAILS the build. Burn
+      # the baseline down over time (regenerate with `checkov -d infra --framework cloudformation
+      # --create-baseline`). See SECURITY-CI.md.
+      - name: Checkov (hard-fail against baseline)
+        run: checkov -d infra --framework cloudformation --compact --baseline infra/.checkov.baseline
 
   sbom:
     name: SBOM (CycloneDX)

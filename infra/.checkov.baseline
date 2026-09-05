@@ -1,0 +1,357 @@
+{
+    "failed_checks": [
+        {
+            "file": "/cdk\\cdk.out\\aegis-governance-core.template.json",
+            "findings": [
+                {
+                    "resource": "AWS::DynamoDB::Table.ApprovalsTableF18C2B8F",
+                    "check_ids": [
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.GatewayFunctionA7138035",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                },
+                {
+                    "resource": "AWS::Logs::LogGroup.GatewayLogGroup423AA6D5",
+                    "check_ids": [
+                        "CKV_AWS_158"
+                    ]
+                },
+                {
+                    "resource": "AWS::S3::Bucket.WormEvidenceBucketEC3383F3",
+                    "check_ids": [
+                        "CKV_AWS_18"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/cdk\\deploy\\aegis-governance-core.template.json",
+            "findings": [
+                {
+                    "resource": "AWS::DynamoDB::Table.ApprovalsTableF18C2B8F",
+                    "check_ids": [
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.GatewayFunctionA7138035",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                },
+                {
+                    "resource": "AWS::Logs::LogGroup.GatewayLogGroup423AA6D5",
+                    "check_ids": [
+                        "CKV_AWS_158"
+                    ]
+                },
+                {
+                    "resource": "AWS::S3::Bucket.WormEvidenceBucketEC3383F3",
+                    "check_ids": [
+                        "CKV_AWS_18"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/cloudformation\\governance-core.yaml",
+            "findings": [
+                {
+                    "resource": "AWS::DynamoDB::Table.ApprovalLedger",
+                    "check_ids": [
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.GatewayFn",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                },
+                {
+                    "resource": "AWS::Logs::LogGroup.GatewayLogGroup",
+                    "check_ids": [
+                        "CKV_AWS_158"
+                    ]
+                },
+                {
+                    "resource": "AWS::S3::Bucket.WormEvidenceBucket",
+                    "check_ids": [
+                        "CKV_AWS_18"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/cloudformation\\sample-agent.yaml",
+            "findings": [
+                {
+                    "resource": "AWS::Lambda::Function.HumanGateFn",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.WorkerFn",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                },
+                {
+                    "resource": "AWS::Logs::LogGroup.SfnLogGroup",
+                    "check_ids": [
+                        "CKV_AWS_158"
+                    ]
+                },
+                {
+                    "resource": "AWS::Logs::LogGroup.StepLogGroup",
+                    "check_ids": [
+                        "CKV_AWS_158"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/golden-pilot\\ci\\oidc-deploy-role.yaml",
+            "findings": [
+                {
+                    "resource": "AWS::IAM::Role.DeployRole",
+                    "check_ids": [
+                        "CKV_AWS_107",
+                        "CKV_AWS_109",
+                        "CKV_AWS_110",
+                        "CKV_AWS_111"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/golden-pilot\\connector-pilot.yaml",
+            "findings": [
+                {
+                    "resource": "AWS::DynamoDB::Table.AuditTable",
+                    "check_ids": [
+                        "CKV_AWS_119",
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::DynamoDB::Table.IdempotencyTable",
+                    "check_ids": [
+                        "CKV_AWS_119",
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::DynamoDB::Table.TicketsTable",
+                    "check_ids": [
+                        "CKV_AWS_119",
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::IAM::Role.ConnectorRole",
+                    "check_ids": [
+                        "CKV_AWS_111"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.ConnectorFn",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/golden-pilot\\evidence-worm.yaml",
+            "findings": [
+                {
+                    "resource": "AWS::S3::Bucket.EvidenceBucket",
+                    "check_ids": [
+                        "CKV_AWS_18"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/golden-pilot\\mcp-gateway.yaml",
+            "findings": [
+                {
+                    "resource": "AWS::ApiGatewayV2::Stage.Stage",
+                    "check_ids": [
+                        "CKV_AWS_95"
+                    ]
+                },
+                {
+                    "resource": "AWS::DynamoDB::Table.AuditTable",
+                    "check_ids": [
+                        "CKV_AWS_119",
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::Serverless::Function.McpFunction",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/golden-pilot\\reviewer-api.yaml",
+            "findings": [
+                {
+                    "resource": "AWS::ApiGatewayV2::Stage.DefaultStage",
+                    "check_ids": [
+                        "CKV_AWS_95"
+                    ]
+                },
+                {
+                    "resource": "AWS::DynamoDB::Table.AuditTable",
+                    "check_ids": [
+                        "CKV_AWS_119",
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::DynamoDB::Table.LedgerTable",
+                    "check_ids": [
+                        "CKV_AWS_119",
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::DynamoDB::Table.PendingTable",
+                    "check_ids": [
+                        "CKV_AWS_119",
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::IAM::Role.LambdaRole",
+                    "check_ids": [
+                        "CKV_AWS_111"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.GateOpenerFn",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.ReviewerFn",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.WorkerFn",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/golden-pilot\\reviewer-service.yaml",
+            "findings": [
+                {
+                    "resource": "AWS::DynamoDB::Table.AuditTable",
+                    "check_ids": [
+                        "CKV_AWS_119",
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::DynamoDB::Table.LedgerTable",
+                    "check_ids": [
+                        "CKV_AWS_119",
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::DynamoDB::Table.PendingTable",
+                    "check_ids": [
+                        "CKV_AWS_119",
+                        "CKV_AWS_28"
+                    ]
+                },
+                {
+                    "resource": "AWS::IAM::Role.LambdaRole",
+                    "check_ids": [
+                        "CKV_AWS_111"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.GateOpenerFn",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.ReviewerFn",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                },
+                {
+                    "resource": "AWS::Lambda::Function.WorkerFn",
+                    "check_ids": [
+                        "CKV_AWS_115",
+                        "CKV_AWS_116",
+                        "CKV_AWS_117",
+                        "CKV_AWS_173"
+                    ]
+                },
+                {
+                    "resource": "AWS::Logs::LogGroup.FnLogGroup",
+                    "check_ids": [
+                        "CKV_AWS_158"
+                    ]
+                }
+            ]
+        }
+    ]
+}

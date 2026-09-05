@@ -133,9 +133,9 @@ jobs:
         continue-on-error: true
         run: bandit -r platform_core tools
 
-      - name: Run checkov on IaC (non-blocking)
-        continue-on-error: true
-        run: checkov -d infra/cloudformation --quiet --compact
+      # HARD-FAIL (#165): baseline grandfathers triaged findings; a NEW misconfiguration fails the build.
+      - name: Run checkov on IaC (hard-fail against baseline)
+        run: checkov -d infra --framework cloudformation --quiet --compact --baseline infra/.checkov.baseline
 
   # On a version tag (vX.Y.Z), publish the wheel + its hash on the GitHub release (created by the
   # release step below if the tag has none) - the governed-core release discipline, adopted here

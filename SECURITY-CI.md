@@ -13,7 +13,7 @@ and the release packet ([`RELEASE-PACKET.md`](RELEASE-PACKET.md)).*
 | **detect-secrets** | **BLOCKING** | vs committed `.secrets.baseline` — a NEW unbaselined secret fails CI |
 | **pip-audit** (deps) | **BLOCKING** | deps are hash-pinned in `platform_core/requirements-lock.txt`; pip-audit runs against that lockfile with the `\|\| true` dropped, so a known-vulnerable dependency fails CI |
 | **Semgrep** (SAST rulesets) | report-only | flips to blocking once a ruleset (e.g. `p/ci`) is pinned + triaged |
-| **Checkov** (IaC) | soft-fail | pre-existing reference-template findings surfaced, not blocking (harden templates, then remove `--soft-fail`) |
+| **Checkov** (IaC) | **BLOCKING** | vs committed `infra/.checkov.baseline` — a NEW IaC misconfiguration fails CI; baselined reference-template findings don't (#165) |
 | **CycloneDX SBOM** | artifact | published every run |
 
 The committed baselines record the CURRENT findings (audit `.secrets.baseline` with
@@ -24,7 +24,7 @@ supply-chain job in `ci.yml` (gitleaks, Trivy, Terraform validate) — `security
 ### How to enforce the remaining scanners
 
 Bandit, detect-secrets, and **pip-audit** are now blocking (see table above). The remaining two —
-Semgrep and Checkov — are still report-only/soft-fail; the recipe for each:
+Semgrep — is still report-only/soft-fail; the recipe:
 
 | Scanner | Status | Make it blocking |
 |---|---|---|
@@ -32,7 +32,7 @@ Semgrep and Checkov — are still report-only/soft-fail; the recipe for each:
 | **detect-secrets** | ✅ blocking | `detect-secrets scan > .secrets.baseline`, **audit** it (`detect-secrets audit .secrets.baseline`) to mark the known false positives (`.env.example` placeholders, prompt SHA hashes), commit it, then run `--baseline .secrets.baseline` and drop `\|\| true`. |
 | **pip-audit** | ✅ blocking | **Done:** dependencies are hash-pinned into `platform_core/requirements-lock.txt` (`pip-compile --generate-hashes`) and pip-audit runs against it with the `\|\| true` dropped, so a known-vulnerable dependency fails CI. |
 | **Semgrep** | report-only | Pin a ruleset (e.g. `p/ci`, `p/python`), triage, then drop `\|\| true`. |
-| **Checkov** | soft-fail | Harden the reference templates, then remove `--soft-fail` to enforce on IaC misconfigurations. |
+| **Checkov** | ✅ blocking | `checkov -d infra --framework cloudformation --create-baseline`, commit `infra/.checkov.baseline`, then run with `--baseline infra/.checkov.baseline` (no `--soft-fail`). New misconfigurations fail CI; baselined ones don't (#165, 2026-09-05). |
 
 ## Dependency lockfiles
 
