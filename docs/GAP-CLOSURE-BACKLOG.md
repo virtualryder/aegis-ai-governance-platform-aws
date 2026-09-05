@@ -378,10 +378,11 @@ allow_insecure_prod=1` override. Proven live to refuse; regression test in `test
 - **OPEN — burn down the Checkov/Bandit baselines** (PITR, API access logging, Lambda DLQ/reserved
   concurrency, log-group KMS, bucket access logging, broad IAM). A baseline is a debt register, not
   "hardened"; start with the approval/evidence-durability, logging and IAM findings.
-- **OPEN — restrict direct Bedrock/Lambda bypass + protect ENFORCE config.** Least-privilege the
-  AgentCore attachment provider's `bedrock-agentcore:*` (UpdateGateway can flip ENFORCE→LOG_ONLY or drop
-  the policy engine — separate that permission); add an IAM/account/org **mandatory-guardrail** condition
-  (`bedrock:GuardrailIdentifier`) so no Bedrock call escapes the guardrail.
+- **FIXED (Tier-1, 2026-09-05) — restrict direct Bedrock/Lambda bypass + protect ENFORCE config.** The
+  AgentCore attachment provider's `bedrock-agentcore:*` is replaced by the enumerated control-plane CRUD it
+  performs, and the drafter's `bedrock:InvokeModel` carries the **mandatory-guardrail** IAM condition
+  (`Null: bedrock:GuardrailIdentifier=false`) — 2 CDK tests. The account/org half is the
+  enforcement-perimeter section below (PERIM-1).
 - **NOTED — AWS Budgets is a backstop, not a real-time breaker** (updates ~8–12 h). The real-time control
   is the per-call meter + kill switch; Budgets is the belt-and-suspenders ceiling. Docs already frame it
   this way; keep it.
@@ -399,3 +400,56 @@ trusts caller assertions (#3). The remaining path to a design-partner pilot is t
 `v0.5.0-pilot-rc1`** (including the private-network JWKS path and the WAF association with the corrected
 retry window), the authoritative consent/purpose source, and the burn-down items above — none of which
 re-open the durable-evidence guarantee.
+
+---
+
+# 2026-09-05 — Enforcement-perimeter review (second external teardown): validation + action plan
+
+A second external review argued that a customer-account governance layer *"cannot guarantee capture of
+every API call"* without organization-level SCPs and VPC-endpoint policies, that Bedrock model-invocation
+logging creates an *unredacted secondary PII store*, that inline proxies degrade streaming/TTFT, and that
+single-account designs lack multi-account aggregation; it proposed an SCP, a VPC-endpoint policy, a
+CloudTrail configuration and a bypass alarm. **Every claim was validated against AWS documentation and the
+code before anything was changed**, and every proposed artefact was linted rather than adopted. Status key
+as above: **FIXED** · **CORRECTED** · **STAGED** · **OPEN** · **N/A**.
+
+## Validation, claim by claim
+
+| # | Review claim | Verdict | Evidence |
+|---|---|---|---|
+| 1 | "Captures every API call" cannot hold without SCPs / endpoint policies | **Partly valid → CORRECTED + FIXED** | Aegis's *proven* scope is the governed path (preventive) plus an account-wide capture trail (#168). The label "capture-every-API-call" invited the account-boundary reading and **no SCP / endpoint-policy artefact was shipped** (prose only in `docs/16` and the pack's network-hardening doc). Wording fixed; artefacts shipped (PERIM-1). |
+| 2 | Full capture "requires CloudTrail **data** events for InvokeModel / Converse" | **Wrong per AWS docs → CORRECTED (in our favour)** | CloudTrail records `InvokeModel`, `InvokeModelWithResponseStream`, `Converse`, `ConverseStream` as **management** events ([Monitor Amazon Bedrock API calls using CloudTrail](https://docs.aws.amazon.com/bedrock/latest/userguide/logging-using-cloudtrail.html)); the #168 trail (management ALL, multi-region, WORM, file-validated) already records every direct invocation by any principal. **But** `ApplyGuardrail`, `InvokeAgent`/`InvokeInlineAgent`/`InvokeFlow`, `Retrieve`/`RetrieveAndGenerate`, async + bidirectional invokes and the AgentCore Gateway *are* data events we did not select — a real selector gap (PERIM-2). The lineage docstring also leaned on invocation logging for Bedrock coverage, which is mutable, per-region and non-WORM — corrected. |
+| 3 | Invocation logging = unredacted PII store | **Mitigated on the governed path; store under-protected → FIXED** | The drafter refuses to draft unless the content carries a mask_pii-signed `sanitized_ref` bound to the signed digest (P0-1), so *its* invocations are de-identified before Bedrock. The account-level log also records **bypass callers'** raw prompts — precisely what the new alarm catches — and the store itself was `S3_MANAGED`, `DESTROY` + auto-delete, no Object Lock, no CMK **while the production gate now requires `model_logging=1`**. Fixed (PERIM-4). |
+| 4 | Inline proxy doubles TTFT / breaks SSE streaming | **N/A → documented** | The drafter is a synchronous `converse()` inside a Step Functions workflow; there is no inline token proxy anywhere in the design. Agent-runtime streaming is AgentCore-native. Recorded as a design boundary in `org/README.md`. |
+| 5 | Custom Lambdas + DynamoDB "lockouts" add cold starts / rate limits / quota pressure | **Valid ops item → OPEN (PERIM-7)** | True of the reserve-before meter and the idempotency writes; the design already documents Budgets as non-real-time. Needs a capacity/quota model and a reserved-concurrency decision — not a correctness defect. |
+| 6 | Single-account; no cross-account aggregation | **Valid enterprise item → OPEN (PERIM-6)** | Landing-zone design exists (`docs/16-MULTI-ACCOUNT-LANDING-ZONE.md`); no IaC or two-account proof. |
+| 7 | Proposed SCP (two statements, `aws:userId`, `aws:PrincipalType`, `bedrock:Converse`, SLR exemption) | **Unsafe as written → REJECTED, replaced** | Statement 1 ANDs `PrincipalType != AssumedRole` into the Deny, so **no role session is ever denied** — the EC2/ECS/Lambda bypass it targets passes. Statement 2 keys on `aws:userId` = `<role-id>:<caller-chosen session name>` ([global condition keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html)) — defeated by `--role-session-name AegisGovernanceProxy-x`. `bedrock:Converse*` are not IAM actions (Converse authorizes as `bedrock:InvokeModel`, [Converse API](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html)). SCPs never apply to service-linked roles or the management account ([SCPs](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)), so the SLR carve-out is noise. It is kept as a **regression fixture that must fail the lint**. |
+| 8 | Proposed CloudTrail selectors (`Model`, `Guardrail`, `KnowledgeBase`, `AgentAlias`) + metric filter on `userIdentity.arn != "*Proxy*"` | **Directionally right; incomplete / unsafe → replaced** | Missing `AsyncInvoke`, `InlineAgent`, `FlowAlias`, `Prompt` and `AWS::BedrockAgentCore::Gateway`; the filter keys on the session-bearing ARN. Ours selects every documented type and keys on `sessionContext.sessionIssuer.arn` (the role) plus a second filter for IAM-user/root callers. |
+| 9 | Console / playground needs `aws:UserAgent` denial | **Unnecessary → documented** | A playground call is the console principal calling `InvokeModel`; outside the allowlist it is denied by the inference statement. `aws:UserAgent` is spoofable and adds nothing. |
+
+## Action plan — PERIM-1 … PERIM-8
+
+| ID | Item | Layer | Status | Proof | Live gate |
+|---|---|---|---|---|---|
+| PERIM-1 | **Preventive account boundary**: corrected org SCP (11 real inference actions incl. agents/KB/async/batch; `ArnNotLike aws:PrincipalArn` allowlist; allowlisted-role protection; telemetry protection; control-plane changes only by the deployer) + standalone VPC-endpoint policy + renderer + lint | Org / network | **STAGED** (templates shipped, statically validated) | `benefits org/*`, `scripts/render_org_perimeter.py --lint`, `tests/test_org_perimeter.py` (4, incl. the proposed-SCP fixture) | Needs an Organization (#172): sandbox OU → `guardrail_proof` + `cedar_perimeter_proof` still pass while an operator-role `converse` is refused. Step 1 of the landing-zone runbook. |
+| PERIM-2 | **Bedrock + AgentCore data-event capture** in the account trail (advanced selectors; docstring corrected) | Detective | **FIXED** (IaC) | `test_capture_trail_selects_bedrock_and_agentcore_data_events`; `org/cloudtrail-advanced-event-selectors.json` pinned equal | Next `capture_all=1` gate: `lineage_proof` + an `ApplyGuardrail` call from a test role appears in the WORM capture |
+| PERIM-3 | **Bypass alarm** `<prefix>-bedrock-perimeter-bypass` from the capture log (issuing-role allowlist + IAM-user/root) on the ops topic | Detective | **FIXED** (IaC) | `test_bedrock_perimeter_bypass_alarm_from_capture_trail` | Same gate: an operator-role `converse` → ALARM within 5 min; the drafter's own calls do not trip it |
+| PERIM-4 | **Invocation-log store as regulated data**: CMK (log group + payload bucket, bedrock service granted the key), Object-Lock COMPLIANCE + versioned + RETAIN + no auto-empty under `-c model_log_lock_days>0`; **production gate requires it** | Data protection | **FIXED** (IaC + gate) | `test_invocation_log_store_is_regulated_data_under_production_settings`; `app.py` `_require_production_controls` | Next `model_logging=1` + `kms=customer-managed` gate: Bedrock delivers to the SSE-KMS bucket + CMK log group (the cross-service key grant is the risk to verify) |
+| PERIM-5 | **In-VPC endpoint policy** on `bedrock-runtime` (drafter role pattern + `approved_bedrock_principals`) | Network | **FIXED** (IaC) | `test_bedrock_runtime_endpoint_policy_admits_only_the_governed_drafter` | Next `network_mode=private` gate (`network_waf_proof`): drafter still drafts through the endpoint |
+| PERIM-6 | **Multi-account aggregation**: org trail → log-archive account, cross-account EventBridge for the bypass alarm, central Security Hub | Landing zone | **OPEN (P1)** | design in `docs/16` | Two-account live proof; deliver as IaC in `org/` |
+| PERIM-7 | **Egress / non-Bedrock model surfaces** (SageMaker endpoints, third-party APIs): optional no-IGW/NAT SCP + Network Firewall pattern for workload OUs; pack already asserts 0 NAT / 0 IGW in private mode | Org / network | **OPEN (P1)** | `test_network_zero_public_egress` (pack) | Template + lint, then the same sandbox-OU gate as PERIM-1 |
+| PERIM-8 | **Capacity & quota model**: Lambda reserved concurrency for the drafter/interceptor, DynamoDB on-demand vs provisioned for the meter/ledger, Bedrock TPM/RPM quotas and model units, cold-start budget | Ops | **OPEN (P2)** | — | Load test at pilot volume; record in DEPLOYMENT-GUIDE |
+| — | **Claim precision**: "capture-every-API-call" = account-wide *capture*; *prevention* of direct calls = org boundary (PERIM-1) | Docs | **CORRECTED** | governed-core README, platform README/MATURITY, benefits README | — |
+| — | Streaming / TTFT | — | **N/A** | `org/README.md` | — |
+
+## Net effect
+
+The review's verdict — *"an opt-in proxy rather than an enterprise governance framework"* — was right
+about one thing and wrong about two. Right: prevention of *direct* Bedrock calls is an organization-level
+control, and we had not shipped it. Wrong: CloudTrail *already* records every model invocation in the
+account as a management event into our WORM trail, and the design has no inline token proxy to degrade
+streaming. With PERIM-1..5 the pack now ships **prevention (SCP + endpoint policy), capture (every Bedrock
+surface, WORM) and detection (bypass alarm)** as one tested set — with the honest caveat that the SCP is
+validated statically until a customer Organization is available (#172), which is why it sits first in
+the landing-zone runbook rather than in the pack's own from-zero gate.
+

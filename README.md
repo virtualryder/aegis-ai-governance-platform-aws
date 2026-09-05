@@ -112,8 +112,9 @@ the gap analysis and what carries forward versus what is new here.
 
 ## What it is, in one paragraph
 
-Aegis sits between your AI agents and your systems of record. Every agent action — every model
-call, every tool call, every retrieval — flows through a **deny-by-default authorization gateway**
+Aegis sits between your AI agents and your systems of record. Every action **on the governed path** —
+every model call, every tool call, every retrieval an Aegis agent makes — flows through a
+**deny-by-default authorization gateway**
 that enforces *least-privilege as an intersection* (an agent can never exceed the human it acts
 for), withholds consequential actions for a **human gate**, masks structured PII/PHI/FTI/CJI
 identifiers at every boundary (deterministic Safe Harbor regex baseline; free-text names and
@@ -122,7 +123,11 @@ other unstructured PII require the NER engine, which is mandatory in real-data m
 **hallucinations**, meters and caps **token spend**, and attributes that spend back to the
 owning department. Compliance regimes are applied as **overlay packs** that switch on the right
 controls, regions, and retention for the customer's industry. It is all built on AWS-native,
-GA services — no black box, no lock-in.
+GA services — no black box, no lock-in. At the **account boundary**, every Bedrock invocation by *any*
+principal is captured into WORM custody (CloudTrail management + Bedrock data events), a bypass alarm
+fires on any caller outside the allowlist, and *prevention* of direct calls is shipped as tested
+organization SCP + VPC-endpoint-policy templates (`benefits_eligibility_agent/org/`) — because no
+application-layer gateway can forbid a principal that holds its own `bedrock:InvokeModel` grant.
 
 ## Who it is for and why they care
 

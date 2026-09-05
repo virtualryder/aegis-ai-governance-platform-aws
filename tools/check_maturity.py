@@ -90,8 +90,11 @@ def _build_env(extra_env: dict) -> dict:
     # Normalise PYTHONPATH so `platform_core:.` resolves against the repo root
     # regardless of the caller's cwd.
     reproduce_pp = extra_env.get("PYTHONPATH", "platform_core:.")
+    # The reproduce line is written for a POSIX shell (`:`-separated). On Windows os.pathsep is `;`,
+    # so split on BOTH - otherwise `platform_core:.` is one bogus entry, a module fails to import, and
+    # the tool reports phantom drift (seen 2026-09-05: 55 "collected" on Windows vs the true 60).
     parts = []
-    for entry in reproduce_pp.split(os.pathsep):
+    for entry in re.split(r"[:;]", reproduce_pp) if os.pathsep != ":" else reproduce_pp.split(os.pathsep):
         entry = entry.strip()
         if not entry:
             continue
@@ -154,6 +157,17 @@ def main() -> int:
     args = parser.parse_args()
 
     text = read_maturity()
+    # The file must be VALID YAML, not just regex-scrapable text: on 2026-09-05 a nested double quote
+    # inside a flow-mapping note made MATURITY.yaml unparseable for two commits while this check (which
+    # only regex-scanned offline_total) stayed green. Parse it for real (pyyaml is a CI dependency).
+    try:
+        import yaml  # type: ignore
+        yaml.safe_load(text)
+    except ImportError:
+        print("WARNING: pyyaml not installed - MATURITY.yaml parse check skipped")
+    except Exception as exc:  # noqa: BLE001
+        print(f"FAIL: MATURITY.yaml is not valid YAML: {exc}")
+        return 1
     declared = declared_total(text)
     targets, extra_env = parse_reproduce(text)
     actual = collect_count(targets, extra_env)
