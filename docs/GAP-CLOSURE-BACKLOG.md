@@ -496,3 +496,24 @@ gate all agree, and the docs must say which of those three the tag actually has.
 state with `v0.5.2-pilot-rc1`; the siblings get honest 1.10.1 tags now and their live re-gates as the next
 cross-pack milestone.
 
+---
+
+# 2026-09-05 — Live-found register: what the Tier-1 from-zero gate caught that the unit suite could not
+
+Every item below passed CDK synthesis assertions and the offline suite, and **failed on the first real deploy
+of that path**. Each is now fixed *and* pinned by a test that encodes the live fact, so the class cannot
+recur silently. Recorded because a reviewer should weigh "IaC-asserted" against "live-proven" with exactly
+this list in mind.
+
+| # | Surface | What the live deploy said | Why the suite was blind | Fix + pin |
+|---|---|---|---|---|
+| L1 | `cognito-idp` interface endpoint (deep-dive #5 zero-egress JWKS) | "does not support the availability zone of the subnet" — offered only in us-east-1b/1c/1d; VPC pinned to 1a+1b | AZ availability of an endpoint service is account/region data, invisible to synth | VPC pinned to AZs every endpoint service offers (`describe-vpc-endpoint-services`-verified), `-c vpc_azs` override; CDK test asserts subnets/endpoints stay in the vetted set |
+| L2 | CloudTrail advanced selectors (PERIM-2) | "resources.type field value is not valid" — `AWS::Bedrock::Prompt` is rejected | CloudFormation validates the type only at PutEventSelectors time; a docs summary had listed it | Probed every type on a throwaway trail; Prompt removed, `BedrockAgentCore::Runtime`/`RuntimeEndpoint` added; test pins Prompt out; org selector file regenerated |
+| L3 | CMK key policy (customer-managed KMS) | Step Functions log group refused the key: grant covered `/aws/lambda/<prefix>-*` only | Key-policy conditions are opaque strings to synth; no test enumerated the log-group families | Grant lists every family the pack encrypts; CDK test enumerates them |
+| L4 | AgentCore attachment provider (Tier-1 least-privilege) | Gateway went FAILED: `CreateGateway` needs `bedrock-agentcore:CreateWorkloadIdentity` (a dependency the wildcard had hidden) | The enumerated list was derived from what the provider *calls*, not what the service *does on its behalf* | Workload-identity Create/Get/Delete/List enumerated; CDK test pins them |
+| L5 | Teardown helper | `BypassGovernanceRetention` on plain buckets (InvalidRequest); AgentCore sweep silently failing on an old host boto3 — an engine from the morning's gate survived | Errors swallowed; residue report omitted buckets, log groups and AgentCore | Per-bucket lock check, gateways swept before engines with retry on the async conflict, errors printed, residue report complete |
+| L6 | Account model-invocation logging | The stack's `on_delete` deletes the account's pre-existing (platform runbook) config | Account singleton; nothing in the pack owns the prior state | Gate driver snapshots and restores it; noted for the pack's own teardown path (OPEN: make the custom resource restore-aware) |
+
+Each of L1–L5 is closed with a test; L6 is tracked. The gate itself (`scripts/tier1_regate.py`) is now the
+pack's standing from-zero acceptance harness.
+
