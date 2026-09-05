@@ -25,3 +25,7 @@ dist/
 platform_core/build/
 platform_core/*.egg-info/
 
+
+# scratch commit messages
+*commit_msg*.txt
+.build_*.txt
