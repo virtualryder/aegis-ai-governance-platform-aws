@@ -453,3 +453,46 @@ surface, WORM) and detection (bypass alarm)** as one tested set — with the hon
 validated statically until a customer Organization is available (#172), which is why it sits first in
 the landing-zone runbook rather than in the pack's own from-zero gate.
 
+---
+
+# 2026-09-05 — Third external review (re-run against HEAD `bcf8d7a`): release integrity + runtime path
+
+The reviewer re-ran against current HEAD and separated *what is fixed in code* from *what a customer can
+actually deploy*. Verdict: the `governed-core` 1.10.1 fixes are real, but **release integrity was broken** —
+the packs' supported tags predate the fixes, their integrity verifiers failed, and two AWS-documented
+production blockers sat in the live runtime path. **Every finding was reproduced before it was acted on.**
+Status key as above.
+
+## Validation, finding by finding
+
+| # | Finding | Reproduced? | What was actually wrong | Status |
+|---|---|---|---|---|
+| R1 | Pack integrity verifiers fail (Benefits, PV, EDU); "mirrored control files drift from the declared lock/version" | **Yes** — `lib/verify_core.py` rc=1 in all three; Housing clean but declared 1.10.0 vs pin 1.10.1 | `lib/CORE_VERSION`/`core.lock` still said 1.9.0 while `requirements-core.txt` pins 1.10.1; `lib/controls/mask_pii.py` (PV/EDU, #164 propagation) and benefits' new `lib/controls/verify_manifest.py` + `authoritative_context.py` were added **without a relock**. CI runs the verifier, so all three mains were red. | **FIXED** — relocked at 1.10.1 in all four packs (`regen_core_lock.py --set 1.10.1`), verifiers OK, suites green (benefits 278/279, PV 191, EDU 189, Housing 186), pushed. **Closure test:** the verifier is already a CI gate; the miss was procedural (relock is not automatic). Added to the release checklist below (REL-4). |
+| R2 | Supported tags older than the fixes; benefits tag ~1,700 lines behind HEAD; some release docs still describe 1.9.0 | **Yes** — benefits `RELEASE`=v0.5.1 (pre-Tier-1), PV v0.3.0 (1.9.0 gate), EDU `RELEASE`=v0.1.3 while its docs/tags say v0.3.0, Housing `RELEASE`=v0.9.6 while v0.10.0 exists | The "1.9.0" sentences are accurate history of *older* tags, but the **supported tag ≠ the fixed core** in every pack, and two `RELEASE` files disagree with their own tags/docs. | **IN PROGRESS** — benefits: `v0.5.2-pilot-rc1` cut after the Tier-1 live gate (REL-1). Siblings: cut `v0.4.0-pilot-rc1` (PV, EDU) and `v0.11.0` (Housing) from the relocked mains with release docs stating exactly what is live-gated vs offline-gated on 1.10.1 (REL-2). |
+| R3 | Pack tests "pass only when `governed-core` source is injected into PYTHONPATH" | **Partly** — with the pinned wheel installed (`pip install --require-hashes -r requirements-core.txt`, which each pack's CI does) the suites pass with no PYTHONPATH; without it `conftest.py` fails at `import governed_core` | A documentation gap: the test-run instruction was not next to the suite. | **FIXED** — README/START-HERE test instructions state the install step (REL-3). |
+| R4 | Checkov blocks new findings but baselines existing failures (reviewer counted 86) | **Yes** — `WOGplatform/infra/.checkov.baseline`: 10 templates, **93 check-instances**: CKV_AWS_28 (DynamoDB PITR) ×13, 115/116/117 (Lambda reserved concurrency / DLQ / VPC) ×13 each, 173 (Lambda env-var KMS) ×12, 119 (DynamoDB CMK) ×10, 158 (log-group KMS) ×6, 18 (S3 access logging) ×4, 111/107/109/110/95 (IAM) ×9 | A baseline is a debt register; the count is the debt. | **OPEN (P1)** — CHK-1 burn-down below, phased by cost. |
+| R5 | Runtime accepts an unvalidated `prompt` (AWS: structured input can cause direct tool dispatch) | **Yes** — `lib/runtime/agent.py` took `payload["prompt"]` verbatim, any type, unbounded | A list/dict prompt would reach Strands as content blocks. Tool calls would still hit the Cedar gateway, but the entrypoint had no input contract at all. | **FIXED** — `validate_input()`: prompt must be a plain string ≤ 4000 chars (no NUL), `case_id`/`requester` short identifiers; refused **before** the kill-switch read, tenant derivation, gateway and model; `access_token` type-checked. 5 tests incl. an I/O-ordering proof (RT-1). |
+| R6 | Deployment relies on the AgentCore CLI-generated execution role (AWS: development/testing only) | **Yes** — `_configure.sh` ran `agentcore configure … -ecr auto` with no `--execution-role`; `_obs_setup.sh` then patched the CLI role with an inline SSM/budget policy; a generated `ssm-pol.json` carrying the raw account id was committed | Also: the runtime's own Strands model carried **no guardrail**, so the mandatory-guardrail IAM condition could not be applied to the runtime role. | **FIXED (IaC + tests; live gate staged)** — compute stack exports `RuntimeExecutionRole` (`<prefix>-agentcore-runtime`): the AWS-documented runtime policy scoped to region/account/runtime name + SSM, budget meter, ApplyGuardrail, SourceAccount/SourceArn trust; with a guardrail deployed, model invocations carry `Null{bedrock:GuardrailIdentifier:false}`. `_configure.sh` **refuses** to run without the role ARN; `_launch.sh` passes `GUARDRAIL_ID/VERSION` so `agent.py` sets Strands `guardrail_id/version`; `_obs_setup.sh` never patches an IaC role; `ssm-pol.json` removed + gitignored. The deterministic role name feeds the org SCP allowlist and the bypass alarm automatically. 2 CDK tests + 1 runtime test (RT-2). |
+| R7 | SCP/VPC boundary staged + statically tested, not live-proven; multi-account + non-Bedrock egress open | **Agreed** — matches PERIM-1/6/7 status | — | as recorded (PERIM-*) |
+
+## Action items — REL-1 … REL-4, RT-1 … RT-3, CHK-1
+
+| ID | Item | Status | Closure | Validation |
+|---|---|---|---|---|
+| REL-1 | **Benefits supported tag = fixed core**: cut `v0.5.2-pilot-rc1` from the Tier-1 + perimeter + runtime-hardening tree | **IN PROGRESS** | tag after the `ben-t1` live gate passes | `tests/test_release_consistency.py` (RELEASE ↔ anchors), `tests/test_doc_counts.py`, evidence `TIER1-REGATE-2026-09-05.*` |
+| REL-2 | **Sibling supported tags = fixed core**: PV/EDU `v0.4.0-pilot-rc1`, Housing `v0.11.0`; `RELEASE` files reconciled with tags and docs | **OPEN (this session)** | cut from relocked mains; release docs say "offline-gated on 1.10.1; last live gate on 1.9.0 (date/env)" until each pack's live re-gate | each pack's release-consistency test; `git describe` == `RELEASE` |
+| REL-3 | **Test-run instructions** next to the suite (install the hash-pinned core first) | **FIXED** | README/START-HERE "Run the tests" | reviewer reproduction without PYTHONPATH |
+| REL-4 | **Relock is part of the change, not a follow-up**: any edit under `lib/` must regenerate `core.lock` in the same commit | **OPEN (procedural)** | add a pre-commit / CI step that fails when `lib/` changed and `core.lock` did not | CI job on a PR touching `lib/` only |
+| RT-1 | Runtime **input contract** | **FIXED** | `agent.validate_input` | `tests/test_runtime_input_contract.py` (5) |
+| RT-2 | Runtime **execution role as IaC** + guardrail on the runtime model | **FIXED in IaC; live gate staged** | compute `RuntimeExecutionRole`; `_configure.sh --execution-role` | CDK tests (2) + runtime test; **next runtime gate** (`gate_111` / `obs_two_tenant_proof`) launched on the IaC role must pass, and a runtime model call must appear guardrail-assessed in the invocation log |
+| RT-3 | Propagate RT-1/RT-2 to PV / EDU / Housing runtimes (same `lib/runtime` template) | **OPEN (P1)** | port `validate_input` + IaC role + launch wiring | each pack's runtime unit tests + one live runtime gate per pack |
+| CHK-1 | **Checkov baseline burn-down** (93 → 0 with justified skips) | **OPEN (P1)** | Phase A (IaC flags, cheap): PITR ×13, DynamoDB CMK ×10, log-group KMS ×6, Lambda env KMS ×12, DLQ ×13 → ~54. Phase B (design): reserved concurrency ×13 (capacity model, PERIM-8), Lambda-in-VPC ×13 (private mode), S3 access logging ×4. Phase C: IAM 111/107/109/110/95 ×9 (scope the writes). Every remaining item carries an inline `checkov:skip` with the rationale. | `checkov` with an **empty** baseline in CI; the baseline file deleted |
+
+## Net effect
+
+The reviewer's distinction — *fixed on `main` ≠ deployable by a customer* — was correct and is now the
+release rule: a pack's supported tag must be cut from a tree whose integrity lock, pinned core, and live
+gate all agree, and the docs must say which of those three the tag actually has. Benefits reaches that
+state with `v0.5.2-pilot-rc1`; the siblings get honest 1.10.1 tags now and their live re-gates as the next
+cross-pack milestone.
+
