@@ -308,17 +308,26 @@ copy of those fields and injects only server-authoritative values — the server
 (`within_service_window` from `SERVICE_WINDOW_*`), the live meter (`budget_ok`), and an optional pack
 `authoritative_context` resolver for `consent`/`purpose`; without a resolver those stay UNSET so Cedar
 denies (fail-closed). Tests: `tests/test_interceptor_authoritative.py` (caller values stripped/overwritten).
-Follow-up (OPEN): the benefits pack should ship an `authoritative_context` resolver that reads consent
-from an authoritative consent record and binds purpose to the case/workflow, plus a target-side re-check
-(defense in depth if the Gateway ever evaluates pre-interceptor args).
+**CLOSED END-TO-END + LIVE-PROVEN (2026-09-05):** the benefits pack now ships
+`lib/controls/authoritative_context.py` — the interceptor's resolver reads the authoritative consent
+record and the case's authorized purpose from a server-side authz store (DynamoDB, case_id key, CMK/TTL,
+`GetItem`-only for the interceptor). A from-zero `ben-perim` deploy proved it live: a case with a real
+authz record → ALLOWED (returned an ELIGIBLE determination); a caller that FORGED consent/purpose on a
+case with NO record → DENIED by `consent_purpose_before_assess`. That also proves the interceptor's
+injection reaches the Cedar decision (the pattern would have inverted otherwise). Evidence:
+`benefits_eligibility_agent/evidence/AGENTCORE-PERIMETER-AUTHZ-3-2026-09-05.md`. Torn down to zero residue.
 
 **#4 supported release tag lacked the fixes — CONFIRMED → FIXED.**
 Verified: `v0.4.0-pilot-rc1 = be39f1c` (2026-09-03, governed-core 1.9.0) predates the Sept-5 work, yet
 RELEASE-MANIFEST claimed it was "cut from this tree and matches this count." Fix: RELEASE-MANIFEST
 corrected (the false claim retracted); `RELEASE` + deploy guide + anchor docs moved to
-**`v0.5.0-pilot-rc1`**, cut from current main (governed-core 1.10.1 + all Sept-5 work + the 1.10.1
-fixes), release-consistency gate green. **STAGED:** the full live clean-account gate against this exact
-tag has not yet been re-run — that is the remaining step, called out explicitly in the manifest.
+**`v0.5.1-pilot-rc1`** (v0.5.0 → v0.5.1 after the #3 resolver landed), cut from current main
+(governed-core 1.10.1 + all Sept-5 work + the 1.10.1 fixes + the #3 resolver), release-consistency gate
+green. **LIVE re-gate DONE for the perimeter + #3 path** (from-zero `ben-perim` deploy, PASS, torn down —
+see #3 above and `AGENTCORE-PERIMETER-AUTHZ-3-2026-09-05.md`). **STAGED:** re-running the heavier
+full-portfolio gates (111 / kill-switch / budget / lineage — last green at 1.10.0) against this exact tag
+is the remaining live step; they exercise the audit/approval paths the 1.10.1 offline fault-injection
+tests already cover.
 
 **#5 zero-egress breaks cold-start JWT verification — CONFIRMED → FIXED (IaC) / STAGED (live).**
 Verified: the private NetworkStack created endpoints for Secrets/SFN/Comprehend/Bedrock/Logs/KMS/STS but
