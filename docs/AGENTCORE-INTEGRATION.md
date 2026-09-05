@@ -40,13 +40,14 @@ agent and its tools *through Gateway*, evaluates each invocation against **Cedar
 list**, and runs control-plane **Cedar Analysis** to catch policy conflicts. That is the same sentence
 Aegis's `policy_engine` was written to say. **We concede this layer to AgentCore.**
 
-**But Policy is PREVIEW.** It is not GA, carries no production SLA, and (per AWS's own security blog)
-Cedar here expresses conditional/temporal/quantitative/boolean rules — it does **not** express
-separation-of-duties, single-use approval, or human-in-the-loop gating. Those remain Aegis's job.
+**Policy reached GA on 2026-03-03** (Cedar deny-by-default tool authorization at the Gateway, a
+production SLA, 13 regions incl. us-east-1). But — per AWS's own security blog — Cedar here expresses
+conditional/temporal/quantitative/boolean rules; it does **not** express separation-of-duties,
+single-use approval, or human-in-the-loop gating. Those remain Aegis's job.
 
-Sources: AgentCore overview; "Why Policy in AgentCore chose Cedar" (AWS Security Blog); "AgentCore now
-includes Policy (preview), Evaluations (preview)" (AWS What's New, Dec 2025); AgentCore GA (AWS What's
-New, Oct 2025).
+Sources: AgentCore overview; "Why Policy in AgentCore chose Cedar" (AWS Security Blog); "Policy in Amazon Bedrock
+AgentCore is now generally available" (AWS What's New, 2026-03-03); "AgentCore now includes Policy
+(preview), Evaluations (preview)" (AWS What's New, Dec 2025); AgentCore GA (AWS What's New, Oct 2025).
 
 ---
 
@@ -60,7 +61,7 @@ Recorded because it is the first question a reviewer asks. Verified against the 
 | **Runtime** | **Yes** | The Strands agent runs in a per-session microVM; `session.id` is bound on every span; the kill-switch and budget hooks sit on every model call | benefits EP1 → mt6 gates |
 | **Gateway** | **Yes** | MCP over CUSTOM_JWT, one Lambda target per manifest tool, created as IaC by a CloudFormation custom resource (`create_gateway`, `create_gateway_target`) | every AgentCore gate |
 | **Gateway REQUEST interceptor** | **Yes** | Derives the tenant from the verified JWT, injects the HMAC-signed pair, checks the kill switch and the budget, short-circuits with 403. It is a **Lambda because that is the only interceptor type AgentCore offers** | multi-tenant, kill-switch, budget gates |
-| **Policy** (AWS-preview) | **Yes** | Cedar engine in ENFORCE (`create_policy_engine` / `create_policy`): deny-by-default, forbid-wins; `platform_core.policy_engine` stays the offline parity oracle (§3) | ENFORCE-from-zero, 111 gate |
+| **Policy** (GA 2026-03-03) | **Yes** | Cedar engine in ENFORCE (`create_policy_engine` / `create_policy`): deny-by-default, forbid-wins; `platform_core.policy_engine` stays the offline parity oracle (§3) | ENFORCE-from-zero, 111 gate |
 | **Identity — inbound** | **Yes** | `customJWTAuthorizer` (Cognito discovery URL + allowed client) on the Runtime; the same human JWT is the Gateway bearer, so Cedar evaluates the real principal, never a service role | all runs |
 | **Observability** | **Yes** | ADOT GenAI spans (agent / model / tool) joined to gateway request rows, Lambda `aegis.call` lines, the model-invocation log and the WORM record by one correlation set | observability + 111 gates |
 | **Identity — outbound** (workload identity, OAuth2 / API-key credential providers) | **No** | No third-party system of record is deployed; the one tool that would need it (`verify_income`) is deliberately not deployed. Becomes the right shape for the first real SaaS connector (OpenAPI target + outbound OAuth) — in-account tools stay Lambda | — |
@@ -102,19 +103,21 @@ that competes with Gateway/Policy/Identity.
 
 ---
 
-## 3. How we adopt Policy while it is preview (the responsible path)
+## 3. How we adopt Policy — GA since 2026-03-03 — with defense in depth (the responsible path)
 
-We do **not** put a preview service in the sole enforcement path for regulated data. Instead:
+Even with Policy GA, we do **not** put any single managed service in the *sole* enforcement path for
+regulated data. Instead:
 
 1. **AgentCore Gateway + Policy** become the primary, managed tool-authz choke point (Cedar default-deny).
 2. The **reviewed `platform_core.policy_engine`** stays deployed as (a) a **fail-closed fallback** if
    Policy is unavailable in-region, and (b) a **conformance oracle**: every request is decided by both,
    and a **parity check** asserts AgentCore-Cedar == reviewed-engine. Divergence fails CI, exactly like
    the existing drift-checker.
-3. When Policy reaches **GA**, the fallback becomes optional and the oracle stays as the parity test.
+3. Policy is now **GA** (2026-03-03): the reviewed-engine fallback is therefore optional (kept for an
+   in-region outage / offline portability), and the oracle stays as the standing parity test.
 
-This makes the preview status a *strength* in the story: we can show AgentCore Policy and our reviewed
-engine agreeing, decision-for-decision, on the same live traffic.
+The conformance oracle is a *strength* in the story: we can show the GA AgentCore Policy engine and our
+reviewed engine agreeing, decision-for-decision, on the same live traffic.
 
 ---
 

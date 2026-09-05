@@ -74,7 +74,7 @@ Deploy the shared control plane + two tenants (A, B). Prove, live and torn down:
 ## Migration & compatibility
 - The existing **silo** path stays valid (per-customer accelerator). Hybrid is an additive **multi-tenant
   deploy mode**; `tenant` pinned = 1-tenant silo is the degenerate case of the same code.
-- AgentCore Policy is AWS-preview → the reviewed engine stays fail-closed fallback + parity oracle throughout.
+- AgentCore Policy is GA (2026-03-03) → the reviewed engine stays as a defense-in-depth parity oracle + offline/outage fallback.
 
 ## Routing correction — how the tenant reaches the tool (2026-09-02, from the probe)
 

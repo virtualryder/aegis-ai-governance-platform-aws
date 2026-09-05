@@ -40,7 +40,7 @@ Two implementations of one contract, on purpose:
 
 | | `platform_core` (this repo) | `governed-core` (its own repo) |
 |---|---|---|
-| **Job** | The **reference implementation and conformance oracle** for AGP 1.0: the readable, dependency-free version of every control that a reviewer (CISO, auditor, AWS) can run on a laptop, plus the **fail-closed fallback + parity oracle** while AgentCore Policy is AWS-preview | The **production control plane** the agent packs import and run on AgentCore — Gateway interceptor, tool-Lambda decorators, evidence writer, sign-off gate, tenancy routing, kill switch, budget meter |
+| **Job** | The **reference implementation and conformance oracle** for AGP 1.0: the readable, dependency-free version of every control that a reviewer (CISO, auditor, AWS) can run on a laptop, plus the **fail-closed fallback + parity oracle** as defense-in-depth alongside AgentCore Policy (GA 2026-03-03) | The **production control plane** the agent packs import and run on AgentCore — Gateway interceptor, tool-Lambda decorators, evidence writer, sign-off gate, tenancy routing, kill switch, budget meter |
 | **Runs where** | Offline (`demo/`, `platform_core/tests`); as a Lambda **layer** in the portable reference gateway (`infra/golden-pilot/mcp-gateway.yaml`, live-validated: B3, Run 10, Run 13) | In every pack's tool Lambdas, the gateway REQUEST interceptor and the AgentCore Runtime image (live-validated: benefits EP1 → mt6, 2026-07-27 → 2026-09-03) |
 | **Executes real side effects?** | No — the portable reference gateway executes **fixtures** (`[fixture] … executed`); the one real connector proof is the DynamoDB system-of-record connector (Run 9, 2026-07-01) | Yes — the packs' tools (Comprehend masking, Bedrock drafting, DynamoDB stores, Step Functions workflow) are real; consequential commits stay behind the human gate |
 | **Owner / repo** | `virtualryder/aegis-ai-governance-platform-aws` (this repo), `platform_core/` | `virtualryder/governed-core` (public, Apache-2.0) |
@@ -57,7 +57,7 @@ Recorded 2026-09-03 after the Copilot review. **`platform_core` is not retired i
   is ~2 500 lines of stdlib Python (+ ~700 in `prod/`) with 60 offline tests; `governed-core` is Lambda / AgentCore code that
   only makes sense deployed. Folding one into the other would either strip the reviewable reference of
   its independence or burden the runtime core with laptop-only concerns.
-- AgentCore **Policy is AWS-preview**. Until it is GA, the deny-by-default decision on the AgentCore
+- AgentCore **Policy is GA** (2026-03-03). The deny-by-default decision on the AgentCore
   path is made by Cedar in AgentCore **and** re-affirmed by the same predicate offline as a parity
   oracle (`docs/AGENTCORE-INTEGRATION.md` §"what stays"). That oracle is `platform_core.policy_engine`.
 - Where the two implement the *same* control, the **ordering and semantics are mirrored and
