@@ -20,16 +20,16 @@ is the single place that says so, and every README below points here.*
  │  (9-clause predicate), approval     │    │  AgentCore Gateway interceptor, Cedar controls,  │
  │  ledger, masker, audit chain,       │    │  evidence (hash chain + WORM), sign-off gate,    │
  │  budgets, model gateway, kill switch│    │  tenancy, telemetry, kill switch, budget meter   │
- │  version 0.2.0 (this repo)          │    │  version 1.9.0 (tag + GitHub release + wheel)    │
+ │  version 0.2.0 (this repo)          │    │  version 1.10.0 (tag + release + wheel)    │
  │  stdlib-only, laptop-runnable       │    │  Lambda + Runtime code, hash-pinned per pack     │
  └──────────────┬──────────────────────┘    └──────────────┬──────────────────────────────────┘
                 │ shipped as a Lambda LAYER                 │ pinned wheel (URL + sha256) and
                 │ into the reference stacks                 │ a byte-level lock of the mirrored lib/
  ┌──────────────▼──────────────────────┐    ┌──────────────▼──────────────────────────────────┐
  │  Reference stacks (WOGplatform)     │    │  Agent packs (their own repos)                   │
- │  infra/golden-pilot  mcp-gateway    │    │  benefits_eligibility_agent   core 1.9.0  LIVE   │
- │   (API GW + Cognito JWT + reviewed  │    │  pharmacovigilance_agent      core 1.9.0  LIVE   │
- │   engine, fixture tool execution)   │    │  edu_financial_aid_agent      core 1.9.0  LIVE   │
+ │  infra/golden-pilot  mcp-gateway    │    │  benefits_eligibility_agent   core 1.10.0 LIVE   │
+ │   (API GW + Cognito JWT + reviewed  │    │  pharmacovigilance_agent      core 1.10.0 LIVE   │
+ │   engine, fixture tool execution)   │    │  edu_financial_aid_agent      core 1.10.0 LIVE   │
  │  infra/cdk  aegis-governance-core   │    │  Housing_eligibility_agent    core 1.4.0         │
  │   (STUB gateway: audit+guardrail+   │    │  each: manifest, tools, Cedar policies, CDK      │
  │   kill switch; Budgets; WORM; KMS)  │    │  (real AgentCore Runtime + Gateway + Policy)     │
@@ -44,7 +44,7 @@ Two implementations of one contract, on purpose:
 | **Runs where** | Offline (`demo/`, `platform_core/tests`); as a Lambda **layer** in the portable reference gateway (`infra/golden-pilot/mcp-gateway.yaml`, live-validated: B3, Run 10, Run 13) | In every pack's tool Lambdas, the gateway REQUEST interceptor and the AgentCore Runtime image (live-validated: benefits EP1 → mt6, 2026-07-27 → 2026-09-03) |
 | **Executes real side effects?** | No — the portable reference gateway executes **fixtures** (`[fixture] … executed`); the one real connector proof is the DynamoDB system-of-record connector (Run 9, 2026-07-01) | Yes — the packs' tools (Comprehend masking, Bedrock drafting, DynamoDB stores, Step Functions workflow) are real; consequential commits stay behind the human gate |
 | **Owner / repo** | `virtualryder/aegis-ai-governance-platform-aws` (this repo), `platform_core/` | `virtualryder/governed-core` (public, Apache-2.0) |
-| **Version** | `VERSION` + `platform_core/pyproject.toml` (**0.2.0** from 2026-09-03; 0.1.0 before) | `pyproject.toml` (**1.9.0**); every version is a git tag **and** a GitHub release carrying the CI-built wheel |
+| **Version** | `VERSION` + `platform_core/pyproject.toml` (**0.2.0** from 2026-09-03; 0.1.0 before) | `pyproject.toml` (**1.10.0**); every version is a git tag **and** a GitHub release carrying the CI-built wheel |
 | **How a consumer pins it** | The layer is staged **byte-for-byte from `platform_core/`** by `infra/golden-pilot/prepare_layer.sh`; `verify_authorizer_engine.py` proves the deployed authorizer is that code | `requirements-core.txt`: `governed-core @ <release wheel URL> --hash=sha256:…` (`pip --require-hashes`); the Runtime image pins the same wheel; `lib/core.lock` (`lib/verify_core.py`, CI) is a byte-level lock of the pack's mirrored `lib/` so nothing drifts silently; `lib/CORE_VERSION` names the version |
 | **Release discipline** | tags + GitHub releases from 2026-09-03 (`v0.2.0`); `CHANGELOG.md` | tag → GitHub release → CI wheel with sha256 (since 1.3.1) |
 | **Conformance proof** | `platform_core/tests/test_agp_conformance.py` + `AGP-CONFORMANCE.md` (control → module → negative test) | The packs' live gates: `evidence/AGENTCORE-*.md` in each pack (isolation, audit routing, observability, kill switch, budget) |
@@ -82,6 +82,7 @@ and the two reference stacks are the *specification and its proof*, not a second
 | **1.9.0** | per-tenant token + USD budget meter | **benefits main (2026-09-03)** — `AGENTCORE-BUDGET` 24/24 | `docs/TOKEN-BUDGETS-AND-COST-CEILINGS.md`; platform_core 0.2.0 (outbox ordering, zero-default entitlements, bound approvals at consumption — Run 13) |
 | 1.9.0 | (same core) — first non-lead pack to re-pin and re-gate all four SaaS/containment/budget controls | **benefits `v0.4.0-pilot-rc1` (2026-09-03)** — kill switch + budget on the tag; **pharmacovigilance `v0.3.0-pilot-rc1` (2026-09-03)** — from-zero two-tenant gate: isolation 12/12, transparency 13/13 per tenant, canary 0, kill switch 29/29, budget 24/24, regression sweep 0 (`pharmacovigilance_agent/evidence/AGENTCORE-*-2026-09-03.*`) | GAP-1 of the 2026-09-03 platform review |
 | 1.9.0 | (same core) — EDU financial-aid pack re-pinned and re-gated LIVE | **edu_financial_aid `v0.3.0-pilot-rc1` (2026-09-04)** — from-zero two-tenant gate: isolation 12/12, transparency 13/13 per tenant (model invocations tenant-tagged, masked-before-model), canary 0, kill switch 29/29 (in-flight mid-session stop), budget 24/24, regression sweep 0 (`edu_financial_aid_agent/evidence/AGENTCORE-*-2026-09-04.*`). The gate caught a cluster of latent port defects: the runtime pinned to the wrong (`fa-financial`) deployment, a runtime role missing its SSM/budget grants, a runtime never re-pinned to the full 1.9.0 features (correlation/budget/kill-switch/model-invocation tenant tagging), a workflow that hard-coded verification-hold so no case could reach sign-off, and an MCP-teardown bug that masked the governed mid-session kill. Offline suite 174→190. | GAP-1 of the 2026-09-03 platform review |
+| 1.10.0 | correctness batch: audit fail-closed (#159), approval binding (#162), deepened PII/PHI (#164 — shared `pii_detect`: UTF-8 byte-window chunking + fail-closed regex backstop) | **benefits** re-pinned + LIVE re-gated (2026-09-05: isolation 12/12, #168 lineage 0 orphans, WORM custody); **pharmacovigilance** + **edu_financial_aid** re-pinned to 1.10.0 (offline suites green) | + **#168** capture-every-API-call (account CloudTrail → unified lineage, WORM Object-Lock custody) and **#169** token chargeback reconciled to Cost Explorer; Housing (1.4.0) + eligibility pending uplift |
 
 Rules of the matrix: a pack's tag names exactly one governed-core version (`requirements-core.txt`);
 a pack on an older core is **not wrong**, it is **behind** — Housing (1.4.0) still lacks

@@ -1,0 +1,18 @@
+DEPENDENCY-MODEL + MATURITY: EDU financial-aid pack re-pinned to governed-core 1.9.0, LIVE-gated (GAP-1 cont.)
+
+The EDU pack joins benefits and pharmacovigilance at governed-core 1.9.0, live-gated on a from-zero
+two-tenant AgentCore deployment (fa-mt, 2026-09-04) and torn down to zero residue:
+isolation + per-tenant audit routing 12/12, full transparency 13/13 per tenant (model invocations
+tenant-tagged, masked-before-model), strict PII canary 0 hits, kill switch 29/29 (in-flight
+mid-session stop), per-tenant token+USD budget 24/24, e2e regression 0 unexpected. Tag
+edu_financial_aid v0.3.0-pilot-rc1; offline suite 174 -> 190.
+
+- docs/DEPENDENCY-MODEL.md: EDU pack row 1.5.0 -> 1.9.0 LIVE; new version-history row for the EDU
+  live gate (and the cluster of latent port defects it caught: stale fa-financial runtime env,
+  missing runtime-role SSM/budget grant, a runtime never re-pinned to the full 1.9.0 features, a
+  workflow that could never reach sign-off, and an MCP-teardown bug that masked the mid-session
+  kill). Only Housing (1.4.0) remains behind.
+- MATURITY.yaml: agentcore.pack_repin_gap1_edu record.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01H6R9E992bAAyrPQAdygUwC
