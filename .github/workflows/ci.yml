@@ -59,6 +59,8 @@ jobs:
 
       - name: Check MATURITY.yaml test count (drift gate)
         run: python tools/check_maturity.py
+      - name: Pack parity matrix is generated from the packs (no-op when the packs are not checked out)
+        run: python tools/check_pack_parity.py --check
 
       # COPILOT-6d: every relative Markdown link resolves; no UTF-8 mojibake in tracked text files.
       - name: Docs hygiene (links + encoding)
