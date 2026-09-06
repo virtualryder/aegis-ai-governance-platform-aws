@@ -34,6 +34,11 @@ CONTROLS = [
     ("Output guardrail as IaC + grounded drafter (#166/#190)", r"CfnGuardrail|guardrail_config", 2, "2026-09-05"),
     ("WAFv2 on the Cognito front door (#170)", r"CfnWebACL|WebAcl", 2, "2026-09-05"),
     ("Authoritative Cedar context resolver (#3)", r"authoritative_context|authz_table", 2, "governed-core 1.10.1"),
+    # Fourth review R4-3 (2026-09-06): "a guardrail is present" (Null check) is not "THE guardrail" - the
+    # allow must name the exact guardrail ARN and an explicit Deny must refuse every other/absent value.
+    ("Exact-guardrail model IAM (allow + explicit deny, scoped models)", r"BedrockExactGuardrail|DenyOtherOrNoGuardrail", 2, "2026-09-06 R4-3"),
+    # The perimeter Cedar profile itself (-c perimeter=1): the #160/#161 gates the resolver feeds.
+    ("Perimeter Cedar profile (#160/#161 gates, -c perimeter=1)", r"_PERIMETER_INPUT_FIELDS|perimeter=perimeter", 2, "2026-09-06 PAR-1"),
     ("Zero-egress private network mode (VPC endpoints)", r"NetworkStack|network_mode", 2, "Gate-B / L9"),
     ("MFA-required identity mode + threat protection", r"identity_mode|Mfa\.REQUIRED", 2, "Gate-B"),
 ]
