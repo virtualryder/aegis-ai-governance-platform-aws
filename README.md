@@ -222,7 +222,7 @@ In deployment this is **Amazon Bedrock AgentCore Gateway** (managed) or the **po
 See [`docs/02-REFERENCE-ARCHITECTURE.md`](docs/02-REFERENCE-ARCHITECTURE.md) for the full
 edge-to-data architecture, per-component talking points, and the control→regime mapping.
 
-**As-deployed diagram (honest, 2026-09-03):** [`docs/ARCHITECTURE-DEPLOYED.drawio`](docs/ARCHITECTURE-DEPLOYED.drawio)
+**As-deployed diagram (honest, 2026-09-03 — currency note 2026-09-06: predates governed-core 1.10.x, the enforcement perimeter, output guardrail, contextual grounding, CMK invocation store and the bypass alarm, all live on benefits `v0.5.2-pilot-rc1` per `benefits_eligibility_agent/evidence/TIER1-REGATE-2026-09-06.md`; redraw is roadmap):** [`docs/ARCHITECTURE-DEPLOYED.drawio`](docs/ARCHITECTURE-DEPLOYED.drawio)
 ([PNG](docs/ARCHITECTURE-DEPLOYED.png) · [PDF](docs/ARCHITECTURE-DEPLOYED.pdf)) draws only what is
 deployed and live-validated on benefits `v0.3.0-pilot-rc1` (+ the kill switch and the per-tenant budget, main 2026-09-03) + governed-core 1.9.0: seven layers
 (identity/JWT → runtime + model → governed tool gateway → governed tools → deterministic workflow →
