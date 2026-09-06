@@ -530,7 +530,11 @@ this list in mind.
 | L18 | Authoritative consent / purpose (#3, #163) with `-c perimeter=1` | Attempt 4: every real runtime flow was denied at `assess_eligibility` (`consent_purpose_before_assess`) — NOTHING in the production path wrote the authz record the interceptor's resolver reads; only the Cedar proof had seeded it | The resolver was proven with a proof-seeded record; no test asked who writes it in production | Ingest (the one door raw content enters, by a verified caseworker in MT mode) records the caseworker's explicit attestation of the applicant's consent + the case's authorized purpose (`consent_attested: true`, `purpose` in the Cedar-allowed set), server-side; nothing else may write it (the interceptor keeps GetItem only); a caller-supplied consent/purpose is still stripped. Fail-closed without it. Unit + CDK tests; every proof attests as the caseworker's client would |
 | L19 | Runtime mid-session stop (kill switch / budget) | Attempt 4: the BUDGET stop was computed correctly inside the session, but leaving the MCP client re-raised its teardown error ("Connection to the MCP server was closed" — the gateway had refused the in-flight tool call under the same cap) and the caller saw HTTP 424, not the governed refusal. The EDU runtime had carried a teardown guard since its 2026-09-04 gate; the benefits template never received it — **runtime drift in the wrong direction** (see R4-5) | The unit fakes never raised on `__exit__`; the fix lived in one pack's copy of the template | The session records its outcome first; a teardown error after an outcome is logged, never surfaced; the containment-cause walk descends into ExceptionGroups. Ported to PV + EDU the same day. Unit test raises on teardown in all three packs |
 
-Each of L1–L19 is closed with a test or an exact live assertion (L6 closed 2026-09-06; L14–L19 found by the full-portfolio gate on 2026-09-06 — attempts 2–4 — and closed on benefits main; attempt 5 is the from-zero re-run of the closed tree). The gate itself (`scripts/tier1_regate.py`) is now the
+| L20 | Negation-blind eligibility extraction (`intake_application`) | Attempt 6: the extractor matched the bare token `tanf` in an application reading "... **no TANF**." and set `categorical_eligibility=True`. Categorical eligibility SKIPS the income/resource test, so a negation-blind match silently converts an income-tested case into an automatic approval - a materially wrong legal determination drawn from text that says the opposite. **What caught it was the contextual-grounding guardrail, not a test**: the drafter's model wrote that the case facts and the engine's determination contradicted each other, GROUNDING scored 0.31 against a 0.55 threshold, the draft was blocked fail-closed and the case went `DraftNotice -> ManualReview` instead of to sign-off. No unit test found it because every fixture asserted the positive case. | Negation-aware scan (`_categorical_from_text`): a benefit token counts only when no negation cue appears in the clause around it, with a clause boundary ending the negation window ("no TANF. Receives SSI" is still categorical). 12 regression cases in `tests/test_tools.py` - 7 negated, 4 granted, 1 explicit-field-wins. The same class exists in Housing (`elderly`/`disabled`) - carried into PAR-2 - and in PV's `_SERIOUS` flags, where it over-flags seriousness (fail-safe for PV, still wrong; tracked as L20b). |
+| L21 | Lineage proof read log-delivered sources with no settle window | Attempt 6: `lineage_proof.py` read CloudTrail / model-invocation / gateway logs ONCE, immediately after the case ran. On a from-zero deployment the capture-all trail is minutes old and CloudTrail's delivery into CloudWatch Logs lags the API call it records, so the proof saw `cloudtrail_lambda_invokes=0`, `model_invocations=0`, `gateway_requests=0` while DynamoDB (11 aegis calls) and Step Functions (17 events) - read directly, not through log delivery - were fully populated. Every governed tool was reported as an orphan. Every previous PASS was on stacks that had been delivering for hours; proving the platform from zero is exactly what surfaced this. | Bounded settle (`--settle-max-sec`, default 900): re-read the three delivered sources until CloudTrail shows at least one governed Lambda invoke in the window, or the deadline passes. The wait is RECORDED in the evidence and an expired deadline still FAILS - "we waited 15 minutes and CloudTrail delivered nothing" can never be confused with "we did not wait". |
+| L22 | Regression sweep knew only the Lambda-side view of a deliberate refusal | Attempt 6: a correct fail-closed run reported 17 "unexpected" errors. (a) A **Cedar DENY at the gateway** logs `Policy evaluation denied request` / `Tool Execution Denied` with `"decision":"DENY"`; the classifier matched only uppercase `DENIED`, so the platform's headline control read as an incident. (b) The gateway wraps a tool Lambda's refusal in a generic line ("An error occurred while executing tool: mask-pii___mask_pii from target X") that carries no reason - no content pattern can tell a kill-switch refusal from a genuinely broken tool. | (a) explicit Cedar-deny patterns. (b) **correlation, not a wider pattern**: a gateway tool-execution wrapper is expected only when that tool's own Lambda log carries an already-classified-EXPECTED refusal within 15s. Widening the pattern to match the wrapper text would have blinded the gate to real tool failures; a wrapper with no matching Lambda refusal stays UNEXPECTED. Offline-tested in both directions. |
+
+Each of L1–L19 is closed with a test or an exact live assertion (L6 closed 2026-09-06; L14–L22 found by the full-portfolio gate on 2026-09-06 — attempts 2–6 — and closed on benefits main; attempt 5 is the from-zero re-run of the closed tree). The gate itself (`scripts/tier1_regate.py`) is now the
 pack's standing from-zero acceptance harness.
 
 
@@ -571,7 +575,7 @@ that work are marked.
 
 | ID | Item | Why this order | Status |
 |---|---|---|---|
-| REL-6 | Green attempt 5 → tag `v0.6.0-pilot-rc1` on that exact commit; evidence + teardown from the same sha | the reviewer's #4 and the honesty anchor for everything below | attempt 5 running |
+| REL-6 | Green attempt 7 → tag `v0.6.0-pilot-rc1` on that exact commit; evidence + teardown from the same sha | the reviewer's #4 and the honesty anchor for everything below | attempt 6 found L20/L21/L22 (all fixed); attempt 7 from zero next |
 | R4-3 | Exact-guardrail IAM (allow `StringEquals` + explicit `Deny StringNotEquals`; scoped model/profile ARNs) — benefits, then PV/EDU | cheapest P0, pure IaC, CDK-testable | benefits DONE (pending gate re-run on the tagged tree) |
 | R4-6 | MMDSv2 explicit + asserted in the gate | AWS hard requirement since 2026-06-30 | DONE (asserted from attempt 5) |
 | R4-5 | Runtime pins 1.10.1 + agreement test | the image was one core behind | DONE; PAR-3 (single runtime package) next |
@@ -580,6 +584,46 @@ that work are marked.
 | PAR-1 step 5 | authoritative Cedar context resolver + the perimeter Cedar set + R4-3 for PV/EDU | parity 13/13 | next |
 | PAR-3 | `governed_core.runtime` — one versioned runtime, packs consume it | R4-5 root cause | after PAR-1 |
 | RT-4 | Gateway-only runtime invocation (Gateway runtime target / `aws:SourceArn`) evaluated live | R4-2 hardening | after PAR-3 |
-| SEC-1 / SIG-1 / CHK-1 | reusable security workflow; sign every manifest; Checkov burn-down | R4-13/14 | this week |
+| SEC-1 | reusable security workflow (bandit / detect-secrets / checkov / CodeQL / trivy, all blocking) in benefits + PV + EDU | R4-13 | **DONE 2026-09-06** |
+| CHK-1 | Checkov burn-down: hardened the evidence-trail log bucket, Log4j WAF rule group, reviewed baselines committed | R4-14 | **DONE 2026-09-06** (baseline gate live; residual items are design positions, recorded) |
+| SIG-1 | sign PV/EDU/Housing manifests; exercise the KMS signer | R4-14 | next |
 | EV-1 | COMPLIANCE-mode live deployment in a disposable account | R4-10 | needs a throwaway account |
 | PERIM-1b | Organizations Bedrock policy (enforced guardrail) + SCP tested in a real OU | R4-1 — the only path to "non-bypassable" | blocked on an Organization (David) |
+
+
+## 2026-09-06 - SEC-1 / CHK-1 landed (fourth review R4-13, R4-14)
+
+**SEC-1 - one security workflow, every pack, every gate blocking.** Before this the packs ran only
+pip-audit + SBOM while the platform repo alone ran static analysis, secret detection and IaC
+scanning, so a finding could land in a pack and never be seen. `.github/workflows/security.yml` now
+runs the same five gates in benefits, PV and EDU, and none of them is report-only:
+
+| Gate | Tool | Blocking on |
+|---|---|---|
+| static analysis | bandit 1.9.4 (`-ll -ii`, B101 skipped) | any medium+/medium+ finding - benefits scanned clean, so this starts at zero with no baseline |
+| secret detection | detect-secrets 1.5.0 | any string not already in the reviewed `.secrets.baseline` |
+| IaC | checkov 3.2.489 over the **synthesized** CloudFormation | any finding not in `.checkov.baseline` (checkov cannot see through CDK Python - the app must be synthesized first or the scan silently passes over an empty tree) |
+| code scanning | CodeQL `security-extended` | its own findings |
+| container | trivy on the runtime image built from `lib/runtime` | HIGH/CRITICAL, `ignore-unfixed` - pip-audit sees requirements.txt; only an image scan sees the base image's OS packages |
+
+`.secrets.baseline` per pack was reviewed line by line, not accepted blind: 18/13/17 files, every
+finding an env-var NAME, a URL, an example ARN (already redacted), a Docker digest pin, a test
+fixture JWT, or the documented `ChangeMe-Approver1!` demo seed the manifest ships for the sandbox
+profile (a pilot must change it; the CDK "no default passwords" assertion covers the deployed pool).
+
+**CHK-1 first real finding - the evidence trail's own log bucket was unhardened.** The data-events
+trail on the WORM vault (the control that proves nobody but the gateway touched the evidence) was
+delivering into a CDK auto-created bucket that synthesized with **no properties at all**: no
+block-public-access, no TLS enforcement, no versioning, no declared encryption
+(CKV_AWS_53/54/55/56/21/35). It is now an explicitly declared bucket with the same shape as the rest
+of the regulated-data estate, and the same locked/unlocked retention behaviour (RETAIN and never
+auto-emptied under the production profile; destroy/auto-delete in sandbox, which is what the
+portfolio gate's zero-residue teardown asserts). Also added `AWSManagedRulesKnownBadInputsRuleSet`
+to the auth Web ACL (CKV_AWS_192 - the Common Rule Set alone does not inspect for a Log4j2 JNDI
+lookup). Both are covered by new CDK assertions in all three packs.
+
+Honest note on the checkov numbers: the 481 raw findings from the first sizing scan are inflated -
+the same 3-4 stacks are synthesized once per deployment profile (demo/dev/mt/synth/val1-3), so the
+distinct finding set is far smaller. The residual baseline is dominated by Lambda DLQ/concurrency/
+in-VPC and log-group-KMS checks that are deliberate design positions, not debt; the CI gate fails
+on anything NEW.

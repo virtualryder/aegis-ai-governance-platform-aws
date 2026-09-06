@@ -39,6 +39,10 @@ CONTROLS = [
     ("Exact-guardrail model IAM (allow + explicit deny, scoped models)", r"BedrockExactGuardrail|DenyOtherOrNoGuardrail", 2, "2026-09-06 R4-3"),
     # The perimeter Cedar profile itself (-c perimeter=1): the #160/#161 gates the resolver feeds.
     ("Perimeter Cedar profile (#160/#161 gates, -c perimeter=1)", r"_PERIMETER_INPUT_FIELDS|perimeter=perimeter", 2, "2026-09-06 PAR-1"),
+    # CHK-1 (2026-09-06): the trail that proves nobody but the gateway touched the evidence was itself
+    # delivering into a CDK-default bucket with NO properties at all. The control is the DECLARED,
+    # hardened log bucket - and the Log4j managed rule group on the auth Web ACL alongside it.
+    ("Hardened evidence-trail log bucket + Log4j WAF group", r"WormDataEventsLogs|KnownBadInputsRuleSet", 2, "2026-09-06 CHK-1"),
     ("Zero-egress private network mode (VPC endpoints)", r"NetworkStack|network_mode", 2, "Gate-B / L9"),
     ("MFA-required identity mode + threat protection", r"identity_mode|Mfa\.REQUIRED", 2, "Gate-B"),
 ]
