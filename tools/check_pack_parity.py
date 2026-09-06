@@ -43,6 +43,11 @@ CONTROLS = [
     # delivering into a CDK-default bucket with NO properties at all. The control is the DECLARED,
     # hardened log bucket - and the Log4j managed rule group on the auth Web ACL alongside it.
     ("Hardened evidence-trail log bucket + Log4j WAF group", r"WormDataEventsLogs|KnownBadInputsRuleSet", 2, "2026-09-06 CHK-1"),
+    # L20 (2026-09-06): decision-relevant flags extracted from free text must be NEGATION-AWARE.
+    # A bare token match set categorical eligibility from an application reading "no TANF", which
+    # skips the income test entirely. One shared lib/controls/negation.py, not a copy per pack -
+    # a copy is exactly how this class of bug comes back.
+    ("Negation-aware decision-flag extraction (L20)", r"negation\.asserted", 1, "2026-09-06 L20"),
     ("Zero-egress private network mode (VPC endpoints)", r"NetworkStack|network_mode", 2, "Gate-B / L9"),
     ("MFA-required identity mode + threat protection", r"identity_mode|Mfa\.REQUIRED", 2, "Gate-B"),
 ]
@@ -57,6 +62,18 @@ def scan(pack_dir):
     for extra in (os.path.join(cdk, "app.py"), os.path.join(pack_dir, "lib", "runtime", "agent.py")):
         if os.path.exists(extra):
             files.append(extra)
+    # Not every control lives in the CDK. L20 (negation-aware extraction) is a property of the TOOL
+    # handlers and the shared lib/controls modules they import, so those are part of the corpus too.
+    # Widening the corpus cannot silently flip an existing row: the matrix is regenerated and
+    # diffed whenever this list changes.
+    for d in (os.path.join(pack_dir, "lib", "controls"),):
+        if os.path.isdir(d):
+            files += [os.path.join(d, f) for f in os.listdir(d) if f.endswith(".py")]
+    agents = os.path.join(pack_dir, "agents")
+    for a in sorted(os.listdir(agents)) if os.path.isdir(agents) else []:
+        t = os.path.join(agents, a, "tools")
+        if os.path.isdir(t):
+            files += [os.path.join(t, f) for f in os.listdir(t) if f.endswith(".py")]
     text = "\n".join(open(f, encoding="utf-8", errors="replace").read() for f in files)
     return {name: len(re.findall(pat, text)) >= n for name, pat, n, _ in CONTROLS}
 
