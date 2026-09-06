@@ -76,14 +76,17 @@ def render(rows, present):
         for l, _ in PACKS:
             cells.append("n/a" if not present[l] else ("✅" if rows[l].get(name) else "❌"))
         out.append("| %s | %s | %s |" % (name, since, " | ".join(cells)))
-    out += ["", "## Reading the matrix", "",
-            "- **benefits** is the lead pack: every control lands there first and is live-gated there (Tier-1 `ben-t1` 2026-09-06).",
-            "- **pharmacovigilance / edu_financial_aid** carry the 2026-09-02/03 controls (multi-tenant, kill switch, budget, model logging,",
-            "  runtime hardening) and **none of the 2026-09-05 controls** (capture-all lineage, enforcement perimeter, guardrail IaC +",
-            "  grounded drafter, WAF, authoritative Cedar context) — backlog **PAR-1**.",
-            "- **housing** is at the July 2026 Gate-B level: private network + MFA identity only. Multi-tenant, kill switch, budget,",
-            "  model logging, runtime hardening and everything from 2026-09-05 are **not wired** — backlog **PAR-2**.",
-            "- Live re-gates on 1.10.1 (**REL-5**) follow each pack's parity work, so a live gate proves the same control set everywhere.", ""]
+    out += ["", "## Reading the matrix (computed)", ""]
+    for l, _ in PACKS:
+        if not present[l]:
+            out.append("- **%s**: not checked out beside this repo." % l); continue
+        missing = [n for n, _, _, _ in CONTROLS if not rows[l].get(n)]
+        if not missing:
+            out.append("- **%s**: every control is wired (lead pack; live-gated per its VALIDATED_RELEASE.md)." % l)
+        else:
+            out.append("- **%s**: %d of %d wired. **Absent:** %s." % (l, len(CONTROLS) - len(missing), len(CONTROLS), "; ".join(missing)))
+    out += ["", "Backlog: **PAR-1** (PV/EDU 2026-09-05 controls), **PAR-2** (Housing full uplift), then **REL-5** live re-gates on 1.10.1",
+            "so a live gate proves the same control set everywhere (`docs/GAP-CLOSURE-BACKLOG.md`).", ""]
     return "\n".join(out)
 
 
