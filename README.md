@@ -49,14 +49,14 @@
 > authorized product. Across **ten documented AWS runs** ([`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md))
 > the deny-by-default **Cedar authorization** (Verified Permissions), **hardened identity** (Cognito
 > MFA + cryptographic JWT verification), the **human-approval reviewer service** behind an API Gateway
-> JWT authorizer, **append-only audit + WORM retention**, **KMS-signed manifests + atomic token
+> JWT authorizer, **append-only audit + WORM retention**, **signed manifests (Ed25519 reference signer on benefits; KMS-asymmetric signer is the production path, not yet exercised - see SIG-1) + atomic token
 > budgets**, a **governed connector** (idempotency + saga rollback), and a **live MCP JSON-RPC
 > gateway endpoint** (JWT authN, deny-by-default allow-list, approval gate, masked audit) were each
 > **deployed, exercised with real requests, and torn down**. **Hybrid multi-tenant** (one shared AgentCore
 > control plane, physically separate per-tenant data — including each tenant's own hash-chained ledger and
 > WORM vault via governed-core 1.6.0 — cross-tenant deny proven) is **live-validated with two tenants** in the
 > benefits pack (2026-09-02), including **full per-case transparency** through the real AgentCore Runtime: the
-> agent's reasoning spans, every gateway/tool/model API call and the WORM record joined by session/trace id, tagged
+> agent's framework / model-invocation + tool spans (not private chain-of-thought), every gateway/tool/model API call and the WORM record joined by session/trace id, tagged
 > per tenant, masked-before-model measured ([`docs/OBSERVABILITY-CORRELATION.md`](docs/OBSERVABILITY-CORRELATION.md)). Still customer/engagement-owned: ATO/GovRAMP authorization, an
 > independent pen test, a live external-SaaS connector, multi-account (Organizations) deployment, and
 > operator dashboards. Authoritative per-control maturity + plan:
@@ -89,7 +89,7 @@ Nothing in this repository is production-certified; see [`docs/10-PRODUCTION-REA
 
 *Governance once, agents as add-ons: this repo's `platform_core` is the **canonical reference implementation of the Aegis Governance Pattern (AGP) v1.0** — the versioned governance contract every suite conforms to. See [`docs/14-GOVERNANCE-PATTERN-VERSIONING.md`](docs/14-GOVERNANCE-PATTERN-VERSIONING.md). **Which code runs where:** `platform_core` is the offline reference + conformance oracle (and the engine inside the portable reference gateway); everything live on AgentCore runs on the separately versioned, hash-pinned [`governed-core`](https://github.com/virtualryder/governed-core) — one contract, two implementations, on purpose. The authoritative statement, pins and compatibility matrix: [`docs/DEPENDENCY-MODEL.md`](docs/DEPENDENCY-MODEL.md). **Which controls are actually wired in which pack** (pinning the core ≠ wiring its controls): the generated [`docs/PACK-PARITY.md`](docs/PACK-PARITY.md) — benefits has everything and is live-gated; PV/EDU lack the 2026-09-05 set; Housing is at the Gate-B level.*
 
-> **Validation update (2026-07-07/08).** All deployment claims were independently re-verified against the validation account (stack history, CloudTrail, KMS deletion markers), and **Run 10 added a live MCP JSON-RPC gateway endpoint** — JWT authN (401s proven), deny-by-default tool allow-list, approval gate, fail-closed masking, IAM-level append-only audit — deployed, exercised over HTTPS, and torn down. Sanitized proof pack: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
+> **Validation update (2026-07-07/08).** All deployment claims were re-verified by the repository author against the validation account (repository-author evidence, not an external party's - see the fourth review, R4-12) (stack history, CloudTrail, KMS deletion markers), and **Run 10 added a live MCP JSON-RPC gateway endpoint** — JWT authN (401s proven), deny-by-default tool allow-list, approval gate, fail-closed masking, IAM-level append-only audit — deployed, exercised over HTTPS, and torn down. Sanitized proof pack: [`evidence/CLEAN-ACCOUNT-ACCEPTANCE.md`](evidence/CLEAN-ACCOUNT-ACCEPTANCE.md).
 
 ### A whole-of-government and whole-of-enterprise governance layer for AI agents, built on AWS
 
@@ -112,9 +112,11 @@ the gap analysis and what carries forward versus what is new here.
 
 ## What it is, in one paragraph
 
-Aegis sits between your AI agents and your systems of record. Every action **on the governed path** —
-every model call, every tool call, every retrieval an Aegis agent makes — flows through a
-**deny-by-default authorization gateway**
+Aegis sits between your AI agents and your systems of record. Every TOOL call and every RETRIEVAL an Aegis
+agent makes flows through a **deny-by-default authorization gateway** (AgentCore Gateway + Cedar); the
+agent's own MODEL calls are governed differently - by IAM that admits only the exact Bedrock guardrail
+(allow + explicit deny), the per-tenant budget meter and the kill switch on every call, and model-invocation
+logging - not by the gateway (fourth review R4-2: a JWT holder invokes the Runtime directly by design)
 that enforces *least-privilege as an intersection* (an agent can never exceed the human it acts
 for), withholds consequential actions for a **human gate**, masks structured PII/PHI/FTI/CJI
 identifiers at every boundary (deterministic Safe Harbor regex baseline; free-text names and
@@ -307,7 +309,7 @@ log in [`DEPLOYED-AND-VALIDATED.md`](DEPLOYED-AND-VALIDATED.md).
 | 5 | Reviewer service: role + separation-of-duties + single-use approval |
 | 6 | S3 Object Lock retention: locked-object delete denied |
 | 7 | Reviewer behind API Gateway + Cognito JWT authorizer (401 -> authorized approve) |
-| 8 | KMS-signed manifests + atomic (no-oversell) token budgets |
+| 8 | Signed manifests (Ed25519 reference signer; benefits signed, PV/EDU/Housing not yet - SIG-1) + atomic (no-oversell) token budgets |
 | 9 | Governed connector: idempotency + saga rollback/compensation |
 | 10 | **A real MCP JSON-RPC endpoint**: API GW + Cognito JWT authorizer -> MCP server (deny-by-default allow-list, approval gate, fail-closed masking, append-only audit); all deny paths exercised over HTTPS |
 
@@ -367,7 +369,7 @@ sample_agents/
 infra/                           CloudFormation IaC, deploy/teardown scripts, smoke tests (CANONICAL-IAC.md)
 demo/                            Acceptance tests and demo harness
 tools/                           add_agent.py — one-command agent scaffolder
-platform_core/prod/              Production components: real JSON-Schema validation, manifest->Cedar compiler, KMS-signed manifests, atomic budgets
+platform_core/prod/              Production components: real JSON-Schema validation, manifest->Cedar compiler, signed manifests (KMS signer = reference path), atomic budgets
 infra/cloudformation/            governance-core + sample-agent templates, network.yaml (VPC/PrivateLink) + edge.yaml (WAFv2) minimal reference stacks, params, deploy/smoke/teardown scripts
 infra/golden-pilot/              Live-validated slices: AVP Cedar, Cognito identity, reviewer service + API front door, WORM evidence, connector saga, MCP gateway
 infra/terraform/                 Terraform module (governance_core) + commercial & GovCloud root examples — parity reference

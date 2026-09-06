@@ -119,5 +119,5 @@ is reconciled under one version number.
   switch) — it exists to validate the platform primitives (WORM, KMS, Budgets, CloudTrail, kill switch
   SoD policies) as IaC, not to serve tool calls. Labelled as such in `infra/cdk/README.md` and
   MATURITY (COPILOT-7).
-- `platform_core/prod/` (Cedar compiler, KMS-signed manifests, atomic budgets) is **OFFLINE + unit-tested**
+- `platform_core/prod/` (Cedar compiler, signed manifests - the KMS-asymmetric signer is a reference path, atomic budgets) is **OFFLINE + unit-tested**
   except where the matrix above says otherwise; the AgentCore packs use AgentCore's own Cedar engine.

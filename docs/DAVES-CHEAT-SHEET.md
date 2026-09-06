@@ -27,7 +27,7 @@ hallucination risk, cost control, and *who has authority to act*.
 1 Governance core (KMS/audit/WORM/Guardrail/Cognito/gateway) · 2 Human gate holds the action ·
 3 Cedar authz (Verified Permissions) ALLOW+2 DENY + real Bedrock · 4 Cognito MFA + JWT verify ·
 5 Reviewer: role + SoD + single-use · 6 WORM delete denied · 7 API Gateway + JWT authorizer
-(401 → authorized approve) · 8 KMS-signed manifests + atomic budgets (no oversell) ·
+(401 → authorized approve) · 8 signed manifests (Ed25519 reference signer; KMS path not yet exercised) + atomic budgets (no oversell) ·
 9 Governed connector: idempotency + saga rollback. **Evidence:** `DEPLOYED-AND-VALIDATED.md`.
 
 ## Two demos
