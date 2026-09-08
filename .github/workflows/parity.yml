@@ -57,6 +57,50 @@ jobs:
 
       # A check that has never been observed to fail is a claim, not a control. This proves the
       # gate can fail, on every run, without depending on a real drift ever happening.
+      # #237: the governed-core PIN is not the only thing that must agree. Eleven files were copied
+      # into four repositories by hand during the 2026-09-07/08 remediation - including the tests
+      # written to detect drift - and Housing had no security workflow at all for a month without
+      # anyone noticing (L47). This compares the shared files byte-for-byte and asserts the required
+      # ones exist.
+      - name: Document parity - BLOCKING
+        run: |
+          python tools/check_doc_parity.py \
+            packs/benefits_eligibility_agent \
+            packs/pharmacovigilance_agent \
+            packs/EDU_financial_aid_agent \
+            packs/Housing_eligibility_agent
+
+      - name: Negative control - a diverged shared file must FAIL
+        run: |
+          set -euo pipefail
+          printf '\n# planted divergence\n' >> packs/Housing_eligibility_agent/tools/check_secrets_baseline.py
+          if python tools/check_doc_parity.py \
+               packs/benefits_eligibility_agent \
+               packs/pharmacovigilance_agent \
+               packs/EDU_financial_aid_agent \
+               packs/Housing_eligibility_agent; then
+            echo "::error::doc parity PASSED with a planted divergence - it is not comparing"
+            exit 1
+          fi
+          git -C packs/Housing_eligibility_agent checkout -- tools/check_secrets_baseline.py
+          echo "negative control ok: the gate rejected the planted divergence"
+
+      - name: Negative control - a missing required file must FAIL
+        run: |
+          set -euo pipefail
+          rm -f packs/pharmacovigilance_agent/.github/workflows/security.yml
+          if python tools/check_doc_parity.py \
+               packs/benefits_eligibility_agent \
+               packs/pharmacovigilance_agent \
+               packs/EDU_financial_aid_agent \
+               packs/Housing_eligibility_agent; then
+            echo "::error::doc parity PASSED with a pack missing its security workflow - this is"
+            echo "::error::exactly the L47 defect and the gate did not see it"
+            exit 1
+          fi
+          git -C packs/pharmacovigilance_agent checkout -- .github/workflows/security.yml
+          echo "negative control ok: a missing required file fails the build"
+
       - name: Negative control - the gate must FAIL on a planted drift
         run: |
           set -euo pipefail
