@@ -1,0 +1,82 @@
+name: Cross-pack parity
+
+# #230, 2026-09-08. `tools/check_core_parity.py` has existed since the dependency migration and was
+# wired into NO workflow and NO pre-commit hook in ANY repo. Nothing ran it. Worse, invoked the way
+# a CI step would most plausibly invoke it — with no arguments — it printed "need at least two repos
+# to compare" and exited 0, so wiring it up carelessly would have produced a permanently green check
+# that compared nothing. Both halves are fixed: the script now exits 2 rather than 0 when it has
+# fewer than two repos or is given a path that does not exist, and this workflow gives it all four.
+#
+# The check itself asks three questions the per-repo gates cannot:
+#   1. does every pack pin the SAME governed-core version AND the same artifact hash?
+#   2. is every pin hash-locked at all? (a requirement without --hash is a copy with extra steps)
+#   3. has any pack quietly re-copied a core module into lib/controls, shadowing the package?
+#
+# It runs here rather than in the packs because it is the only place that sees all of them.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # The packs are separate repositories: a pin can drift without anything pushing HERE.
+    - cron: "41 7 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    name: governed-core pin parity across the four packs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Public repos, shallow clones - this reads requirements-core.txt and lib/controls only.
+      - name: Check out the four governed packs
+        run: |
+          set -euo pipefail
+          for repo in benefits_eligibility_agent pharmacovigilance_agent \
+                      EDU_financial_aid_agent Housing_eligibility_agent; do
+            git clone --quiet --depth 1 "https://github.com/virtualryder/${repo}.git" "packs/${repo}"
+          done
+          ls -1 packs
+
+      - name: Parity - BLOCKING
+        run: |
+          python tools/check_core_parity.py \
+            packs/benefits_eligibility_agent \
+            packs/pharmacovigilance_agent \
+            packs/EDU_financial_aid_agent \
+            packs/Housing_eligibility_agent
+
+      # A check that has never been observed to fail is a claim, not a control. This proves the
+      # gate can fail, on every run, without depending on a real drift ever happening.
+      - name: Negative control - the gate must FAIL on a planted drift
+        run: |
+          set -euo pipefail
+          sed -i 's/--hash=sha256:[0-9a-f]\{64\}/--hash=sha256:'"$(printf '0%.0s' {1..64})"'/' \
+            packs/Housing_eligibility_agent/requirements-core.txt
+          if python tools/check_core_parity.py \
+               packs/benefits_eligibility_agent \
+               packs/pharmacovigilance_agent \
+               packs/EDU_financial_aid_agent \
+               packs/Housing_eligibility_agent; then
+            echo "::error::the parity gate PASSED with a planted hash mismatch - it is not checking"
+            exit 1
+          fi
+          echo "negative control ok: the gate rejected the planted mismatch"
+
+      - name: Negative control - no arguments must NOT be a pass
+        run: |
+          set -euo pipefail
+          if python tools/check_core_parity.py; then
+            echo "::error::the parity gate PASSED with no repos to compare"
+            exit 1
+          fi
+          echo "negative control ok: invoking it with nothing is a failure, not a pass"
