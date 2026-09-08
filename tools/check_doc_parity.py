@@ -76,17 +76,25 @@ def _norm_hash(p):
 
 
 def _resolve(roots):
-    """Accept either a parent directory holding the packs, or the pack paths themselves."""
+    """Accept either a parent directory holding the packs, or the pack paths themselves.
+
+    Case-insensitive on the directory name. The GitHub repository is `EDU_financial_aid_agent`
+    and the local working copy is `edu_financial_aid_agent`; a case-sensitive match found three
+    packs on the runner and refused - correctly, but for the wrong reason. Matching case-blind
+    keeps the refusal meaning "a pack is genuinely absent".
+    """
+    canon = {n.lower(): n for n in PACKS}
     found = {}
     for root in roots:
         rp = pathlib.Path(root).resolve()
-        if rp.name in PACKS and rp.is_dir():
-            found[rp.name] = rp
+        if rp.is_dir() and rp.name.lower() in canon:
+            found[canon[rp.name.lower()]] = rp
             continue
-        for name in PACKS:
-            cand = rp / name
-            if cand.is_dir():
-                found[name] = cand
+        if not rp.is_dir():
+            continue
+        for child in rp.iterdir():
+            if child.is_dir() and child.name.lower() in canon:
+                found.setdefault(canon[child.name.lower()], child)
     return found
 
 
