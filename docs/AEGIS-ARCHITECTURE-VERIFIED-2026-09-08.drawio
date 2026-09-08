@@ -1,0 +1,244 @@
+<?xml version="1.0" ?>
+<mxfile host="app.diagrams.net" modified="2026-09-08T00:00:00.000Z" agent="aegis" version="24.7.17" type="device">
+  <diagram id="aegis-verified" name="Aegis — as verified 2026-09-08">
+    <mxGraphModel dx="2200" dy="1400" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1150" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="n2" value="Aegis Governed-Agent Reference Architecture — AS DEPLOYED AND VERIFIED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#232F3E;strokeColor=#232F3E;fontColor=#FFFFFF;fontSize=16;fontStyle=1;arcSize=8;" parent="1" vertex="1">
+          <mxGeometry x="40" y="20" width="1560" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n3" value="Single AWS account, us-east-1. Drawn from the &lt;b&gt;benefits_eligibility_agent&lt;/b&gt; pack at tag &lt;b&gt;v0.6.0-pilot-rc1&lt;/b&gt; — the one tree a full-portfolio gate passed 15/15 from zero (2026-09-07, env &lt;b&gt;ben-fp&lt;/b&gt;, two tenants, real AgentCore Runtime). Evidence: &lt;b&gt;evidence/FULL-PORTFOLIO-GATE-2026-09-07.json&lt;/b&gt;." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="40" y="60" width="1140" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="n4" value="VERIFICATION LEGEND" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F3F4;strokeColor=#DADCE0;fontColor=#232F3E;fontSize=10;fontStyle=1;arcSize=8;" parent="1" vertex="1">
+          <mxGeometry x="1200" y="58" width="400" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n5" value="" style="rounded=0;fillColor=#FFFFFF;strokeColor=#1A73E8;strokeWidth=3;" parent="1" vertex="1">
+          <mxGeometry x="1212" y="84" width="26" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="n6" value="&lt;b&gt;Live-verified&lt;/b&gt; — exercised in the 15/15 gate" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=9;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="1246" y="82" width="350" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="n7" value="" style="rounded=0;fillColor=#FFFFFF;strokeColor=#F59E0B;strokeWidth=3;dashed=1;dashPattern=8 4;" parent="1" vertex="1">
+          <mxGeometry x="1212" y="104" width="26" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="n8" value="&lt;b&gt;IaC-asserted&lt;/b&gt; — synthesized &amp;amp; unit-tested, never live-run" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=9;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="1246" y="102" width="350" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="n9" value="" style="rounded=0;fillColor=#FFFFFF;strokeColor=#9AA0A6;strokeWidth=3;dashed=1;dashPattern=1 4;" parent="1" vertex="1">
+          <mxGeometry x="1212" y="124" width="26" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="n10" value="&lt;b&gt;Not deployed&lt;/b&gt; — deliberately absent, or needs an AWS Organization" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=9;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="1246" y="122" width="350" height="16" as="geometry"/>
+        </mxCell>
+        <mxCell id="n11" value="AWS Account — prefix ben-&amp;lt;env&amp;gt;  ·  all resources tagged and torn down to zero stack residue" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#232F3E;strokeWidth=2;dashed=0;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#232F3E;align=left;spacingLeft=10;spacingTop=4;" parent="1" vertex="1">
+          <mxGeometry x="40" y="155" width="1560" height="850" as="geometry"/>
+        </mxCell>
+        <mxCell id="n12" value="1 · IDENTITY &amp;amp; ENTRY  — who is asking, and are they who they say" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#DD344C;strokeWidth=2;dashed=0;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#DD344C;align=left;spacingLeft=10;spacingTop=4;" parent="1" vertex="1">
+          <mxGeometry x="60" y="190" width="300" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="n13" value="AWS WAFv2
+REGIONAL Web ACL" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#DD344C;strokeColor=#F59E0B;strokeWidth=3;dashed=1;dashPattern=8 4;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.WAF;" parent="1" vertex="1">
+          <mxGeometry x="90" y="225" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n14" value="Amazon Cognito
+MFA-required (pilot)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#DD344C;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;" parent="1" vertex="1">
+          <mxGeometry x="90" y="345" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n15" value="&lt;b&gt;What:&lt;/b&gt; managed rate-limit + AWS common rule set on the auth front door.&lt;br&gt;&lt;b&gt;Why:&lt;/b&gt; the token endpoint is the only public surface; it needs a shield.&lt;br&gt;&lt;b&gt;Status:&lt;/b&gt; built as IaC; the WAF↔Cognito association is a documented AWS propagation delay and is not yet proven live (#189)." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=8;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="180" y="228" width="172" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="n16" value="&lt;b&gt;What:&lt;/b&gt; issues the RS256 JWT every request carries. Federation-ready (Entra/Okta/Ping via OIDC).&lt;br&gt;&lt;b&gt;Why:&lt;/b&gt; identity must be &lt;i&gt;cryptographic&lt;/i&gt;, not asserted — Cedar authorizes on a verified subject and group.&lt;br&gt;&lt;b&gt;Proven:&lt;/b&gt; real MFA login → JWT verified vs JWKS → group → Cedar decision." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=8;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="180" y="348" width="172" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="n17" value="2 · GOVERNED CONTROL PLANE  — the deny-by-default choke point" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#E7157B;strokeWidth=2;dashed=0;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#E7157B;align=left;spacingLeft=10;spacingTop=4;" parent="1" vertex="1">
+          <mxGeometry x="380" y="190" width="420" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="n18" value="AgentCore Gateway
+MCP · CUSTOM_JWT" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#E7157B;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.gateway;" parent="1" vertex="1">
+          <mxGeometry x="410" y="230" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n19" value="AgentCore Policy
+Cedar · ENFORCE" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#DD344C;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.identity_and_access_management_permissions;" parent="1" vertex="1">
+          <mxGeometry x="560" y="230" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n20" value="Tenant Interceptor
+(authoritative context)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#ED7100;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" parent="1" vertex="1">
+          <mxGeometry x="710" y="230" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n21" value="&lt;b&gt;Every governed tool call passes here.&lt;/b&gt; The gateway advertises only the tools the caller's verified entitlement claim allows — a missing or malformed claim grants ZERO tools, not all of them. Cedar then evaluates 9 conditions (entitlement, consent, purpose, budget, temporal window, quantitative cap, separation of duties, masking-before-use, no self-commit) and DENIES by default. The interceptor &lt;i&gt;overwrites&lt;/i&gt; caller-supplied context from authoritative stores, so a client cannot assert its own consent or budget." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=8;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="410" y="320" width="380" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="n22" value="&lt;b&gt;Why this shape:&lt;/b&gt; governance that lives inside the agent can be prompted away. Putting it in the gateway makes it structural — the model never holds the decision." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=9;fontColor=#B31412;" parent="1" vertex="1">
+          <mxGeometry x="410" y="424" width="380" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n23" value="3 · AGENT RUNTIME &amp;amp; MODEL" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#01A88D;strokeWidth=2;dashed=0;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#01A88D;align=left;spacingLeft=10;spacingTop=4;" parent="1" vertex="1">
+          <mxGeometry x="820" y="190" width="380" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="n24" value="AgentCore Runtime
+Strands agent, IaC role" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#ED7100;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;" parent="1" vertex="1">
+          <mxGeometry x="850" y="230" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n25" value="Bedrock Guardrail
+pinned version" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#DD344C;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.shield;" parent="1" vertex="1">
+          <mxGeometry x="990" y="230" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n26" value="Amazon Bedrock
+Claude Sonnet 4.5" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#01A88D;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;" parent="1" vertex="1">
+          <mxGeometry x="1120" y="230" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n27" value="&lt;b&gt;Runtime:&lt;/b&gt; runs on the CDK-exported least-privilege execution role (never the toolkit's auto-generated one), IMDSv2 required, bounded plain-string input contract validated before any I/O.&lt;br&gt;&lt;b&gt;Guardrail:&lt;/b&gt; pinned version + contextual grounding; IAM &lt;i&gt;requires&lt;/i&gt; the exact guardrail ARN — a call without it is denied, not merely unguarded.&lt;br&gt;&lt;b&gt;Model:&lt;/b&gt; reached over VPC endpoints; every invocation is logged and metered." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=8;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="850" y="320" width="330" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="n28" value="&lt;b&gt;RT-4 (new, not live-proven):&lt;/b&gt; the runtime's authorizer now sets &lt;i&gt;allowedWorkloadConfiguration&lt;/i&gt; so only this deployment's Gateway may invoke it." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=9;fontColor=#B45309;" parent="1" vertex="1">
+          <mxGeometry x="850" y="428" width="330" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n29" value="4 · GOVERNED TOOLS &amp;amp; HUMAN DECISION GATE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#ED7100;strokeWidth=2;dashed=0;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#ED7100;align=left;spacingLeft=10;spacingTop=4;" parent="1" vertex="1">
+          <mxGeometry x="60" y="510" width="740" height="240" as="geometry"/>
+        </mxCell>
+        <mxCell id="n30" value="Tool Lambdas
+mask · assess · draft · finalize" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#ED7100;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" parent="1" vertex="1">
+          <mxGeometry x="90" y="545" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n31" value="Step Functions
+workflow + waitForTaskToken" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#E7157B;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.step_functions;" parent="1" vertex="1">
+          <mxGeometry x="250" y="545" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n32" value="System-of-record
+connector" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#8C4FFF;strokeColor=#9AA0A6;strokeWidth=3;dashed=1;dashPattern=1 4;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;" parent="1" vertex="1">
+          <mxGeometry x="410" y="545" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n33" value="&lt;b&gt;One Lambda per manifest tool&lt;/b&gt;, explicit least-privilege IAM each. mask_pii mints a &lt;b&gt;signed sanitized_ref&lt;/b&gt;; downstream tools authorize on that signature — a caller-supplied &lt;i&gt;deidentified: true&lt;/i&gt; is never accepted. Case text moves &lt;b&gt;by reference&lt;/b&gt;, so raw PII never crosses workflow state.&lt;br&gt;&lt;b&gt;Human gate:&lt;/b&gt; the workflow suspends on waitForTaskToken; sign-off re-verifies approver identity and enforces approver ≠ requester. No adverse action is autonomous." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=8;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="90" y="632" width="480" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="n34" value="&lt;b&gt;NOT DEPLOYED.&lt;/b&gt; The only real external connector (verify_income) is deliberately not deployed and not a Gateway target. &lt;b&gt;Every live run to date has governed tools over SYNTHETIC data.&lt;/b&gt; Governing a real system of record is the #1 pilot gap." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=9;fontColor=#B31412;" parent="1" vertex="1">
+          <mxGeometry x="580" y="545" width="205" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="n35" value="5 · DATA &amp;amp; EVIDENCE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#7AA116;strokeWidth=2;dashed=0;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#7AA116;align=left;spacingLeft=10;spacingTop=4;" parent="1" vertex="1">
+          <mxGeometry x="820" y="510" width="380" height="240" as="geometry"/>
+        </mxCell>
+        <mxCell id="n36" value="DynamoDB
+case · sanitized · authz · budget" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#C925D1;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" parent="1" vertex="1">
+          <mxGeometry x="850" y="545" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n37" value="S3 WORM Vault
+Object Lock + hash chain" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#7AA116;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;" parent="1" vertex="1">
+          <mxGeometry x="990" y="545" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n38" value="AWS KMS
+customer-managed" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#DD344C;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.kms;" parent="1" vertex="1">
+          <mxGeometry x="1120" y="545" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n39" value="&lt;b&gt;Append-only ledger + hash chain&lt;/b&gt;, IAM Deny on update/delete and on Object-Lock bypass. Evidence is written &lt;b&gt;before&lt;/b&gt; any side effect (durable-evidence gating), so an audit failure can never follow a completed action." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=8;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="850" y="632" width="330" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="n40" value="&lt;b&gt;AUDITOR CAVEAT:&lt;/b&gt; every gate ran Object Lock in &lt;b&gt;GOVERNANCE&lt;/b&gt; mode, 1-day retention, so the environment could be torn down. &lt;b&gt;COMPLIANCE&lt;/b&gt; mode (7-year) is IaC only and has never been deployed live (EV-1)." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=9;fontColor=#B31412;" parent="1" vertex="1">
+          <mxGeometry x="850" y="690" width="330" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="n41" value="6 · OBSERVABILITY, LINEAGE &amp;amp; AUDIT" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#8C4FFF;strokeWidth=2;dashed=0;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#8C4FFF;align=left;spacingLeft=10;spacingTop=4;" parent="1" vertex="1">
+          <mxGeometry x="60" y="770" width="1140" height="215" as="geometry"/>
+        </mxCell>
+        <mxCell id="n42" value="CloudTrail
+capture-all trail (WORM)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#E7157B;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudtrail;" parent="1" vertex="1">
+          <mxGeometry x="90" y="805" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n43" value="CloudWatch Logs
+CMK-encrypted" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#E7157B;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;" parent="1" vertex="1">
+          <mxGeometry x="230" y="805" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n44" value="AWS X-Ray
+trace correlation" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#E7157B;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.xray;" parent="1" vertex="1">
+          <mxGeometry x="370" y="805" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n45" value="Model-invocation log
+regulated store" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#01A88D;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;" parent="1" vertex="1">
+          <mxGeometry x="510" y="805" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n46" value="SNS + alarms
+bypass detector" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#E7157B;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;" parent="1" vertex="1">
+          <mxGeometry x="650" y="805" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n47" value="&lt;b&gt;One correlation set — trace, session, execution, tenant — is carried through every hop and hashed into the ledger row&lt;/b&gt;, so the audit record proves its own join keys. &lt;b&gt;lineage_proof&lt;/b&gt; reconciles CloudTrail invocations against aegis.call audit lines in both directions and reports orphans. A detective alarm fires on any Bedrock caller outside the allow-listed role — that is how a bypass is &lt;i&gt;seen&lt;/i&gt;." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=8;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="790" y="805" width="390" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="n48" value="&lt;b&gt;Qualification:&lt;/b&gt; the gate's &lt;i&gt;orphans=0&lt;/i&gt; was computed over 11 of 13 governed tools (register L41, fixed after the tag)." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=9;fontColor=#B45309;" parent="1" vertex="1">
+          <mxGeometry x="790" y="900" width="390" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="n49" value="7 · CONTAINMENT &amp;amp; COST CEILING" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#DD344C;strokeWidth=2;dashed=0;verticalAlign=top;fontSize=13;fontStyle=1;fontColor=#DD344C;align=left;spacingLeft=10;spacingTop=4;" parent="1" vertex="1">
+          <mxGeometry x="1220" y="190" width="360" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="n50" value="SSM Parameter
+KILL SWITCH" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#E7157B;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.systems_manager_parameter_store;" parent="1" vertex="1">
+          <mxGeometry x="1250" y="230" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n51" value="AWS Budgets
+USD ceiling" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#E7157B;strokeColor=#1A73E8;strokeWidth=3;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.budgets;" parent="1" vertex="1">
+          <mxGeometry x="1400" y="230" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n52" value="Organizations SCP
+preventive perimeter" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#E7157B;strokeColor=#9AA0A6;strokeWidth=3;dashed=1;dashPattern=1 4;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.organizations;" parent="1" vertex="1">
+          <mxGeometry x="1250" y="400" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n53" value="Account enforced
+guardrail" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fontSize=10;gradientColor=none;fillColor=#DD344C;strokeColor=#9AA0A6;strokeWidth=3;dashed=1;dashPattern=1 4;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.shield;" parent="1" vertex="1">
+          <mxGeometry x="1400" y="400" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n54" value="&lt;b&gt;Kill switch:&lt;/b&gt; one SSM parameter, checked by the interceptor, the tool Lambdas and the runtime with a 15s TTL. Engaging it stops the governed path everywhere; every engage/disengage is IAM-attributed and WORM-audited. &lt;b&gt;Live-proven.&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=8;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="1250" y="320" width="320" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="n55" value="&lt;b&gt;Budget:&lt;/b&gt; per-tenant token + USD meter, reserve-before / commit-after on every model call, refusing &lt;i&gt;before&lt;/i&gt; the spend at runtime, gateway and drafter. The AWS Budgets ceiling is a &lt;b&gt;slow backstop&lt;/b&gt; — AWS billing data refreshes at least daily and alerts once per period — not a real-time cap." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=8;fontColor=#3C4043;" parent="1" vertex="1">
+          <mxGeometry x="1250" y="490" width="320" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="n56" value="&lt;b&gt;OPEN — needs an AWS Organization.&lt;/b&gt; An SCP is the only way to &lt;i&gt;prevent&lt;/i&gt; a non-governed principal from calling Bedrock. Today that bypass is DETECTED, not prevented.&lt;br&gt;&lt;b&gt;Available but not applied:&lt;/b&gt; an account-level enforced guardrail needs no Organization and would make any bypass call guardrailed. Operator decision — it affects every Bedrock call in the account." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=9;fontColor=#B31412;" parent="1" vertex="1">
+          <mxGeometry x="1250" y="575" width="320" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="n57" value="RS256 JWT" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;" parent="1" edge="1" source="n14" target="n18">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n58" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;" parent="1" edge="1" source="n13" target="n14">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n59" value="authorize" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;" parent="1" edge="1" source="n18" target="n19">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n60" value="context" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;" parent="1" edge="1" source="n19" target="n20">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n61" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;" parent="1" edge="1" source="n20" target="n24">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n62" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;" parent="1" edge="1" source="n24" target="n25">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n63" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;" parent="1" edge="1" source="n25" target="n26">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n64" value="only permitted tools" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" parent="1" edge="1" source="n18" target="n30">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n65" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;" parent="1" edge="1" source="n30" target="n31">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n66" value="by reference" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;" parent="1" edge="1" source="n31" target="n36">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n67" value="evidence BEFORE side effect" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;dashed=0;strokeColor=#7AA116;" parent="1" edge="1" source="n30" target="n37">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n68" value="every invocation" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;dashed=1;" parent="1" edge="1" source="n26" target="n45">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n69" value="deny all" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;dashed=1;strokeColor=#DD344C;" parent="1" edge="1" source="n50" target="n20">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n70" value="breach engages" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=9;fontColor=#3C4043;strokeColor=#5F6368;strokeWidth=2;endArrow=blockThin;endFill=1;dashed=1;" parent="1" edge="1" source="n51" target="n50">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n71" value="&lt;b&gt;WHAT THIS DIAGRAM DOES NOT CLAIM.&lt;/b&gt; &amp;nbsp;(1) All evidence is &lt;b&gt;author-produced on one AWS account&lt;/b&gt; — the repository names this its single biggest credibility gap and ships an Independent Verification Protocol to close it. &amp;nbsp;(2) &lt;b&gt;main is 23 commits ahead&lt;/b&gt; of the gated tag; the 15/15 result describes the tag, not today's tree. &amp;nbsp;(3) No &lt;b&gt;real system of record&lt;/b&gt; has ever been governed — every run used synthetic data. &amp;nbsp;(4) Object Lock &lt;b&gt;COMPLIANCE&lt;/b&gt; mode has never been deployed. &amp;nbsp;(5) Of four vertical packs only &lt;b&gt;benefits&lt;/b&gt; is live-gated; housing wires 3 of 17 controls. &amp;nbsp;(6) &lt;b&gt;488&lt;/b&gt; checkov findings are baselined across the portfolio. &amp;nbsp;(7) No penetration test, DR exercise, or SLO has been run." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=10;fontColor=#B31412;" parent="1" vertex="1">
+          <mxGeometry x="40" y="1015" width="1560" height="74" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
