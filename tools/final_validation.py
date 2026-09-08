@@ -9,6 +9,7 @@ import hashlib
 import json
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 
@@ -178,8 +179,15 @@ def _l54():
     bad = []
     for p in PACKS:
         tag = _read(p, "RELEASE").strip()
-        r = subprocess.run(["gh", "release", "view", "--json", "tagName", "-q", ".tagName"],
-                           cwd=ROOT / p, capture_output=True, text=True, shell=(True))
+        # No shell=True (bandit B602, caught by the platform's own security workflow on the first
+        # push of this file - the validator is not exempt from the gates it validates). Resolve the
+        # executable instead: shutil.which finds gh.exe on Windows and gh on the runner.
+        gh = shutil.which("gh")
+        if not gh:
+            bad.append("%s: gh CLI not on PATH - cannot verify the published release" % p)
+            continue
+        r = subprocess.run([gh, "release", "view", "--json", "tagName", "-q", ".tagName"],
+                           cwd=ROOT / p, capture_output=True, text=True)
         latest = (r.stdout or "").strip()
         if latest != tag:
             bad.append("%s: RELEASE=%s latest=%s" % (p, tag, latest or "none"))
