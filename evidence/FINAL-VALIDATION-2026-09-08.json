@@ -101,7 +101,7 @@
       "id": "L55",
       "title": "the parity check actually runs, and refuses on a subset",
       "ok": true,
-      "detail": "workflow runs it=True refuses on subset=True negative controls=4"
+      "detail": "workflow runs it=True refuses on subset=True negative controls=6"
     },
     {
       "id": "L56a",

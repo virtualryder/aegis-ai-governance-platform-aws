@@ -78,10 +78,30 @@ def scan(pack_dir):
     return {name: len(re.findall(pat, text)) >= n for name, pat, n, _ in CONTROLS}
 
 
+def _pack_dir(base, wanted):
+    """Locate a pack directory case-insensitively.
+
+    The GitHub repository is `EDU_financial_aid_agent`; the local working copy is
+    `edu_financial_aid_agent`. A case-sensitive join found no EDU pack on the runner, rendered its
+    column as `n/a`, and reported the committed matrix STALE - a real failure caused entirely by the
+    lookup. Same defect, same day, as the one fixed in check_doc_parity.py.
+    """
+    exact = os.path.join(base, wanted)
+    if os.path.isdir(exact):
+        return exact
+    try:
+        for entry in os.listdir(base):
+            if entry.lower() == wanted.lower() and os.path.isdir(os.path.join(base, entry)):
+                return os.path.join(base, entry)
+    except OSError:
+        pass
+    return exact
+
+
 def build(base):
     rows, present, pinned = {}, {}, {}
     for label, d in PACKS:
-        p = os.path.join(base, d)
+        p = _pack_dir(base, d)
         present[label] = os.path.isdir(os.path.join(p, "cdk"))
         rows[label] = scan(p) if present[label] else {}
         # 2026-09-08: READ the pinned core, do not hardcode it. The prose below used to state a
