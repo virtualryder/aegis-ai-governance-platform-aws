@@ -59,8 +59,11 @@ jobs:
 
       - name: Check MATURITY.yaml test count (drift gate)
         run: python tools/check_maturity.py
-      - name: Pack parity matrix is generated from the packs (no-op when the packs are not checked out)
-        run: python tools/check_pack_parity.py --check
+      # 2026-09-08: REMOVED from here. This step was named "no-op when the packs are not checked
+      # out" and that is exactly what it was: this workflow never checks the packs out, and the
+      # tool returned 0 with "nothing to verify (OK)". It had always passed without comparing
+      # anything. The real invocation is in parity.yml, which clones the four packs first, and the
+      # tool now REFUSES (exit 2) rather than passing when it cannot see them.
 
       # COPILOT-6d: every relative Markdown link resolves; no UTF-8 mojibake in tracked text files.
       - name: Docs hygiene (links + encoding)

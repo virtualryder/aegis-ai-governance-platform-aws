@@ -101,6 +101,32 @@ jobs:
           git -C packs/pharmacovigilance_agent checkout -- .github/workflows/security.yml
           echo "negative control ok: a missing required file fails the build"
 
+      # The pack-parity MATRIX (which controls each pack actually wires) is generated from the packs'
+      # own CDK and runtime sources. It belongs here, where the packs exist - in ci.yml it ran
+      # against nothing and reported OK.
+      - name: Pack-parity matrix is current - BLOCKING
+        run: python tools/check_pack_parity.py --check --base packs
+
+      - name: Negative control - a stale matrix must FAIL
+        run: |
+          set -euo pipefail
+          sed -i 's/governed-core [0-9]\+\.[0-9]\+\.[0-9]\+/governed-core 0.0.0/' docs/PACK-PARITY.md
+          if python tools/check_pack_parity.py --check --base packs; then
+            echo "::error::the pack-parity gate PASSED against a doctored matrix"
+            exit 1
+          fi
+          git checkout -- docs/PACK-PARITY.md
+          echo "negative control ok: a stale matrix fails the build"
+
+      - name: Negative control - no packs must NOT be a pass
+        run: |
+          set -euo pipefail
+          if python tools/check_pack_parity.py --check --base /nonexistent; then
+            echo "::error::the pack-parity gate PASSED with no packs to read"
+            exit 1
+          fi
+          echo "negative control ok: with no packs it refuses instead of reporting OK"
+
       - name: Negative control - the gate must FAIL on a planted drift
         run: |
           set -euo pipefail
