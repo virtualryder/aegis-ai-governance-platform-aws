@@ -19,15 +19,38 @@ public-sector, healthcare payer/provider, life-sciences, and education workflows
 > authorization, and operational ownership. *Independent reference accelerator; not an AWS service or
 > AWS-supported software; not affiliated with or endorsed by Amazon Web Services.*
 
-## The five repositories
+## The repositories — two tiers, and they are not equivalent
 
-| # | Repo | Role | Lead with (hero pilot) |
+An earlier revision of this page listed five repositories and named only the July-2026 vertical
+packs. Everything built since 2026-08 — the hash-pinned `governed-core` dependency, hybrid
+multi-tenancy, the kill switch, per-tenant budget ceilings, capture-all lineage, the enforcement
+perimeter, and every live gate, tag and evidence record — lives in a **different set of repos** that
+this page did not mention at all. Reading the two tiers as one portfolio is the mistake this section
+now exists to prevent.
+
+### Tier 1 — the governed packs (what to review, deploy and pilot)
+
+| # | Repo | Domain | Status |
 |---|---|---|---|
-| — | **aegis-ai-governance-platform-aws** | The horizontal governed-agent **reference architecture** (the pattern all packs conform to) | Governed IT service desk / ticketing |
-| 1 | **hcls-ai-agents** | Life-sciences vertical pack (pharma / biotech / medtech / CRO) — **strongest vertical asset** | Pharmacovigilance (Agent 02) or Regulatory Writing |
-| 2 | **slg-ai-agents** | State & local government pack — **cleanest workshop/pilot story** | 311 resident services or IT service desk |
-| 3 | **healthcare_ai_agents** (HPP) | Healthcare payer/provider pack | Patient Access, Member Services, or Revenue-Cycle Denials |
-| 4 | **edu-ai-agents** | Education pack — **most candid; strongest GTM/assurance** | Student/Family Concierge or Document Accessibility |
+| — | **aegis-ai-governance-platform-aws** | The deny-by-default control plane all Tier-1 packs conform to (AGP v1.0) | 13 live runs, deployed and torn down |
+| — | **governed-core** | The shared control library the packs pin by URL + sha256 | 1.11.1, 106 offline tests |
+| 1 | **benefits_eligibility_agent** | Public-benefits eligibility screening (SLG) | **LEAD PACK — live-gated.** Full-portfolio gate 15/15 from zero; tag `v0.6.0-pilot-rc1` |
+| 2 | **pharmacovigilance_agent** | Life sciences — ICSR intake (HCLS) | Every control wired, **offline-gated only**; last live gate on governed-core 1.9.0 |
+| 3 | **edu_financial_aid_agent** | Financial-aid determination support (EDU) | Every control wired, **offline-gated only** |
+| 4 | **Housing_eligibility_agent** | Housing Choice Voucher screening (SLG) | **Behind the others**; no AgentCore-era live gate has run on it |
+
+`docs/PACK-PARITY.md` is generated from the packs' own CDK and runtime sources and is the
+authoritative statement of which controls each pack actually **wires**. A mark there means
+IaC-asserted, not live-proven. **Any claim of the form "the platform does X" is a claim about
+benefits** unless PACK-PARITY shows a mark for the pack in question.
+
+### Tier 2 — the original vertical demo packs
+
+**hcls-ai-agents**, **slg-ai-agents**, **healthcare_ai_agents** (HPP), **edu-ai-agents** — last
+touched **July 2026**. They predate `governed-core` and carry **none** of the 2026-08/09 control
+set. Their vertical workflows and live runs were real and they remain useful for domain
+storytelling; they are **not** governed by this control plane, and they must not be folded into a
+"review these together" package with Tier 1.
 
 **Do not lead with** utilization management, clinical administration, care management (HPP), benefits
 or public safety (SLG) as *first* pilots — start low-blast-radius, expand once trust is established.

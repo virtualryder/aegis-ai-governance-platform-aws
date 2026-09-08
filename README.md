@@ -6,29 +6,48 @@
 > it, review it, and own what they run. Wherever this repository says "platform," read it as *the control
 > plane this architecture describes*, not a supported offering.
 
-> ### 🛡️ Part of the Aegis Governed-Agent Portfolio — one solution, five repositories
-> This repository is **1 of 5 that form a single, review-as-one solution**: the **Aegis** control plane
-> plus four vertical agent packs. All five conform to one versioned governance contract — **AGP v1.0** —
-> and one deploy pattern, so a CIO / CISO reviews and approves them **together** for pilot.
+> ### Part of the Aegis Governed-Agent Portfolio — read the two tiers separately
+> This repository is the **Aegis** control plane. The portfolio around it has **two tiers, and they
+> are not equivalent** — an earlier revision of this section listed five repositories as "a single,
+> review-as-one solution", which would have sent a reviewer to four repos that carry none of the
+> controls this one documents.
 >
-> | # | Repository | Role |
-> |--:|---|---|
-> | 1 | **`aegis-ai-governance-platform-aws`** | Governed-agent **reference architecture** (deny-by-default control plane) |
-> | 2 | **`hcls-ai-agents`** | **Life sciences** — pharma / biotech / CRO |
-> | 3 | **`slg-ai-agents`** | **State & local government** |
-> | 4 | **`healthcare_ai_agents`** (**HPP**) | **Healthcare payer / provider** |
-> | 5 | **`edu-ai-agents`** | **Education** — K-12 & higher-ed |
+> **Tier 1 — the governed packs.** Built on the hash-pinned `governed-core` dependency, conforming to
+> **AGP v1.0**, and the subject of every live gate, tag and evidence record since 2026-08. These are
+> what to review, deploy and pilot.
 >
-> **▶ You are here: `aegis-ai-governance-platform-aws`.**
+> | # | Repository | Domain | Status |
+> |--:|---|---|---|
+> | 1 | **`aegis-ai-governance-platform-aws`** | The deny-by-default control plane (you are here) | 13 live runs, deployed and torn down |
+> | 2 | **`benefits_eligibility_agent`** | Public-benefits eligibility screening (SLG) | **LEAD PACK — live-gated.** Full-portfolio gate 15/15 from zero; tag `v0.6.0-pilot-rc1` |
+> | 3 | **`pharmacovigilance_agent`** | Life sciences — ICSR intake (HCLS) | Every control wired (PACK-PARITY), **offline-gated only**; last live gate on governed-core 1.9.0 |
+> | 4 | **`edu_financial_aid_agent`** | Financial-aid determination support (EDU) | Every control wired, **offline-gated only** |
+> | 5 | **`Housing_eligibility_agent`** | Housing Choice Voucher screening (SLG) | **Behind the others** — see `docs/PACK-PARITY.md`; no AgentCore-era live gate has run on it |
+> | 6 | **`governed-core`** | The shared control library the packs pin by URL + sha256 | 1.11.1, 106 offline tests |
 >
-> **New to the portfolio?** Start in the **`aegis-ai-governance-platform-aws`** repo:
-> `PORTFOLIO-EXECUTIVE-SUMMARY.md` (10-minute front door) → `SA-DEPLOYMENT-RUNBOOK.md` (deploy the
-> platform + heroes in a new AWS account) → `PORTFOLIO-MATURITY-SCORECARD.md` (what's proven) →
-> `DO-NOT-CLAIM.md` (the honesty boundary).
+> `docs/PACK-PARITY.md` is generated from the packs' own CDK and runtime sources and is the
+> authoritative statement of which controls each pack actually **wires** — a mark there means
+> IaC-asserted, not live-proven. Any claim of the form "the platform does X" is a claim about
+> **benefits** unless PACK-PARITY shows a mark for the pack in question.
+>
+> **Tier 2 — the original vertical demo packs.** `hcls-ai-agents`, `slg-ai-agents`,
+> `healthcare_ai_agents` (HPP) and `edu-ai-agents`. These predate `governed-core` entirely and were
+> last touched in **July 2026**. They demonstrate the vertical workflows and their live runs were
+> real, but they carry **none** of the 2026-08/09 control set — no hash-pinned core, no hybrid
+> multi-tenancy, no kill switch, no budget ceiling, no capture-all lineage, no enforcement perimeter.
+> Use them for domain storytelling; do not present them as governed by this control plane, and do not
+> fold them into a "review these together" package with Tier 1.
+>
+> **You are here: `aegis-ai-governance-platform-aws`.**
+>
+> **New to the portfolio?** Start here, then `PORTFOLIO-EXECUTIVE-SUMMARY.md` (front door) ->
+> `SA-DEPLOYMENT-RUNBOOK.md` (deploy in a new AWS account) -> `docs/PACK-PARITY.md` (what is actually
+> wired, per pack) -> `PORTFOLIO-MATURITY-SCORECARD.md` (what is proven) -> `DO-NOT-CLAIM.md` (the
+> honesty boundary).
 >
 > **Naming:** **`healthcare_ai_agents` = HPP** (payer / provider: claims, prior-auth, denials) and
 > **`hcls-ai-agents` = life sciences** (pharmacovigilance, clinical, regulatory) are **distinct
-> products**; the underscore-vs-hyphen naming is historical.
+> products**; the underscore-vs-hyphen naming is historical. Both are Tier 2.
 >
 > ---
 

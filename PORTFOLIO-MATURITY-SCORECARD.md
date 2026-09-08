@@ -1,5 +1,23 @@
 # Portfolio Maturity Scorecard
 
+> ### ⚠️ Currency note (2026-09-08) — this document describes TIER 2 only
+> Everything below predates `governed-core` and describes the **July-2026 vertical demo packs**
+> (`hcls-ai-agents`, `slg-ai-agents`, `healthcare_ai_agents`, `edu-ai-agents`). It does **not**
+> cover the **governed packs** — `benefits_eligibility_agent`, `pharmacovigilance_agent`,
+> `edu_financial_aid_agent`, `Housing_eligibility_agent` — which are where every live gate, tag,
+> evidence record and control since 2026-08 actually lives. Any figure here (test counts,
+> validation dates, maturity ratings) is a Tier-2 figure and is **not** a statement about the
+> governed packs.
+>
+> For the current picture read, in order: [`README.md`](README.md) (the two tiers),
+> [`docs/PACK-PARITY.md`](docs/PACK-PARITY.md) (which controls each governed pack actually wires),
+> and each governed pack's own `VALIDATED_RELEASE.md` (live-proven vs offline-gated).
+>
+> This banner is a pointer, not a rewrite: the body below has **not** been re-verified against the
+> governed packs, and saying so is the point.
+
+---
+
 *The single-glance honesty table. Green = evidence in-repo (code + tests, or documented clean-account
 validation). Not every agent is equally validated — lead only with what is proven. The machine-readable
 source of truth for each repo is its `MATURITY.yaml`; `tools/check_maturity.py` fails CI on drift.*
