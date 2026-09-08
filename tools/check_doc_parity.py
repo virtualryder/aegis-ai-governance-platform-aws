@@ -41,6 +41,11 @@ PACKS = ["benefits_eligibility_agent", "pharmacovigilance_agent",
 
 # Byte-identical across every pack. Each of these was copied by hand; each is a fork waiting.
 SHARED = [
+    # Line-ending policy. Added 2026-09-08 (L60): three different versions had already
+    # drifted across the four packs, which is the L58 shape - copied by hand, nothing
+    # comparing the copies. A pack whose line-ending rules differ produces a different
+    # working tree from the same commit, so this belongs in SHARED, not in REQUIRED.
+    ".gitattributes",
     "tools/check_secrets_baseline.py",
     "tools/check_core_parity.py",
     "tests/test_doc_count_ratios.py",
