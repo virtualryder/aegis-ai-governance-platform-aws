@@ -1,6 +1,6 @@
 # Aegis — Partner Brief
 
-*Prepared 2026-09-08. Every figure here is traceable to a file or a run in these repositories.
+*Prepared 2026-09-08, revised 2026-09-09 after the re-gate. Every figure here is traceable to a file or a run in these repositories.
 Where something has not been proven, this document says so in the same sentence as the claim.*
 
 ---
@@ -11,7 +11,9 @@ Aegis is a **deny-by-default governance control plane for LLM agents on AWS**. I
 authorization, PII masking proven by signature, per-tenant cost ceilings, a kill switch, and a WORM
 audit ledger *in front of* the model rather than inside the prompt — so the governance cannot be
 talked out of by the agent it governs. It has been deployed from zero and torn down repeatedly on a
-real AWS account, most recently passing a 15-check full-portfolio gate with a live AgentCore Runtime.
+real AWS account, most recently passing a **17-check full-portfolio gate** with a live AgentCore Runtime
+(2026-09-09). That run took seven attempts; the six failures are published in the repository beside the
+pass.
 
 **It is a reference architecture, not a product.** There is no SLA, no support contract, no managed
 release train. And every piece of evidence in it was produced by its author on the author's own
@@ -25,9 +27,14 @@ to close.**
 
 ## 2. What is actually proven
 
-One tree — `benefits_eligibility_agent` at tag `v0.6.0-pilot-rc1` — passed a **15/15 full-portfolio
-gate on 2026-09-07**, from an empty environment, with two tenants and a real AgentCore Runtime, then
-tore down. Evidence: `evidence/FULL-PORTFOLIO-GATE-2026-09-07.json`.
+One tree — `benefits_eligibility_agent` at tag `v0.7.0-pilot-rc1` — passed a **17/17 full-portfolio
+gate on 2026-09-09**, from an empty environment, with two tenants and a real AgentCore Runtime, then
+tore down to zero residue. Evidence: `evidence/FULL-PORTFOLIO-GATE-2026-09-09.json`.
+
+**It took seven attempts, and the six failures are published in the same commit as the pass**
+(`FULL-PORTFOLIO-GATE-2026-09-08.json` is the run before this one, which reached the checks and failed
+four of them). If a partner's SA reads only one thing to judge whether this evidence is honest, read
+those two files next to each other.
 
 | Proven live | What it demonstrates |
 |---|---|
@@ -41,8 +48,10 @@ tore down. Evidence: `evidence/FULL-PORTFOLIO-GATE-2026-09-07.json`.
 | Runtime on IaC role | Least-privilege execution role from CDK, never the toolkit's auto-generated one; IMDSv2 required |
 | Guardrail enforcement | IAM requires the exact guardrail ARN — a call without it is denied, not merely unguarded |
 | Teardown | Zero CloudFormation stack residue; account model-logging restored |
+| **No AgentCore residue** | New in this gate: gateways, policy engines and runtimes are **not** owned by the stacks that create them, so "zero residue" was asserted for stacks only. Now asserted before deploy and after teardown |
+| **Policy provenance in a live row** | New: the 2026-09-09 run wrote hash-chained audit rows carrying `policy_version: cedar-534be1c676bb` and `rule_version: manifest-835adf581b0c` into `ben-fp2-sp-a-audit-ledger`. Previously configuration-asserted only |
 
-Supporting the above: ~400 offline tests per pack, five **blocking** CI security gates
+Supporting the above: **487 / 346 / 337 / 238** offline tests (benefits / PV / financial-aid / housing), five **blocking** CI security gates
 (bandit, detect-secrets, checkov, CodeQL, trivy), and a cross-repo parity workflow that runs daily
 and proves its own fallibility on every execution.
 
@@ -55,25 +64,37 @@ These are not hedges. Each one is a specific thing a customer's auditor will ask
 1. **All evidence is author-produced on one AWS account.** The repo ships
    `docs/INDEPENDENT-VERIFICATION.md` precisely because an earlier reviewer discounted the evidence
    on those grounds. No third party has run it.
-2. **`main` is 23 commits and 53 files ahead of the gated tag**, including 18 files under
-   `scripts/`, `lib/` and `cdk/`. The 15/15 result describes the tag. It does not describe today's
-   tree.
+2. **The tag is the tree, as of 2026-09-09.** `v0.7.0-pilot-rc1` points at the current `main` of
+   `benefits_eligibility_agent`, and the `RELEASE` file inside the tag names the tag. This was not
+   true of `v0.6.0-pilot-rc1`, which `main` had drifted 23 commits ahead of. It will stop being true
+   the moment anything lands on `main`, so check it (`git rev-list -n1 v0.7.0-pilot-rc1` against
+   `origin/main`) rather than trusting this sentence.
 3. **No real system of record has ever been governed.** The only external connector
    (`verify_income`) is deliberately not deployed and is not a Gateway target. Every live run
    governed tools over **synthetic data**.
 4. **Evidence immutability has never been tested in the mode an auditor requires.** Every gate ran
    S3 Object Lock in **GOVERNANCE** mode with 1-day retention so the environment could be torn down;
    teardown itself uses `BypassGovernanceRetention`. **COMPLIANCE** mode (7-year) is IaC only.
-5. **One of four packs is live-proven.** Pharmacovigilance and financial-aid wire every control but
-   are offline-gated only; housing wires **3 of 17** and has never had an AgentCore-era live gate.
+5. **One of four packs is live-proven, and that is deliberate positioning rather than an accident.**
+   `benefits_eligibility_agent` is **the reference pack**: it is the only one with the gate harness
+   (`scripts/full_portfolio_gate.py`), and the only one ever deployed in the AgentCore era.
+   Pharmacovigilance, financial-aid and housing are **the same hash-locked core, not live-proven** —
+   they pin the identical `governed-core` artifact by sha256, they receive every core fix (including
+   the 2026-09-09 policy-name and RT-4 fixes) with unit tests, and cross-pack parity is enforced in
+   CI on 15 shared files. What they have never had is a from-zero deployment. Housing additionally
+   wires only **3 of 17** controls. Read the three as evidence that the core is portable, and read
+   benefits as the only evidence that the core works.
 6. **Account-wide prevention is incomplete.** There is no AWS Organization, so no SCP. A
    non-governed principal calling Bedrock directly is **detected**, not prevented. (An account-level
    enforced guardrail — which needs no Organization — is available and deliberately not applied.)
 7. **488 checkov findings are baselined** across the portfolio: Lambda concurrency limits, DLQs, VPC
    attachment, log-group and env KMS, DynamoDB CMK and PITR.
 8. **No penetration test, DR exercise, or SLO** has been run.
-9. **Policy provenance** in the audit record landed 2026-09-08 and is still
-   **configuration-asserted only** — no live deployment has yet written a row carrying it.
+9. ~~**Policy provenance** is configuration-asserted only.~~ **Closed 2026-09-09.** The live run
+   wrote audit rows carrying `policy_version` and `rule_version` into the per-tenant ledger
+   (`evidence/AGENTCORE-111-GATE-2026-09-09-mt.json`). It is listed here rather than deleted because
+   this document's previous revision said the opposite and a reader deserves to see which way it
+   moved.
 10. **Gateway-only runtime invocation (RT-4) was tested live on 2026-09-09 and reverted to
     opt-in.** It works — and in this topology it leaves the agent with no permitted invoker, because
     the only allowed workload type is an AgentCore Gateway and the gateway sits *downstream* of the
@@ -99,7 +120,7 @@ audit immutability) to the specific test or log that demonstrates each.
 | Can the record be altered? | IAM Deny on update/delete and on Object-Lock bypass — **but proven only in GOVERNANCE mode** |
 | Can you prove completeness of capture? | Within the governed path, yes. Account-wide, detective only (no SCP) |
 | Who approved this action, and were they distinct from the requester? | Yes — identity re-verified at sign-off |
-| Which policy version decided this case? | **Only as of 2026-09-08, and not yet in a live run** |
+| Which policy version decided this case? | Yes — written into the hash-chained ledger row by the 2026-09-09 live run (`policy_version` + `rule_version`) |
 | Was PII removed before the model saw it? | Yes, proven by signature rather than asserted |
 | Who verified all this? | **The author. That is the gap.** |
 
@@ -139,9 +160,10 @@ non-bypassable governance.
 
 | # | Item | Why it matters in that meeting |
 |---|---|---|
-| 1 | Re-gate `main` and cut a tag the evidence describes | The first technical question will be "is what you're showing me the thing you tested?" |
-| 2 | One COMPLIANCE-mode Object Lock deployment in a throwaway account (EV-1) | This is the auditor's question; it is cheap and it is currently unanswered |
+| 1 | ~~Re-gate `main` and cut a tag the evidence describes~~ | **DONE 2026-09-09** — `v0.7.0-pilot-rc1`, 17/17 from zero, tag == `main`, six failed attempts published beside it |
+| 2 | ~~One COMPLIANCE-mode Object Lock deployment in a throwaway account (EV-1)~~ | **DONE** — `evidence/COMPLIANCE-LOCK-PROOF-2026-09-08.json` |
 | 3 | This brief + the architecture diagram | Both attached |
+| 4 | **Open a CloudTrail quota case** (`L-1568E18E`, 5 trails/region, marked not adjustable) | A gate run needs a trail and the account is at the cap; the draft is `docs/ops/CLOUDTRAIL-QUOTA-REQUEST.md`. Needs a human in the console — the Support API requires a Business/Enterprise plan |
 
 **Before a customer pilot (the joint work programme):**
 
@@ -164,8 +186,13 @@ genuine engagement, not a checklist — which is the point of bringing a partner
 ## 7. Attached
 
 - `docs/AEGIS-ARCHITECTURE-VERIFIED-2026-09-08.drawio` — as-deployed architecture. Line style
-  encodes verification status: solid = live-verified in the 15/15 gate, dashed = IaC-asserted only,
-  dotted = not deployed. The footer restates what the diagram does not claim.
+  encodes verification status: solid = live-verified, dashed = IaC-asserted only, dotted = not
+  deployed. **Drawn against the 15/15 gate of 2026-09-07 and not yet redrawn for the 17/17 run**;
+  nothing in it became false, but the two new checks and the policy-provenance row are not on it.
+  The footer restates what the diagram does not claim.
 - `docs/PACK-PARITY.md` — which controls each pack actually wires, generated from their sources.
-- `docs/GAP-CLOSURE-BACKLOG.md` — 59 recorded findings with what each invalidated.
+- `docs/GAP-CLOSURE-BACKLOG.md` — 65 recorded findings with what each invalidated. The most recent
+  four are worth a partner's attention because they are all the same shape: a control that was green
+  and inert (L67), a control that was green and actively harmful (L66), and two instruments that
+  reported results for tests they had not run (L60, L67).
 - `NOT-CLAIMS.md` — the honesty boundary. If any wording anywhere reads as stronger, that page governs.
