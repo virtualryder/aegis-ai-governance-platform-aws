@@ -13,7 +13,13 @@ import shutil
 import subprocess
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+# ROOT holds the four packs. In CI parity.yml clones them INTO the platform checkout, so the
+# platform directory is the root; locally they are SIBLINGS of it. Resolving only one of those
+# layouts made this tool report 0/26 on a working tree - every check "failing" with a
+# FileNotFoundError, which is the same shape as a check that cannot see what it grades (L41,
+# L44b). An explicit override costs one line and makes the tool runnable where the work happens.
+ROOT = (pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1
+        else pathlib.Path(__file__).resolve().parent.parent)
 PACKS = ["benefits_eligibility_agent", "pharmacovigilance_agent",
          "edu_financial_aid_agent", "Housing_eligibility_agent"]
 ALL = PACKS + ["WOGplatform"]
@@ -257,10 +263,33 @@ def _t232():
     return _exists_all("tests/test_policy_provenance.py")
 
 
-# ---- 233 runtime gateway-only --------------------------------------------------------------------
+# ---- 233 runtime gateway-only: OPT-IN, and off by default ----------------------------------------
 def _t233():
-    bad = [p for p in PACKS if "allowedWorkloadConfiguration" not in _read(p, "lib/runtime/_configure.sh")]
-    return (not bad), "; ".join(bad) or "allowedWorkloadConfiguration wired in all four"
+    """The check inverted on 2026-09-09, because the control it used to assert broke the agent.
+
+    It required allowedWorkloadConfiguration to be WIRED in all four packs. Live, that restriction
+    left the runtime with no permitted invoker - the only allowed workload type is an AgentCore
+    Gateway, and here the gateway is downstream of the runtime, not in front of it. Four gate checks
+    failed with "Transaction token required: authorizer has AllowedWorkloadConfiguration configured".
+
+    What must hold now: the capability is still present (so a gateway-fronted deployment can opt in),
+    it is gated on an EXPLICIT flag, and it refuses when asked for without a gateway ARN. A pack that
+    turns it on merely because an ARN is in scope is the regression this check exists to catch.
+    """
+    bad = []
+    for p in PACKS:
+        src = _read(p, "lib/runtime/_configure.sh")
+        if not src:
+            continue
+        if "allowedWorkloadConfiguration" not in src:
+            bad.append("%s: capability removed entirely" % p)
+        elif "RT4_GATEWAY_ONLY" not in src:
+            bad.append("%s: not gated on an explicit opt-in" % p)
+        elif 'if [ -n "${GW_ARN:-}" ]; then' in src:
+            bad.append("%s: still enabled by the mere presence of a gateway ARN" % p)
+        elif "REFUSED" not in src:
+            bad.append("%s: opt-in does not refuse without a gateway ARN" % p)
+    return (not bad), "; ".join(bad) or "gateway-only runtime is opt-in and off by default in all four"
 
 
 # ---- PAR-4 shared proofs consumed ----------------------------------------------------------------
