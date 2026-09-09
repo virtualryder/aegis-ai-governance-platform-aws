@@ -72,8 +72,16 @@ These are not hedges. Each one is a specific thing a customer's auditor will ask
 7. **488 checkov findings are baselined** across the portfolio: Lambda concurrency limits, DLQs, VPC
    attachment, log-group and env KMS, DynamoDB CMK and PITR.
 8. **No penetration test, DR exercise, or SLO** has been run.
-9. Two controls landed 2026-09-08 and are **configuration-asserted only**: policy provenance in the
-   audit record, and gateway-only runtime invocation.
+9. **Policy provenance** in the audit record landed 2026-09-08 and is still
+   **configuration-asserted only** — no live deployment has yet written a row carrying it.
+10. **Gateway-only runtime invocation (RT-4) was tested live on 2026-09-09 and reverted to
+    opt-in.** It works — and in this topology it leaves the agent with no permitted invoker, because
+    the only allowed workload type is an AgentCore Gateway and the gateway sits *downstream* of the
+    runtime. Four gate checks failed on `Transaction token required`. R4-2 is mitigated where it
+    actually bites: at the gateway, by the Cedar `mask_before_*` policies, which forbid the
+    consequential tool actions unless the payload is de-identified, whoever makes the call. The
+    restriction remains available (`RT4_GATEWAY_ONLY=1`) for a deployment where the runtime *is* a
+    gateway target; that posture is unit-tested, not live-proven.
 
 ---
 
