@@ -5,6 +5,7 @@ Each check is an independent assertion against the working tree - not a re-readi
 message, and not a claim carried forward from earlier in the session. A finding counts as closed
 only if a check here can distinguish the fixed state from the broken one.
 """
+import datetime
 import hashlib
 import json
 import pathlib
@@ -357,9 +358,14 @@ if failed:
     print("\nSTILL OPEN:")
     for r in failed:
         print("  %-6s %s -> %s" % (r["id"], r["title"], r["detail"]))
-out = ROOT / "WOGplatform" / "evidence" / "FINAL-VALIDATION-2026-09-08.json"
+# L67: the filename and the "date" field were both the literal 2026-09-08, so every later run
+# OVERWROTE the previous day's evidence and stamped its own results with a date it was not
+# produced on - an evidence artifact that misreports when it was made, in the tool whose job is
+# to validate evidence. Found 2026-09-09, when a 26/26 run silently rewrote the 09-08 file.
+RUN_DATE = datetime.date.today().isoformat()
+out = ROOT / "WOGplatform" / "evidence" / ("FINAL-VALIDATION-%s.json" % RUN_DATE)
 out.parent.mkdir(parents=True, exist_ok=True)
-out.write_text(json.dumps({"date": "2026-09-08", "checks": results,
+out.write_text(json.dumps({"date": RUN_DATE, "checks": results,
                            "pass": len(results) - len(failed), "total": len(results)},
                           indent=2), encoding="utf-8", newline="\n")
 print("\nevidence -> %s" % out)

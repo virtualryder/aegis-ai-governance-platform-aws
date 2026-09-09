@@ -63,6 +63,19 @@ jobs:
           diff <(grep -v '"generated_at"' .secrets.baseline.orig) <(grep -v '"generated_at"' .secrets.baseline) \
             || { echo 'New secrets not in baseline — audit .secrets.baseline'; exit 1; }
 
+  account-ids:
+    name: Account-id scan (no real AWS account in tracked content)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      # L67: this gate shipped in all four agent packs and was CI-wired in each, and was ABSENT
+      # from this repo - the one holding SECURITY.md, THREAT-MODEL.md and the terraform modules.
+      # Nothing noticed because nothing compared the five repos' security harnesses to each other.
+      - name: Account-id scan (BLOCKING)
+        run: python tools/scan_account_ids.py
+
   semgrep:
     name: Semgrep (SAST rulesets)
     runs-on: ubuntu-latest

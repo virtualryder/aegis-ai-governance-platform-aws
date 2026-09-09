@@ -32,7 +32,6 @@ compared; `docs/PACK-PARITY.md` is where per-pack divergence is recorded.
 """
 import argparse
 import hashlib
-import os
 import pathlib
 import sys
 
@@ -46,6 +45,13 @@ SHARED = [
     # comparing the copies. A pack whose line-ending rules differ produces a different
     # working tree from the same commit, so this belongs in SHARED, not in REQUIRED.
     ".gitattributes",
+    # L67: the account-id gate. PV and Housing were still running a version that could not match
+    # `"account_id": "<id>"` - the JSON spelling - long after benefits' copy was fixed, because this
+    # file was copied by hand into four repos and nothing compared the copies. That is L58's shape
+    # occurring inside a security control, which is why it belongs in SHARED and not REQUIRED.
+    # (WOGplatform holds a fifth copy that this checker does not see: it compares the four PACKS.)
+    "tools/scan_account_ids.py",
+    "tests/test_scan_account_ids.py",
     "tools/check_secrets_baseline.py",
     "tools/check_core_parity.py",
     "tests/test_doc_count_ratios.py",
