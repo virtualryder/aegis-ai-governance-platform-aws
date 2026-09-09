@@ -94,8 +94,8 @@
     {
       "id": "L54",
       "title": "the RELEASE tag is the published Latest release",
-      "ok": false,
-      "detail": "benefits_eligibility_agent: RELEASE=v0.7.0-pilot-rc1 latest=v0.6.0-pilot-rc1"
+      "ok": true,
+      "detail": "the RELEASE tag is the published Latest in all four"
     },
     {
       "id": "L55",
@@ -158,6 +158,6 @@
       "detail": "verify_core clean in all four"
     }
   ],
-  "pass": 25,
+  "pass": 26,
   "total": 26
 }
