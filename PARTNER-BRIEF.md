@@ -11,8 +11,8 @@ Aegis is a **deny-by-default governance control plane for LLM agents on AWS**. I
 authorization, PII masking proven by signature, per-tenant cost ceilings, a kill switch, and a WORM
 audit ledger *in front of* the model rather than inside the prompt — so the governance cannot be
 talked out of by the agent it governs. It has been deployed from zero and torn down repeatedly on a
-real AWS account, most recently passing a **17-check full-portfolio gate** with a live AgentCore Runtime
-(2026-09-09). That run took seven attempts; the six failures are published in the repository beside the
+real AWS account, most recently passing a **21-check full-portfolio gate** with a live AgentCore Runtime
+(2026-09-10). That run took seven attempts; the six failures are published in the repository beside the
 pass.
 
 **It is a reference architecture, not a product.** There is no SLA, no support contract, no managed
@@ -27,8 +27,8 @@ to close.**
 
 ## 2. What is actually proven
 
-One tree — `benefits_eligibility_agent` at tag `v0.7.0-pilot-rc1` — passed a **17/17 full-portfolio
-gate on 2026-09-09**, from an empty environment, with two tenants and a real AgentCore Runtime, then
+One tree — `benefits_eligibility_agent` at tag `v0.7.0-pilot-rc1` — passed a **21/21 full-portfolio
+gate on 2026-09-10** (run `ben-fpg`), from an empty environment, with two tenants and a real AgentCore Runtime, then
 tore down to zero residue. Evidence: `evidence/FULL-PORTFOLIO-GATE-2026-09-09.json`.
 
 **It took seven attempts, and the six failures are published in the same commit as the pass**
@@ -69,9 +69,14 @@ These are not hedges. Each one is a specific thing a customer's auditor will ask
    true of `v0.6.0-pilot-rc1`, which `main` had drifted 23 commits ahead of. It will stop being true
    the moment anything lands on `main`, so check it (`git rev-list -n1 v0.7.0-pilot-rc1` against
    `origin/main`) rather than trusting this sentence.
-3. **No real system of record has ever been governed.** The only external connector
-   (`verify_income`) is deliberately not deployed and is not a Gateway target. Every live run
-   governed tools over **synthetic data**.
+3. **No CUSTOMER system of record has ever been governed.** This changed on 2026-09-10, and the
+   change is narrower than it sounds. `verify_source` IS now a Gateway target and IS proven live:
+   the tool holds no client secret, the outbound OAuth2 token is minted by the AgentCore Identity
+   vault, the system of record verifies its RS256 signature against the issuer's live JWKS, and an
+   unauthenticated caller gets 401. But **that system of record is ours** - a real OAuth2 API we
+   built and deploy. Proving the governed path reaches it is not proving a customer's system of
+   record has been governed, so `connect_system_of_record` stays **stubbed** in the manifest.
+   Every live run still governed tools over **synthetic data**.
 4. **Evidence immutability has never been tested in the mode an auditor requires.** Every gate ran
    S3 Object Lock in **GOVERNANCE** mode with 1-day retention so the environment could be torn down;
    teardown itself uses `BypassGovernanceRetention`. **COMPLIANCE** mode (7-year) is IaC only.
@@ -185,10 +190,10 @@ genuine engagement, not a checklist — which is the point of bringing a partner
 
 ## 7. Attached
 
-- `docs/AEGIS-ARCHITECTURE-VERIFIED-2026-09-08.drawio` — as-deployed architecture. Line style
+- `docs/AEGIS-ARCHITECTURE-VERIFIED-2026-09-10.drawio` — as-deployed architecture. Line style
   encodes verification status: solid = live-verified, dashed = IaC-asserted only, dotted = not
-  deployed. **Drawn against the 15/15 gate of 2026-09-07 and not yet redrawn for the 17/17 run**;
-  nothing in it became false, but the two new checks and the policy-provenance row are not on it.
+  deployed. **Redrawn for the 21/21 run of 2026-09-10**; the governed
+  system-of-record connector now appears as a component in band 5, not only as a legend row.
   The footer restates what the diagram does not claim.
 - `docs/PACK-PARITY.md` — which controls each pack actually wires, generated from their sources.
 - `docs/GAP-CLOSURE-BACKLOG.md` — 65 recorded findings with what each invalidated. The most recent
